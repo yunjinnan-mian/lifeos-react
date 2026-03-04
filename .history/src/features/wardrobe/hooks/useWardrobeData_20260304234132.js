@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
-import { collection, doc, onSnapshot, setDoc, deleteDoc, getDocs, writeBatch } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import { db, storage } from '../../../firebase';
+import { getFirestore, collection, doc, onSnapshot, setDoc, deleteDoc, getDocs, writeBatch } from 'firebase/firestore';
+import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { app } from '../../firebase';
 import { DEFAULT_SEED, OLD_TYPE_MAP } from '../constants';
 import { compressImage } from '../utils/imageUtils';
+
+const db = getFirestore(app);
+const storage = getStorage(app);
 
 export { db, storage, ref, uploadBytes, getDownloadURL, deleteObject, setDoc, deleteDoc, doc, collection, writeBatch };
 
