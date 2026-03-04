@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>全局控制台 | LifeOS</title>
+    <style>
+        :root {
+            --bg-color: #f4f6f0; 
+            --card-bg: #ffffff;
+            --text-main: #2c3e50;
+            --text-sub: #7f8c8d;
+            --border-color: #e0e0e0;
+            --root-color: #8d6e63; 
+            --trunk-color: #2e7d32; 
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* 顶部布局：标题在左，操作区在右 */
+        .header-container {
+            width: 100%;
+            max-width: 1100px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 10px;
+            margin-bottom: 25px;
+        }
+
+        h1 { font-weight: 300; margin: 0; letter-spacing: 2px; }
+
+        .header-actions {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        /* 极简化的全局搜索框 */
+        .search-box {
+            padding: 8px 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 20px; /* 圆润的搜索框 */
+            outline: none;
+            font-size: 0.95rem;
+            background: var(--card-bg);
+            width: 250px;
+            transition: all 0.2s;
+        }
+        .search-box:focus { border-color: var(--trunk-color); box-shadow: 0 0 5px rgba(46,125,50,0.1); width: 300px; }
+
+        .btn-sync {
+            background: var(--text-main);
+            color: white;
+            border: none;
+            padding: 9px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .btn-sync:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.15); }
+
+        .status-bar { 
+            width: 100%; max-width: 1100px; 
+            font-size: 0.85rem; color: var(--text-sub); 
+            margin-bottom: 10px; display: flex; 
+            justify-content: space-between; 
+        }
+        .cache-notice { color: var(--trunk-color); font-weight: bold; }
+
+        /* 数据表格区 */
+        .table-container {
+            width: 100%;
+            max-width: 1100px;
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+            overflow-x: auto;
+            box-sizing: border-box;
+        }
+
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        
+        /* 谷歌表格风格的表头设计 */
+        th { 
+            background-color: #f9f9f9; 
+            color: var(--text-sub); 
+            font-size: 0.85rem; 
+            letter-spacing: 1px; 
+            white-space: nowrap; 
+            border-bottom: 2px solid var(--border-color);
+            padding: 10px 15px;
+        }
+        
+        .th-content {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .th-label { font-weight: bold; text-transform: uppercase; }
+
+        /* 表头内嵌的无边框下拉菜单 */
+        .header-select {
+            border: 1px solid transparent;
+            background: transparent;
+            color: var(--text-main);
+            font-size: 0.85rem;
+            padding: 2px 0;
+            outline: none;
+            cursor: pointer;
+            font-family: inherit;
+            border-radius: 4px;
+            margin-left: -2px;
+        }
+        .header-select:hover { border-color: #ccc; background: #fff; }
+        .header-select:focus { background: #fff; border-color: var(--trunk-color); }
+
+        td { padding: 15px; border-bottom: 1px solid var(--border-color); }
+        tbody tr:hover { background-color: #f4f6f0; }
+
+        /* 标签视觉 */
+        .badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; background: #eee; text-transform: uppercase; }
+        .badge.navigation { background: #e8eaf6; color: #3f51b5; }
+        .badge.items { background: #e3f2fd; color: #1565c0; }
+        .badge.transactions { background: #fbe9e7; color: #d84315; }
+        .badge.notes { background: #f1f8e9; color: #2e7d32; }
+        .badge.projects { background: #fff3e0; color: #e65100; }
+        .badge.tasks { background: #e0f2f1; color: #00695c; }
+        .badge.logs { background: #f3e5f5; color: #6a1b9a; }
+        .badge.other { background: #eceff1; color: #546e7a; }
+
+        .domain-tag { color: var(--text-sub); font-size: 0.85rem; border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 12px; background: #fff; }
+        .details-cell { font-size: 0.85rem; color: var(--text-sub); max-width: 350px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .empty-state { text-align: center; padding: 50px; color: var(--text-sub); }
+    </style>
+</head>
+<body>
+
+    <div class="header-container">
+        <h1>全局监控台</h1>
+        <div class="header-actions">
+            <input type="text" id="searchInput" class="search-box" placeholder="输入关键词全维检索...">
+            <button class="btn-sync" id="syncBtn">⚡ 抽取云端</button>
+        </div>
+    </div>
+
+    <div class="status-bar">
+        <span id="cacheNotice" class="cache-notice"></span>
+        <span id="statusBar">当前显示: 0 条 / 本地总数: 0 条</span>
+    </div>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>
+                        <div class="th-content">
+                            <span class="th-label">数据类型</span>
+                            <select id="filterType" class="header-select">
+                                <option value="all">全部 (All)</option>
+                                <option value="navigation">🧭 导航</option>
+                                <option value="items">📦 物品</option>
+                                <option value="transactions">💰 财务</option>
+                                <option value="projects">🎯 项目</option>
+                                <option value="tasks">✅ 任务</option>
+                                <option value="notes">📝 笔记</option>
+                                <option value="logs">📊 日志</option>
+                            </select>
+                        </div>
+                    </th>
+                    <th>
+                        <div class="th-content">
+                            <span class="th-label">所属领域 (Domain)</span>
+                            <select id="filterDomain" class="header-select">
+                                <option value="all">全部 (All Domains)</option>
+                            </select>
+                        </div>
+                    </th>
+                    <th><span class="th-label">核心内容</span></th>
+                    <th><span class="th-label">其余快照 (Details)</span></th>
+                    <th><span class="th-label">时间戳</span></th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                <tr>
+                    <td colspan="5" class="empty-state">等待数据渲染...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script type="module" src="lifenav.js"></script>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCq0apieaxh4xaAoJBJ5Evam_jnNOr8yBw",
+            authDomain: "gen-lang-client-0378444111.firebaseapp.com",
+            projectId: "gen-lang-client-0378444111",
+            storageBucket: "gen-lang-client-0378444111.firebasestorage.app",
+            messagingSenderId: "440342290540",
+            appId: "1:440342290540:web:894148c0d604d2eaa33849"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const CACHE_KEY = 'lifeos_global_dashboard_data';
+        let memoryPool = JSON.parse(localStorage.getItem(CACHE_KEY)) || [];
+
+        const syncBtn = document.getElementById('syncBtn');
+        const tableBody = document.getElementById('tableBody');
+        const statusBar = document.getElementById('statusBar');
+        const cacheNotice = document.getElementById('cacheNotice');
+        
+        // 抓取表头里的下拉菜单和右上角的搜索框
+        const filterType = document.getElementById('filterType');
+        const filterDomain = document.getElementById('filterDomain');
+        const searchInput = document.getElementById('searchInput');
+
+        const ALL_COLLECTIONS = ['navigation', 'items', 'transactions', 'projects', 'tasks', 'notes', 'logs'];
+
+        // 页面一加载，渲染缓存
+        if (memoryPool.length > 0) {
+            cacheNotice.textContent = '🟢 已加载本地缓存';
+            extractDomainsAndRender();
+        } else {
+            tableBody.innerHTML = '<tr><td colspan="5" class="empty-state">本地无缓存，请点击右上角抽取云端数据。</td></tr>';
+        }
+
+        // ==========================================
+        // 核心修复：在这里接通所有筛选器的“电源”！
+        // ==========================================
+        filterType.addEventListener('change', applyFilters);
+        filterDomain.addEventListener('change', applyFilters);
+        searchInput.addEventListener('input', applyFilters);
+
+        // 抽取云端数据
+        syncBtn.addEventListener('click', async () => {
+            const originalText = syncBtn.textContent;
+            syncBtn.textContent = '🔄 抽取中...';
+            syncBtn.disabled = true;
+            cacheNotice.textContent = '🟡 正在覆盖缓存...';
+            
+            let tempPool = []; 
+            
+            try {
+                await Promise.all(ALL_COLLECTIONS.map(async (colName) => {
+                    try {
+                        const q = query(collection(db, colName), orderBy('createdAt', 'desc'), limit(100));
+                        const querySnapshot = await getDocs(q);
+                        
+                        querySnapshot.forEach((doc) => {
+                            const data = doc.data();
+                            tempPool.push({ id: doc.id, collectionType: colName, ...data });
+                        });
+                    } catch (e) {
+                        console.warn(`抽屉 ${colName} 拉取跳过:`, e);
+                    }
+                }));
+
+                tempPool.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+
+                memoryPool = tempPool;
+                localStorage.setItem(CACHE_KEY, JSON.stringify(memoryPool));
+
+                cacheNotice.textContent = '🟢 已同步最新数据并固化';
+                extractDomainsAndRender();
+
+            } catch (error) {
+                console.error("同步失败:", error);
+                cacheNotice.textContent = '🔴 同步崩溃';
+                tableBody.innerHTML = `<tr><td colspan="5" class="empty-state" style="color:red;">同步崩溃。<br>${error.message}</td></tr>`;
+            } finally {
+                syncBtn.textContent = originalText;
+                syncBtn.disabled = false;
+            }
+        });
+
+        // 提取领域并更新表头下拉菜单
+        function extractDomainsAndRender() {
+            let uniqueDomains = new Set(); 
+            memoryPool.forEach(item => {
+                const domainVal = item.domain || item.layer || item.module || '未分类 (Other)';
+                uniqueDomains.add(domainVal);
+            });
+            updateDomainSelect(uniqueDomains);
+            applyFilters();
+        }
+
+        function updateDomainSelect(domainsSet) {
+            const currentSelected = filterDomain.value;
+            let optionsHtml = '<option value="all">全部 (All Domains)</option>';
+            Array.from(domainsSet).sort().forEach(domain => {
+                optionsHtml += `<option value="${domain}">${domain}</option>`;
+            });
+            filterDomain.innerHTML = optionsHtml;
+            if (domainsSet.has(currentSelected)) filterDomain.value = currentSelected;
+        }
+
+        // 执行过滤的核心逻辑
+        function applyFilters() {
+            const typeCondition = filterType.value;
+            const domainCondition = filterDomain.value;
+            const keyword = searchInput.value.toLowerCase().trim();
+
+            const filteredData = memoryPool.filter(item => {
+                const matchType = (typeCondition === 'all') || (item.collectionType === typeCondition);
+                const itemDomain = item.domain || item.layer || item.module || '未分类 (Other)';
+                const matchDomain = (domainCondition === 'all') || (itemDomain === domainCondition);
+                const matchKeyword = (keyword === '') || JSON.stringify(item).toLowerCase().includes(keyword);
+
+                return matchType && matchDomain && matchKeyword;
+            });
+
+            statusBar.textContent = `当前显示: ${filteredData.length} 条 / 本地总数: ${memoryPool.length} 条`;
+            renderTable(filteredData);
+        }
+
+        // 渲染表格
+        function renderTable(dataArray) {
+            if (dataArray.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="5" class="empty-state">没有符合条件的数据。</td></tr>';
+                return;
+            }
+
+            tableBody.innerHTML = '';
+            
+            dataArray.forEach(item => {
+                const tr = document.createElement('tr');
+
+                const badgeClass = ALL_COLLECTIONS.includes(item.collectionType) ? item.collectionType : 'other';
+                const typeCell = `<td><span class="badge ${badgeClass}">${item.collectionType}</span></td>`;
+                
+                const domain = item.domain || item.layer || item.module || '未分类';
+                const domainCell = `<td><span class="domain-tag">${domain}</span></td>`;
+                
+                let coreContent = '未知记录';
+                if (item.collectionType === 'navigation') coreContent = `${item.icon || ''} ${item.title || item.url}`;
+                else if (item.collectionType === 'items') coreContent = item.name || '未命名物品';
+                else if (item.collectionType === 'transactions') coreContent = `¥${item.amount || 0} (${item.label || '无描述'})`;
+                else if (item.collectionType === 'notes' || item.collectionType === 'projects' || item.collectionType === 'tasks') coreContent = item.title || '无标题';
+                else if (item.collectionType === 'logs') coreContent = `${item.type}: ${item.value}`;
+                else coreContent = item.name || item.title || item.label || '无核心字段'; 
+
+                const coreCell = `<td><strong>${coreContent}</strong></td>`;
+
+                const detailsObj = { ...item };
+                delete detailsObj.id; delete detailsObj.collectionType; 
+                delete detailsObj.domain; delete detailsObj.module; delete detailsObj.layer;
+                delete detailsObj.name; delete detailsObj.amount; delete detailsObj.label; 
+                delete detailsObj.title; delete detailsObj.icon; delete detailsObj.url;
+                delete detailsObj.type; delete detailsObj.value;
+                delete detailsObj.createdAt; delete detailsObj.updatedAt; delete detailsObj.photoUrl;
+
+                const detailsStr = Object.entries(detailsObj).map(([k, v]) => `${k}:${v}`).join(' | ');
+                const detailsCell = `<td class="details-cell" title="${detailsStr}">${detailsStr || '-'}</td>`;
+
+                let timeStr = '-';
+                if (item.createdAt) {
+                    try {
+                        const date = new Date(item.createdAt);
+                        timeStr = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')} ${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')}`;
+                    } catch(e) {}
+                }
+                const timeCell = `<td>${timeStr}</td>`;
+
+                tr.innerHTML = typeCell + domainCell + coreCell + detailsCell + timeCell;
+                tableBody.appendChild(tr);
+            });
+        }
+    </script>
+</body>
+</html>

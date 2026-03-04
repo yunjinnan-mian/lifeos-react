@@ -1,0 +1,1667 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" id="themeColor" content="#faf7f2">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" id="appleStatusBar" content="default">
+<title>装备耐久 · 衣橱</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;600&family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#f5f0e8; --bg2:#ede7d9; --surface:#faf7f2;
+  --border:#d4c9b5; --text:#2c2416; --text-muted:#8a7a65;
+  --accent:#7a6248; --tag-bg:#e8e0d0;
+  --love:#c17a5a; --ok:#8a9a7a; --retire:#9a8a9a;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:'Noto Sans SC',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+
+/* HEADER */
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 16px;display:flex;align-items:center;justify-content:space-between;height:52px;position:sticky;top:0;z-index:100}
+.logo{font-family:'Noto Serif SC',serif;font-size:16px;font-weight:600;letter-spacing:2px;color:var(--accent)}
+.logo span{color:var(--text-muted);font-weight:300;font-size:11px;margin-left:6px}
+.sync-status{font-size:11px;color:var(--text-muted);display:flex;align-items:center;gap:5px}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:var(--border);transition:background .3s}
+.sync-dot.synced{background:var(--ok)}
+.sync-dot.syncing{background:#e0a050;animation:pulse 1s infinite}
+.sync-dot.error{background:var(--love)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* TABS */
+.tabs{display:flex;background:var(--surface);border-bottom:1px solid var(--border);padding:0 8px;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab-btn{background:none;border:none;border-bottom:2px solid transparent;padding:10px 14px;cursor:pointer;font-family:inherit;font-size:13px;color:var(--text-muted);transition:all .2s;white-space:nowrap;flex-shrink:0}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:500}
+
+.section{display:none}
+.section.active{display:block}
+main{padding:0 0 64px}
+
+/* ZONES */
+.zone{margin-bottom:4px}
+.zone-header{display:flex;align-items:center;gap:8px;padding:10px 16px 6px}
+.zone-emoji{font-size:18px}
+.zone-name{font-family:'Noto Serif SC',serif;font-size:15px;color:var(--accent);letter-spacing:1px}
+.zone-sub{font-size:11px;color:var(--text-muted)}
+.zone-count{margin-left:auto;font-size:11px;color:var(--text-muted);background:var(--tag-bg);border-radius:10px;padding:2px 8px}
+.zone-scroll{display:flex;gap:10px;overflow-x:auto;padding:4px 16px 14px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.zone-scroll::-webkit-scrollbar{display:none}
+.zone-divider{height:1px;background:var(--border);margin:0 16px;opacity:.4}
+
+/* ITEM CARD */
+.item-card{flex-shrink:0;width:118px;background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;cursor:pointer;scroll-snap-align:start;transition:transform .15s;position:relative;animation:fadeIn .25s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.item-card:active{transform:scale(.97)}
+.card-photo{width:100%;aspect-ratio:3/4;background:var(--bg2);display:flex;align-items:center;justify-content:center;font-size:28px;overflow:hidden}
+.card-photo img{width:100%;height:100%;object-fit:cover}
+.card-vibe{position:absolute;top:6px;right:6px;width:7px;height:7px;border-radius:50%}
+.vibe-love{background:var(--love)}
+.vibe-ok{background:var(--ok)}
+.vibe-retire{background:var(--retire)}
+
+.add-card{flex-shrink:0;width:118px;aspect-ratio:3/4;background:none;border:1.5px dashed var(--border);border-radius:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;scroll-snap-align:start;color:var(--border);font-size:32px;font-weight:200;line-height:1;transition:border-color .2s,color .2s;user-select:none}
+.add-card:active{border-color:var(--accent);color:var(--accent)}
+.zone-divider{height:1px;background:var(--border);margin:0 16px;opacity:.4}
+
+/* FUNCTIONAL */
+.functional-section{margin:12px 16px 0;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px}
+.functional-title{font-size:11px;letter-spacing:2px;color:var(--text-muted);margin-bottom:12px}
+.functional-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.functional-item{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:var(--bg2);border-radius:8px}
+.functional-name{font-size:12px}
+.enough-toggle{display:flex;gap:4px}
+.enough-btn{background:none;border:1px solid var(--border);border-radius:6px;padding:3px 7px;font-size:10px;cursor:pointer;font-family:inherit;color:var(--text-muted);transition:all .15s}
+.enough-btn.active-enough{background:var(--ok);color:white;border-color:var(--ok)}
+.enough-btn.active-lacking{background:var(--retire);color:white;border-color:var(--retire)}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(44,36,22,.45);backdrop-filter:blur(4px);z-index:200;display:none;align-items:flex-end;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border-radius:20px 20px 0 0;padding:16px 20px 40px;width:100%;max-width:520px;max-height:92vh;overflow-y:auto;animation:slideUp .25s ease}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.modal-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 14px}
+.modal-title{font-family:'Noto Serif SC',serif;font-size:16px;color:var(--accent);margin-bottom:16px}
+.form-group{margin-bottom:14px}
+label{display:block;font-size:11px;letter-spacing:1px;color:var(--text-muted);margin-bottom:5px}
+input[type="text"],select,textarea{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-family:inherit;font-size:13px;color:var(--text);outline:none;transition:border-color .2s}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+textarea{resize:vertical;min-height:70px}
+
+/* PHOTO */
+.photo-row{display:flex;gap:10px}
+.photo-preview-box{width:88px;flex-shrink:0;aspect-ratio:3/4;background:var(--bg2);border:1.5px dashed var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px;overflow:hidden;position:relative;font-size:11px;color:var(--text-muted)}
+.photo-preview-box img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.photo-preview-box .photo-icon{font-size:22px;opacity:.5}
+.photo-btns{flex:1;display:flex;flex-direction:column;gap:7px;justify-content:flex-start}
+.photo-btn{width:100%;padding:10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-family:inherit;font-size:12px;color:var(--text-muted);transition:background .15s}
+.photo-btn:active{background:var(--border)}
+.photo-btn-camera{font-size:15px;padding:16px;font-weight:500;color:var(--accent);border-color:var(--accent)}
+.photo-btn-gallery{font-size:11px;padding:7px}
+.compress-info{font-size:10px;color:var(--text-muted);margin-top:4px;text-align:center}
+
+/* VIBE */
+.vibe-selector{display:flex;gap:6px}
+.vibe-opt{flex:1;padding:9px 4px;border:1px solid var(--border);border-radius:8px;cursor:pointer;text-align:center;font-size:12px;transition:all .15s;background:none;font-family:inherit;color:var(--text-muted)}
+.vibe-opt.active[data-vibe="love"]{background:var(--love);color:white;border-color:var(--love)}
+.vibe-opt.active[data-vibe="ok"]{background:var(--ok);color:white;border-color:var(--ok)}
+.vibe-opt.active[data-vibe="retire"]{background:var(--retire);color:white;border-color:var(--retire)}
+
+/* ITEM SEASON ROW (in modal) */
+.item-season-row{display:flex;gap:6px}
+.item-s-btn{
+  flex:1;padding:8px 4px;border:1px solid var(--border);border-radius:8px;
+  cursor:pointer;text-align:center;font-size:12px;transition:all .18s;
+  background:none;font-family:inherit;color:var(--text-muted);
+}
+.item-s-btn.active-spring{background:#e8f5e4;color:#4a8a42;border-color:#a0cc98}
+.item-s-btn.active-summer{background:#fdf3dc;color:#a07010;border-color:#d4b060}
+.item-s-btn.active-autumn{background:#faeee4;color:#905028;border-color:#c89068}
+.item-s-btn.active-winter{background:#e4eef8;color:#306090;border-color:#7aaccc}
+
+/* STATS PAGE */
+.stats-wrap{padding:16px 16px 32px}
+.stats-hero{
+  background:var(--surface);border:1px solid var(--border);border-radius:16px;
+  padding:24px 20px 20px;margin-bottom:14px;text-align:center;
+}
+.stats-total-num{
+  font-family:'Noto Serif SC',serif;font-size:52px;font-weight:600;
+  color:var(--accent);line-height:1;letter-spacing:-1px;
+}
+.stats-total-lbl{font-size:12px;color:var(--text-muted);margin-top:6px;letter-spacing:2px}
+.stats-zone-grid{
+  display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px;
+}
+.stats-zone-item{
+  background:var(--bg2);border-radius:10px;padding:12px 14px;
+  display:flex;align-items:center;gap:10px;
+}
+.stats-zone-emoji{font-size:20px;flex-shrink:0}
+.stats-zone-info{flex:1;min-width:0}
+.stats-zone-name{font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stats-zone-count{font-family:'Noto Serif SC',serif;font-size:18px;color:var(--accent);font-weight:600;line-height:1.2}
+.stats-section-title{font-size:11px;color:var(--text-muted);letter-spacing:2px;margin:20px 0 10px}
+.stats-season-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:14px;
+  padding:16px 18px;margin-bottom:10px;
+}
+.stats-season-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.stats-season-label{font-family:'Noto Serif SC',serif;font-size:14px;color:var(--accent)}
+.stats-season-count{font-size:12px;color:var(--text-muted)}
+.stats-bar-track{height:6px;background:var(--bg2);border-radius:3px;overflow:hidden}
+.stats-bar-fill{height:100%;border-radius:3px;transition:width .6s cubic-bezier(.4,0,.2,1)}
+.bar-spring{background:#78c470}
+.bar-summer{background:#d4a830}
+.bar-autumn{background:#c07040}
+.bar-winter{background:#5090c0}
+.stats-untagged-row{
+  display:flex;align-items:center;justify-content:space-between;
+  background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  padding:14px 16px;margin-top:10px;
+}
+.stats-untagged-lbl{font-size:13px;color:var(--text-muted)}
+.stats-untagged-num{font-family:'Noto Serif SC',serif;font-size:20px;color:var(--text-muted)}
+
+/* MODAL ACTIONS */
+.modal-actions{display:flex;gap:8px;margin-top:18px}
+.btn-cancel{flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px;cursor:pointer;font-family:inherit;font-size:13px;color:var(--text-muted)}
+.btn-save{flex:2;background:var(--accent);color:white;border:none;border-radius:10px;padding:12px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:500}
+.btn-save:disabled{opacity:.6;cursor:not-allowed}
+.btn-delete{background:none;border:1px solid #c0a0a0;border-radius:10px;padding:12px 14px;cursor:pointer;font-family:inherit;font-size:12px;color:#a07070}
+
+/* KNOWLEDGE */
+.knowledge-wrap{padding:16px}
+.knowledge-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.section-heading{font-family:'Noto Serif SC',serif;font-size:17px;color:var(--accent);letter-spacing:2px}
+.btn-add{background:var(--accent);color:white;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:500}
+.notes-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+.note-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;cursor:pointer;transition:transform .15s}
+.note-card:active{transform:scale(.98)}
+.note-tag{display:inline-block;background:var(--tag-bg);border-radius:4px;padding:2px 7px;font-size:10px;color:var(--accent);letter-spacing:1px;margin-bottom:8px}
+.note-title{font-family:'Noto Serif SC',serif;font-size:14px;margin-bottom:7px;line-height:1.5}
+.note-preview{font-size:12px;color:var(--text-muted);line-height:1.7;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical}
+.note-date{font-size:11px;color:var(--border);margin-top:10px}
+.empty-state{text-align:center;padding:40px 20px;color:var(--text-muted)}
+.empty-state .empty-icon{font-size:40px;margin-bottom:10px;opacity:.4}
+.empty-state p{font-size:12px;line-height:1.9}
+
+/* CATEGORY MANAGEMENT */
+.cat-wrap{padding:16px}
+.cat-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.cat-zone-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:10px;overflow:hidden}
+.cat-zone-row{display:flex;align-items:center;padding:12px 14px;gap:10px}
+.cat-zone-emoji{font-size:20px}
+.cat-zone-name{font-family:'Noto Serif SC',serif;font-size:14px;color:var(--accent);flex:1}
+.cat-zone-actions{display:flex;gap:6px}
+.cat-icon-btn{background:none;border:1px solid var(--border);border-radius:8px;padding:5px 10px;cursor:pointer;font-family:inherit;font-size:11px;color:var(--text-muted)}
+.cat-icon-btn:active{background:var(--bg2)}
+.cat-icon-btn.danger{border-color:#c0a0a0;color:#a07070}
+.cat-types{display:flex;flex-wrap:wrap;gap:6px;padding:0 14px 12px}
+.cat-type-chip{display:flex;align-items:center;gap:4px;background:var(--tag-bg);border-radius:20px;padding:4px 10px 4px 12px;font-size:12px}
+.cat-type-chip button{background:none;border:none;cursor:pointer;font-size:14px;color:var(--text-muted);padding:0;line-height:1;display:flex;align-items:center}
+.cat-add-type{background:none;border:1.5px dashed var(--border);border-radius:20px;padding:4px 12px;font-size:12px;color:var(--text-muted);cursor:pointer;font-family:inherit}
+.cat-add-type:active{background:var(--bg2)}
+
+/* DRAG HANDLES */
+.drag-handle{display:flex;align-items:center;justify-content:center;width:24px;height:24px;cursor:grab;color:var(--border);font-size:15px;flex-shrink:0;touch-action:none;user-select:none;-webkit-user-select:none;transition:color .2s}
+.drag-handle:active{cursor:grabbing;color:var(--accent)}
+.cat-zone-card.dragging{opacity:.4;border:1.5px dashed var(--accent)}
+.cat-zone-card.drag-over{border-color:var(--accent);background:var(--bg2)}
+.cat-type-chip.dragging{opacity:.35}
+.cat-type-chip.drag-over{outline:1.5px dashed var(--accent);outline-offset:2px}
+
+/* EMOJI PICKER ROW */
+.emoji-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.emoji-opt{font-size:22px;padding:6px;border:2px solid transparent;border-radius:8px;cursor:pointer;background:var(--bg2)}
+.emoji-opt.selected{border-color:var(--accent)}
+
+input[type="file"]{display:none}
+
+/* SEASON FILTER BAR - parchment ink stamp */
+.season-bar{display:flex;background:var(--bg2);overflow:hidden;border-bottom:2px solid var(--border)}
+.season-seg{flex:1;padding:10px 2px;text-align:center;font-family:'Noto Serif SC',serif;font-size:12px;color:var(--text-muted);background:none;border:none;cursor:pointer;transition:all .25s;letter-spacing:1px;font-weight:400}
+.season-seg.s-active{color:var(--accent);font-weight:600;letter-spacing:2px;text-shadow:0 1px 0 rgba(122,98,72,.15);position:relative}
+.season-seg.s-active::after{content:'';position:absolute;bottom:-2px;left:20%;right:20%;height:2px;background:var(--accent);border-radius:1px}
+
+/* ITEM MODAL SEASON ROW */
+.item-season-row{display:flex;gap:6px}
+.item-s-btn{flex:1;padding:8px 4px;background:var(--bg2);border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-family:inherit;font-size:12px;color:var(--text-muted);transition:all .2s;text-align:center}
+.item-s-btn.on-spring{background:#eaf5e8;border-color:#5a9a52;color:#3a7a32;font-weight:500}
+.item-s-btn.on-summer{background:#fdf5e0;border-color:#c08a20;color:#8a6010;font-weight:500}
+.item-s-btn.on-autumn{background:#faeee6;border-color:#b06030;color:#7a3a10;font-weight:500}
+.item-s-btn.on-winter{background:#e8f0f8;border-color:#4878a0;color:#285880;font-weight:500}
+
+/* STATS PAGE */
+.stats-wrap{padding:16px 16px 32px}
+.stats-heading{font-family:'Noto Serif SC',serif;font-size:17px;color:var(--accent);letter-spacing:2px;margin-bottom:16px}
+.stats-hero{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px;margin-bottom:12px;display:flex;align-items:center;gap:16px}
+.stats-hero-num{font-family:'Noto Serif SC',serif;font-size:52px;color:var(--accent);line-height:1;font-weight:300}
+.stats-hero-label{font-size:12px;color:var(--text-muted);letter-spacing:1px;margin-top:4px}
+.stats-section-title{font-size:10px;letter-spacing:2px;color:var(--text-muted);margin:16px 0 8px}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px}
+.stat-card-top{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.stat-card-emoji{font-size:18px}
+.stat-card-name{font-size:12px;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stat-card-count{font-family:'Noto Serif SC',serif;font-size:22px;color:var(--accent);font-weight:300}
+.stat-card-bar-bg{height:3px;background:var(--bg2);border-radius:2px;margin-top:6px}
+.stat-card-bar{height:3px;background:var(--accent);border-radius:2px;transition:width .4s ease;opacity:.6}
+.stats-season-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.stat-season-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 10px;text-align:center}
+.stat-season-icon{font-size:20px;margin-bottom:4px}
+.stat-season-num{font-family:'Noto Serif SC',serif;font-size:20px;color:var(--accent);font-weight:300}
+.stat-season-label{font-size:10px;color:var(--text-muted);margin-top:2px}
+
+.annotate-entry{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  min-height:calc(100dvh - 96px);padding:32px 24px;gap:16px;
+}
+.ann-enter-btn{
+  width:100%;max-width:340px;
+  background:#1a1614;color:#f0ebe3;
+  border:none;border-radius:16px;
+  padding:22px 24px;
+  cursor:pointer;font-family:inherit;
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+  transition:background .2s,transform .15s;
+  box-shadow:0 4px 24px rgba(0,0,0,.18);
+}
+.ann-enter-btn:active{background:#0e0c0a;transform:scale(.98)}
+.ann-enter-icon{font-size:32px;line-height:1}
+.ann-enter-title{font-family:'Noto Serif SC',serif;font-size:17px;font-weight:600;letter-spacing:2px}
+.ann-enter-sub{font-size:11px;color:#8a8078;letter-spacing:1px}
+
+/* IMMERSIVE OVERLAY */
+.immersive-overlay{
+  position:fixed;inset:0;z-index:500;
+  background:#111010;
+  display:none;flex-direction:column;
+  color:#f0ebe3;
+}
+.immersive-overlay.open{display:flex}
+
+/* immersive header */
+.imm-header{
+  display:flex;align-items:center;gap:10px;
+  padding:env(safe-area-inset-top,12px) 16px 10px;
+  padding-top:max(env(safe-area-inset-top),12px);
+  flex-shrink:0;background:#111010;
+}
+.imm-zone-select{
+  flex:1;min-width:0;max-width:180px;
+  background:rgba(255,255,255,.07);border:none;
+  border-radius:8px;padding:6px 26px 6px 10px;
+  font-family:inherit;font-size:12px;color:#f0ebe3;
+  outline:none;cursor:pointer;-webkit-appearance:none;appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23a09080'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 8px center;
+}
+.imm-zone-select option{background:#1a1614;color:#f0ebe3}
+.imm-counter{font-size:11px;color:rgba(240,235,227,.35);letter-spacing:.5px;flex-shrink:0;white-space:nowrap;margin-left:auto}
+.imm-exit-btn{
+  background:none;border:none;
+  padding:6px 12px;
+  border-radius:20px;
+  cursor:pointer;
+  color:rgba(240,235,227,.45);
+  font-family:inherit;font-size:12px;letter-spacing:1.5px;
+  flex-shrink:0;
+  transition:color .2s;
+  display:flex;align-items:center;gap:5px;
+}
+.imm-exit-btn:active{color:#f0ebe3}
+
+/* immersive photo */
+.imm-photo-area{
+  flex:1;min-height:0;
+  display:flex;align-items:center;justify-content:center;
+  overflow:hidden;touch-action:pan-y;
+  position:relative;
+}
+.imm-photo-inner{
+  width:100%;height:100%;
+  display:flex;align-items:center;justify-content:center;
+}
+.imm-photo-inner img{
+  width:100%;height:100%;
+  object-fit:contain;
+  user-select:none;pointer-events:none;
+  display:block;
+}
+
+/* immersive controls */
+.imm-panel{
+  flex-shrink:0;
+  padding:16px 18px max(env(safe-area-inset-bottom),22px);
+  background:#111010;
+}
+.ann-row{display:flex;align-items:center;gap:8px;margin-bottom:13px}
+.ann-row:last-child{margin-bottom:0}
+.ann-row-lbl{font-size:10px;color:rgba(240,235,227,.4);letter-spacing:1.5px;min-width:22px;flex-shrink:0}
+
+/* season buttons */
+.s-btn{flex:1;padding:7px 2px;background:none;border:none;font-family:inherit;font-size:12px;color:rgba(240,235,227,.35);cursor:pointer;transition:all .2s;text-align:center}
+.s-btn.on-spring{color:#72c468;text-shadow:0 0 8px rgba(90,154,82,.7),0 0 18px rgba(90,154,82,.35)}
+.s-btn.on-summer{color:#e0b040;text-shadow:0 0 8px rgba(220,170,40,.7),0 0 18px rgba(220,170,40,.35)}
+.s-btn.on-autumn{color:#d07040;text-shadow:0 0 8px rgba(200,100,50,.7),0 0 18px rgba(200,100,50,.35)}
+.s-btn.on-winter{color:#60a0d8;text-shadow:0 0 8px rgba(80,140,200,.7),0 0 18px rgba(80,140,200,.35)}
+.s-all-btn .s-all-star{opacity:0;transition:opacity .2s}
+.s-all-btn.all-on .s-all-star{opacity:1}
+.s-all-btn{padding:7px 10px;background:none;border:none;font-family:inherit;font-size:11px;color:rgba(240,235,227,.35);cursor:pointer;transition:all .2s;white-space:nowrap}
+.s-all-btn.all-on{color:#d4b896;text-shadow:0 0 8px rgba(200,160,120,.5)}
+
+/* vibe buttons */
+.v-btn{flex:1;padding:7px 4px;background:none;border:none;font-family:inherit;font-size:12px;color:rgba(240,235,227,.35);cursor:pointer;transition:all .2s;text-align:center}
+.v-btn.on-love{color:#e08878;text-shadow:0 0 8px rgba(220,120,100,.6)}
+.v-btn.on-ok{color:#78b068;text-shadow:0 0 8px rgba(100,170,80,.6)}
+.v-btn.on-retire{color:#a098b8;text-shadow:0 0 8px rgba(160,150,200,.6)}
+
+/* note input */
+.ann-note-wrap{display:flex;align-items:center;gap:8px;flex:1}
+.ann-note-input{flex:1;background:none;border:none;border-bottom:1px solid rgba(255,255,255,.08);padding:6px 2px;font-family:inherit;font-size:12px;color:#f0ebe3;outline:none;transition:border-color .3s}
+.ann-note-input::placeholder{color:rgba(240,235,227,.2)}
+.ann-note-input.saved{border-bottom-color:#78b068}
+.ann-note-input:focus{border-bottom-color:rgba(240,235,227,.3)}
+.ann-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:rgba(240,235,227,.3);font-size:13px;line-height:2.2;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">装备耐久 <span>· 衣橱</span></div>
+  <div class="sync-status"><div class="sync-dot" id="syncDot"></div><span id="syncLabel">连接中</span></div>
+</header>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('inventory',this)" id="tabInventory">衣橱库存</button>
+  <button class="tab-btn" onclick="switchTab('stats',this)">数据统计</button>
+  <button class="tab-btn" onclick="switchTab('knowledge',this)">搭配笔记</button>
+  <button class="tab-btn" onclick="switchTab('annotate',this)">季节标注</button>
+  <button class="tab-btn" onclick="switchTab('categories',this)">分类管理</button>
+</div>
+
+<main>
+  <div class="section active" id="inventory"></div>
+
+  <div class="section" id="stats">
+    <div class="stats-wrap" id="statsContent"></div>
+  </div>
+
+  <div class="section" id="knowledge">
+    <div class="knowledge-wrap">
+      <div class="knowledge-header">
+        <div class="section-heading">搭配笔记</div>
+        <button class="btn-add" onclick="openNoteModal()">＋ 新建</button>
+      </div>
+      <div class="notes-grid" id="notesGrid"></div>
+    </div>
+  </div>
+
+  <div class="section" id="annotate">
+    <div class="annotate-entry">
+      <button class="ann-enter-btn" onclick="openImmersive()">
+        <span class="ann-enter-icon">🌿</span>
+        <span class="ann-enter-title">沉浸式标注衣物</span>
+        <span class="ann-enter-sub">季节 · 眼缘 · 备注</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="section" id="categories">
+    <div class="cat-wrap">
+      <div class="cat-header">
+        <div class="section-heading">分类管理</div>
+        <button class="btn-add" onclick="openZoneModal(null)">＋ 新建分类</button>
+      </div>
+      <div id="zoneList"></div>
+    </div>
+  </div>
+</main>
+
+<!-- ZONE CAMERA INPUT (system camera, direct capture) -->
+<input type="file" id="zoneCameraInput" accept="image/*" capture="environment" onchange="handleZoneCameraPhoto(this)">
+
+<!-- ITEM EDIT MODAL -->
+<div class="modal-overlay" id="itemModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="itemModalTitle">编辑衣物</div>
+    <div class="form-group">
+      <label>照片</label>
+      <div class="photo-row">
+        <div class="photo-preview-box" id="photoPreview"><div class="photo-icon">🧥</div></div>
+        <div class="photo-btns">
+          <button class="photo-btn photo-btn-gallery" onclick="document.getElementById('galleryInput').click()">🖼 相册</button>
+          <button class="photo-btn photo-btn-camera" onclick="document.getElementById('modalCameraInput').click()">📸 拍照</button>
+          <div class="compress-info" id="compressInfo"></div>
+        </div>
+      </div>
+      <input type="file" id="galleryInput" accept="image/*" onchange="handleGalleryPhoto(this)">
+      <input type="file" id="modalCameraInput" accept="image/*" capture="environment" onchange="handleGalleryPhoto(this)">
+    </div>
+    <div class="form-group">
+      <label>小分类</label>
+      <select id="itemTypeSelect"></select>
+    </div>
+    <div class="form-group">
+      <label>季节</label>
+      <div class="item-season-row" id="itemSeasonRow"></div>
+    </div>
+    <div class="form-group">
+      <label>眼缘</label>
+      <div class="vibe-selector">
+        <button class="vibe-opt" data-vibe="love" onclick="setVibe('love')">💛 喜欢</button>
+        <button class="vibe-opt" data-vibe="ok" onclick="setVibe('ok')">○ 一般</button>
+        <button class="vibe-opt" data-vibe="retire" onclick="setVibe('retire')">↓ 淘汰</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>备注</label>
+      <textarea id="itemNote" placeholder="搭配想法、什么场合穿..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-delete" id="btnItemDelete" onclick="deleteItem()" style="display:none">删除</button>
+      <button class="btn-cancel" onclick="closeModal('itemModal')">取消</button>
+      <button class="btn-save" id="btnItemSave" onclick="saveItem()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- NOTE MODAL -->
+<div class="modal-overlay" id="noteModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="noteTitleLabel">新建笔记</div>
+    <div class="form-group"><label>标签</label><input type="text" id="noteTag" placeholder="颜色搭配、比例..."></div>
+    <div class="form-group"><label>标题</label><input type="text" id="noteTitleInput" placeholder="笔记标题"></div>
+    <div class="form-group"><label>内容</label><textarea id="noteContent" placeholder="写下搭配知识..." style="min-height:130px"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn-delete" id="noteDelete" onclick="deleteNote()" style="display:none">删除</button>
+      <button class="btn-cancel" onclick="closeModal('noteModal')">取消</button>
+      <button class="btn-save" onclick="saveNote()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ZONE EDIT MODAL -->
+<div class="modal-overlay" id="zoneModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="zoneModalTitle">新建大分类</div>
+    <div class="form-group">
+      <label>图标</label>
+      <div class="emoji-row" id="emojiPicker"></div>
+    </div>
+    <div class="form-group"><label>名称</label><input type="text" id="zoneName" placeholder="例如：头部"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('zoneModal')">取消</button>
+      <button class="btn-save" onclick="saveZone()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- TYPE EDIT MODAL -->
+<div class="modal-overlay" id="typeModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="typeModalTitle">新建小分类</div>
+    <div class="form-group"><label>名称</label><input type="text" id="typeName" placeholder="例如：帽子"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('typeModal')">取消</button>
+      <button class="btn-save" onclick="saveType()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- TRANSFER MODAL -->
+<div class="modal-overlay" id="transferModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">转移衣物</div>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;line-height:1.7" id="transferDesc"></p>
+    <div class="form-group">
+      <label>转移到</label>
+      <select id="transferTarget"></select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('transferModal')">取消</button>
+      <button class="btn-save" onclick="confirmTransfer()">确认转移并删除</button>
+    </div>
+  </div>
+</div>
+
+<!-- IMMERSIVE ANNOTATE OVERLAY -->
+<div id="immersiveOverlay" class="immersive-overlay">
+  <div class="imm-header">
+    <select class="imm-zone-select" id="immZoneSelect" onchange="setAnnotateZone(this.value)"></select>
+    <span class="imm-counter" id="immCounter"></span>
+    <button class="imm-exit-btn" onclick="closeImmersive()">退出 ↙</button>
+  </div>
+  <div class="imm-photo-area" id="immPhotoArea">
+    <div class="imm-photo-inner" id="immPhotoInner"></div>
+  </div>
+  <div class="imm-panel" id="immPanel"></div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
+import { getFirestore, collection, doc, onSnapshot, setDoc, deleteDoc, getDocs, writeBatch, query, where } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
+import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-storage.js";
+
+const firebaseConfig = {
+  apiKey:"AIzaSyCq0apieaxh4xaAoJBJ5Evam_jnNOr8yBw",
+  authDomain:"gen-lang-client-0378444111.firebaseapp.com",
+  projectId:"gen-lang-client-0378444111",
+  storageBucket:"gen-lang-client-0378444111.firebasestorage.app",
+  messagingSenderId:"440342290540",
+  appId:"1:440342290540:web:894148c0d604d2eaa33849"
+};
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const storage = getStorage(app);
+
+// ── CONSTANTS ─────────────────────────────────────────
+const EMOJI_OPTIONS = ['🧢','🪖','👒','🎩','🧣','🧤','👕','👔','🧥','🥼','👗','👘','👖','🩱','🩲','👟','👠','👡','👢','🥿','👜','👝','🎒','💼','💍','⌚','🕶️','🛍️'];
+
+// ── STATE ─────────────────────────────────────────────
+// Firestore structure:
+//   zones/{id}: { name, emoji, order, createdAt, updatedAt }
+//   zoneTypes/{id}: { label, zoneId, order, createdAt, updatedAt }
+//   items/{id}: { typeId, zoneId, vibe, note, photoUrl, createdAt, updatedAt }
+//   notes/{id}: { module, tag, title, content, createdAt, updatedAt }
+//   config/functional: { key: 'ok'|'lacking'|null }
+
+let zones = [];
+let zoneTypes = [];
+let items = [];
+let notes = [];
+
+let editingItemId = null;
+let editingNoteId = null;
+let editingZoneId = null;    // for zone modal
+let editingTypeId = null;    // for type modal
+let editingTypeZoneId = null;
+let currentPhotoBlob = null;
+let currentVibe = null;
+let pendingDeleteTypeId = null;
+let pendingDeleteZoneId = null;
+
+// zone camera state
+let currentZoneCameraId = null;
+
+// season filter & annotate state
+let activeSeasonFilter = localStorage.getItem('wardrobeSeasonFilter') || 'all';
+let annotateZoneId = 'all';
+let annotateIdx = 0;
+let annotateCurrentItemId = null; // keeps current item locked while tagging — clears only on manual nav
+let annotateSessionList = []; // frozen list for current session — doesn't change mid-annotation
+
+const SEASON_KEYS = ['spring','summer','autumn','winter'];
+const SEASON_LABELS = {spring:'春', summer:'夏', autumn:'秋', winter:'冬'};
+
+// ── SEED DEFAULTS ─────────────────────────────────────
+const DEFAULT_SEED = [
+  { name:'头部', emoji:'🧢', types:['帽子'] },
+  { name:'颈部', emoji:'🧣', types:['围巾','领巾'] },
+  { name:'上身', emoji:'👕', types:['上衣','外套'] },
+  { name:'下身', emoji:'👖', types:['裤子','裙子'] },
+  { name:'足部', emoji:'👟', types:['鞋子'] },
+  { name:'随身', emoji:'👜', types:['包','配饰'] },
+];
+
+// old type string → label mapping for migration
+const OLD_TYPE_MAP = { hat:'帽子', scarf:'围巾', top:'上衣', outer:'外套', bottom:'裤子', dress:'裙子', shoes:'鞋子', bag:'包', accessory:'配饰' };
+
+async function seedAndMigrate() {
+  const zoneSnap = await getDocs(collection(db, 'zones'));
+  let labelToTypeId = {};
+
+  if (zoneSnap.empty) {
+    // Seed default zones and types
+    const batch = writeBatch(db);
+    const now = new Date().toISOString();
+    DEFAULT_SEED.forEach((z, zi) => {
+      const zRef = doc(collection(db, 'zones'));
+      batch.set(zRef, { name:z.name, emoji:z.emoji, order:zi, createdAt:now, updatedAt:now });
+      z.types.forEach((t, ti) => {
+        const tRef = doc(collection(db, 'zoneTypes'));
+        batch.set(tRef, { label:t, zoneId:zRef.id, order:ti, createdAt:now, updatedAt:now });
+        labelToTypeId[t] = { id: tRef.id, zoneId: zRef.id };
+      });
+    });
+    await batch.commit();
+  } else {
+    // Build label map from existing types
+    const typeSnap = await getDocs(collection(db, 'zoneTypes'));
+    typeSnap.docs.forEach(d => { labelToTypeId[d.data().label] = { id:d.id, zoneId:d.data().zoneId }; });
+  }
+
+  // Migrate old items: if item has old `type` string (not a Firestore ID), convert
+  const itemSnap = await getDocs(collection(db, 'items'));
+  const batch2 = writeBatch(db);
+  let needsMigration = false;
+  itemSnap.docs.forEach(d => {
+    const data = d.data();
+    if (data.type && !data.typeId) {
+      const label = OLD_TYPE_MAP[data.type] || data.type;
+      const mapped = labelToTypeId[label];
+      if (mapped) {
+        const update = { ...data, typeId: mapped.id, zoneId: mapped.zoneId, updatedAt: new Date().toISOString() };
+        delete update.type;
+        batch2.set(doc(db, 'items', d.id), update);
+        needsMigration = true;
+      }
+    }
+  });
+  if (needsMigration) await batch2.commit();
+}
+
+// ── SYNC STATUS ───────────────────────────────────────
+function setSyncStatus(s) {
+  document.getElementById('syncDot').className = 'sync-dot ' + s;
+  document.getElementById('syncLabel').textContent = {synced:'已同步',syncing:'同步中',error:'离线','':'连接中'}[s]||'';
+}
+
+// ── FIRESTORE LISTENERS ───────────────────────────────
+function initListeners() {
+  setSyncStatus('syncing');
+
+  onSnapshot(collection(db, 'zones'), snap => {
+    zones = snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.order||0)-(b.order||0));
+    renderInventory(); renderCategoryList(); setSyncStatus('synced');
+  }, ()=>setSyncStatus('error'));
+
+  onSnapshot(collection(db, 'zoneTypes'), snap => {
+    zoneTypes = snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.order||0)-(b.order||0));
+    renderInventory(); renderCategoryList();
+  }, ()=>{});
+
+  onSnapshot(collection(db, 'items'), snap => {
+    items = snap.docs.map(d=>({id:d.id,...d.data()}));
+    renderInventory();
+    if (document.getElementById('immersiveOverlay')?.classList.contains('open')) renderAnnotateBody();
+  }, ()=>{});
+
+  onSnapshot(collection(db, 'notes'), snap => {
+    notes = snap.docs.map(d=>({id:d.id,...d.data()}));
+    renderNotes();
+  }, ()=>{});
+}
+
+// ── RENDER INVENTORY ──────────────────────────────────
+function renderInventory() {
+  const seasonDefs = [
+    {s:'all', label:'全部'},
+    {s:'spring', label:'春'},
+    {s:'summer', label:'夏'},
+    {s:'autumn', label:'秋'},
+    {s:'winter', label:'冬'},
+  ];
+  let html = `<div class="season-bar">
+    ${seasonDefs.map(d=>`<button class="season-seg ${activeSeasonFilter===d.s?'s-active':''}" data-s="${d.s}" onclick="setSeasonFilter('${d.s}')">${d.label}</button>`).join('')}
+  </div>`;
+
+  zones.forEach((zone, i) => {
+    const typesInZone = zoneTypes.filter(t => t.zoneId === zone.id);
+    let zoneItems = items.filter(it => it.zoneId === zone.id);
+    if (activeSeasonFilter !== 'all') {
+      zoneItems = zoneItems.filter(it => (it.seasons||[]).includes(activeSeasonFilter));
+    }
+    html += `${i>0?'<div class="zone-divider"></div>':''}
+    <div class="zone">
+      <div class="zone-header">
+        <span class="zone-emoji">${zone.emoji||'📦'}</span>
+        <span class="zone-name">${zone.name}</span>
+        <span class="zone-sub">${typesInZone.map(t=>t.label).join('、')}</span>
+        ${zoneItems.length?`<span class="zone-count">${zoneItems.length}</span>`:''}
+      </div>
+      <div class="zone-scroll">
+        ${zoneItems.map(it=>`
+          <div class="item-card" onclick="openItemModal('${it.id}')">
+            <div class="card-photo">${it.photoUrl?`<img src="${it.photoUrl}" loading="lazy">`:(zone.emoji||'📦')}</div>
+            ${it.vibe?`<div class="card-vibe vibe-${it.vibe}"></div>`:''}
+          </div>`).join('')}
+        <div class="add-card" onclick="triggerZoneCamera('${zone.id}')">+</div>
+      </div>
+    </div>`;
+  });
+
+  document.getElementById('inventory').innerHTML = html;
+}
+
+// ── RENDER CATEGORIES ─────────────────────────────────
+function renderCategoryList() {
+  const list = document.getElementById('zoneList');
+  if (!list) return;
+  list.innerHTML = zones.map(zone => {
+    const types = zoneTypes.filter(t=>t.zoneId===zone.id);
+    return `
+    <div class="cat-zone-card" draggable="true" data-zone-id="${zone.id}">
+      <div class="cat-zone-row">
+        <span class="drag-handle" title="拖动排序">⠿</span>
+        <span class="cat-zone-emoji">${zone.emoji||'📦'}</span>
+        <span class="cat-zone-name">${zone.name}</span>
+        <div class="cat-zone-actions">
+          <button class="cat-icon-btn" onclick="openZoneModal('${zone.id}')">编辑</button>
+          <button class="cat-icon-btn danger" onclick="deleteZone('${zone.id}')">删除</button>
+        </div>
+      </div>
+      <div class="cat-types" data-zone-id="${zone.id}">
+        ${types.map(t=>`
+          <div class="cat-type-chip" draggable="true" data-type-id="${t.id}" data-zone-id="${zone.id}">
+            <span class="drag-handle" style="width:16px;height:16px;font-size:12px" title="拖动排序">⠿</span>
+            ${t.label}
+            <button onclick="deleteType('${t.id}','${zone.id}')" title="删除">✕</button>
+          </div>`).join('')}
+        <button class="cat-add-type" onclick="openTypeModal(null,'${zone.id}')">＋ 添加</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  initZoneDrag();
+  initTypeDrag();
+}
+
+// ── ZONE DRAG-SORT ────────────────────────────────────
+function initZoneDrag() {
+  cleanupTouchDrag();
+
+  const cards = document.querySelectorAll('.cat-zone-card[data-zone-id]');
+  let dragSrcId = null;
+
+  cards.forEach(card => {
+    card.draggable = false;
+    // Desktop: only the handle activates draggable
+    const handle = card.querySelector(':scope > .cat-zone-row > .drag-handle');
+    if (handle) {
+      handle.addEventListener('mousedown', () => {
+        card.draggable = true;
+        const up = () => { card.draggable = false; };
+        document.addEventListener('mouseup', up, {once:true});
+      });
+    }
+
+    card.addEventListener('dragstart', e => {
+      if (!card.draggable) { e.preventDefault(); return; }
+      dragSrcId = card.dataset.zoneId;
+      card.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', dragSrcId);
+    });
+    card.addEventListener('dragend', () => {
+      card.draggable = false;
+      card.classList.remove('dragging');
+      document.querySelectorAll('.cat-zone-card').forEach(c => c.classList.remove('drag-over'));
+    });
+    card.addEventListener('dragover', e => {
+      e.preventDefault();
+      if (card.dataset.zoneId !== dragSrcId) card.classList.add('drag-over');
+    });
+    card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
+    card.addEventListener('drop', async e => {
+      e.preventDefault();
+      card.classList.remove('drag-over');
+      const targetId = card.dataset.zoneId;
+      if (!dragSrcId || dragSrcId === targetId) return;
+      const srcIdx = zones.findIndex(z=>z.id===dragSrcId);
+      const tgtIdx = zones.findIndex(z=>z.id===targetId);
+      if (srcIdx < 0 || tgtIdx < 0) return;
+      const moved = zones.splice(srcIdx, 1)[0];
+      zones.splice(tgtIdx, 0, moved);
+      const batch = writeBatch(db);
+      zones.forEach((z, i) => batch.set(doc(db,'zones',z.id), {...z, order:i, updatedAt:new Date().toISOString()}));
+      await batch.commit();
+    });
+
+    // Touch: only attach touchstart to handle, move/end on card
+    if (handle) {
+      handle.addEventListener('touchstart', e => onTouchStart(e, card), {passive:true});
+    }
+    card.addEventListener('touchmove', onTouchMove, {passive:false});
+    card.addEventListener('touchend', onTouchEnd);
+    card.addEventListener('touchcancel', cleanupTouchDrag);
+  });
+}
+
+// ── TYPE DRAG-SORT ────────────────────────────────────
+function initTypeDrag() {
+  const chips = document.querySelectorAll('.cat-type-chip[data-type-id]');
+  let dragSrcTypeId = null;
+
+  chips.forEach(chip => {
+    chip.addEventListener('dragstart', e => {
+      dragSrcTypeId = chip.dataset.typeId;
+      chip.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', dragSrcTypeId);
+      e.stopPropagation();
+    });
+    chip.addEventListener('dragend', () => {
+      chip.classList.remove('dragging');
+      document.querySelectorAll('.cat-type-chip').forEach(c => c.classList.remove('drag-over'));
+      dragSrcTypeId = null;
+    });
+    chip.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (chip.dataset.typeId !== dragSrcTypeId) chip.classList.add('drag-over');
+    });
+    chip.addEventListener('dragleave', () => chip.classList.remove('drag-over'));
+    chip.addEventListener('drop', async e => {
+      e.preventDefault();
+      e.stopPropagation();
+      chip.classList.remove('drag-over');
+      const targetTypeId = chip.dataset.typeId;
+      if (!dragSrcTypeId || dragSrcTypeId === targetTypeId) return;
+
+      const srcType = zoneTypes.find(t=>t.id===dragSrcTypeId);
+      const tgtType = zoneTypes.find(t=>t.id===targetTypeId);
+      if (!srcType || !tgtType) return;
+
+      const zoneId = tgtType.zoneId;
+      // get types in this zone sorted by current order
+      const zoneTypeList = zoneTypes.filter(t=>t.zoneId===zoneId);
+      const srcIdx = zoneTypeList.findIndex(t=>t.id===dragSrcTypeId);
+      const tgtIdx = zoneTypeList.findIndex(t=>t.id===targetTypeId);
+      if (srcIdx < 0 || tgtIdx < 0) return;
+
+      // reorder in memory
+      const moved = zoneTypeList.splice(srcIdx, 1)[0];
+      zoneTypeList.splice(tgtIdx, 0, moved);
+
+      // persist
+      const batch = writeBatch(db);
+      zoneTypeList.forEach((t, i) => {
+        batch.set(doc(db,'zoneTypes',t.id), {...t, order:i, updatedAt:new Date().toISOString()});
+      });
+      await batch.commit();
+    });
+  });
+}
+
+// ── TOUCH DRAG FOR ZONE CARDS ─────────────────────────
+let _touchDragZone = null, _touchClone = null, _touchOffX = 0, _touchOffY = 0;
+let _touchDragActive = false, _touchDragCard = null;
+
+function cleanupTouchDrag() {
+  if (_touchClone) { _touchClone.remove(); _touchClone = null; }
+  document.querySelectorAll('.__drag-clone').forEach(el => el.remove());
+  if (_touchDragCard) { _touchDragCard.style.opacity = ''; _touchDragCard = null; }
+  document.querySelectorAll('.cat-zone-card').forEach(c => c.classList.remove('drag-over'));
+  _touchDragZone = null;
+  _touchDragActive = false;
+}
+
+function onTouchStart(e, card) {
+  const touch = e.touches[0];
+  const rect = card.getBoundingClientRect();
+  _touchDragZone = card.dataset.zoneId;
+  _touchDragCard = card;
+  _touchOffX = touch.clientX - rect.left;
+  _touchOffY = touch.clientY - rect.top;
+  _touchDragActive = false;
+  card._dragStartX = touch.clientX;
+  card._dragStartY = touch.clientY;
+}
+
+function onTouchMove(e) {
+  if (!_touchDragZone || !_touchDragCard) return;
+  const touch = e.touches[0];
+  const card = _touchDragCard;
+
+  if (!_touchDragActive) {
+    const dx = Math.abs(touch.clientX - (card._dragStartX || touch.clientX));
+    const dy = Math.abs(touch.clientY - (card._dragStartY || touch.clientY));
+    if (dx < 8 && dy < 8) return;
+    _touchDragActive = true;
+    const rect = card.getBoundingClientRect();
+    _touchClone = card.cloneNode(true);
+    _touchClone.classList.add('__drag-clone');
+    Object.assign(_touchClone.style, {
+      position:'fixed', left:rect.left+'px', top:rect.top+'px',
+      width:rect.width+'px', opacity:'.75', pointerEvents:'none',
+      zIndex:'9999', borderRadius:'12px', background:'var(--surface)',
+      boxShadow:'0 8px 28px rgba(0,0,0,.22)', transition:'none'
+    });
+    document.body.appendChild(_touchClone);
+    card.style.opacity = '.25';
+  }
+
+  e.preventDefault();
+  _touchClone.style.left = (touch.clientX - _touchOffX) + 'px';
+  _touchClone.style.top  = (touch.clientY - _touchOffY) + 'px';
+
+  document.querySelectorAll('.cat-zone-card').forEach(c => c.classList.remove('drag-over'));
+  const el = document.elementFromPoint(touch.clientX, touch.clientY);
+  const over = el?.closest('.cat-zone-card[data-zone-id]');
+  if (over && over.dataset.zoneId !== _touchDragZone) over.classList.add('drag-over');
+}
+
+async function onTouchEnd(e) {
+  if (!_touchDragZone) return;
+  const touch = e.changedTouches[0];
+  const savedZone = _touchDragZone;
+  const wasActive = _touchDragActive; // ← save BEFORE cleanup resets it
+  cleanupTouchDrag();
+
+  if (!wasActive) return; // tap, not drag
+
+  const el = document.elementFromPoint(touch.clientX, touch.clientY);
+  const over = el?.closest('.cat-zone-card[data-zone-id]');
+  if (!over || over.dataset.zoneId === savedZone) return;
+
+  const targetId = over.dataset.zoneId;
+  const srcIdx = zones.findIndex(z=>z.id===savedZone);
+  const tgtIdx = zones.findIndex(z=>z.id===targetId);
+  if (srcIdx < 0 || tgtIdx < 0) return;
+
+  const moved = zones.splice(srcIdx, 1)[0];
+  zones.splice(tgtIdx, 0, moved);
+
+  const batch = writeBatch(db);
+  zones.forEach((z, i) => batch.set(doc(db,'zones',z.id), {...z, order:i, updatedAt:new Date().toISOString()}));
+  await batch.commit();
+}
+
+// ── RENDER NOTES ──────────────────────────────────────
+function renderNotes() {
+  const grid = document.getElementById('notesGrid');
+  if (!grid) return;
+  if (!notes.length) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">📝</div><p>还没有搭配笔记</p></div>`;
+    return;
+  }
+  grid.innerHTML = notes.map(n=>`
+    <div class="note-card" onclick="openEditNote('${n.id}')">
+      ${n.tag?`<div class="note-tag">${n.tag}</div>`:''}
+      <div class="note-title">${n.title||'无标题'}</div>
+      <div class="note-preview">${n.content||''}</div>
+      <div class="note-date">${n.date||''}</div>
+    </div>`).join('');
+}
+
+// ── SEASON FILTER ────────────────────────────────────
+window.setSeasonFilter = function(s) {
+  activeSeasonFilter = s;
+  localStorage.setItem('wardrobeSeasonFilter', s);
+  renderInventory();
+};
+
+// ── ANNOTATE ─────────────────────────────────────────
+const SEASON_ICONS = {spring:'🌸', summer:'☀️', autumn:'🍂', winter:'❄️'};
+let noteDebounceTimer = null;
+let immSwipeStartX = 0;
+let immSwipeStartY = 0;
+let immSwipeLocked = false; // prevent scroll-conflict
+let immListenersAttached = false;
+
+function buildImmSelect() {
+  const sel = document.getElementById('immZoneSelect');
+  if (!sel) return;
+  const untaggedCount = items.filter(i=>i.photoUrl && !(i.seasons||[]).length).length;
+  const opts = [
+    {id:'all', label:'全部'},
+    {id:'untagged', label:`未标注${untaggedCount ? ' · ' + untaggedCount : ''}`},
+    ...zones.map(z=>({id:z.id, label:(z.emoji||'')+' '+z.name}))
+  ];
+  sel.innerHTML = opts.map(o=>`<option value="${o.id}" ${annotateZoneId===o.id?'selected':''}>${o.label}</option>`).join('');
+}
+
+function renderAnnotate() {
+  // entry tab: nothing dynamic needed
+}
+
+function getAnnotateList() {
+  if (annotateZoneId === 'all') return items.filter(i=>i.photoUrl);
+  if (annotateZoneId === 'untagged') return items.filter(i=>i.photoUrl && !(i.seasons||[]).length);
+  return items.filter(i=>i.zoneId===annotateZoneId && i.photoUrl);
+}
+
+function renderAnnotateBody() {
+  buildImmSelect();
+  const list = getAnnotateList();
+  const counter = document.getElementById('immCounter');
+  const photoInner = document.getElementById('immPhotoInner');
+  const panel = document.getElementById('immPanel');
+  if (!photoInner || !panel) return;
+
+  if (!list.length) {
+    // Only show empty state if we have no locked item still valid in items[]
+    const lockedItem = annotateCurrentItemId ? items.find(i=>i.id===annotateCurrentItemId) : null;
+    if (!lockedItem) {
+      if (counter) counter.textContent = '';
+      photoInner.innerHTML = `<div class="ann-empty"><div style="font-size:40px;opacity:.3;margin-bottom:12px">${annotateZoneId==='untagged'?'✦':'📷'}</div><span>${annotateZoneId==='untagged'?'所有衣物都已标注 ✦':'这里还没有照片'}</span></div>`;
+      panel.innerHTML = '';
+      return;
+    }
+  }
+
+  // Determine which item to show:
+  // If we have a locked ID and it still exists in items[], keep showing it.
+  // Only pick from list when no lock or on explicit navigation.
+  let item;
+  if (annotateCurrentItemId) {
+    item = items.find(i=>i.id===annotateCurrentItemId);
+  }
+  if (!item) {
+    // No lock or item was deleted — pick from list
+    if (annotateIdx >= list.length) annotateIdx = list.length - 1;
+    if (annotateIdx < 0) annotateIdx = 0;
+    item = list[annotateIdx];
+    if (item) annotateCurrentItemId = item.id;
+  }
+  if (!item) return;
+
+  // Counter: show position in list (find where locked item sits, or use annotateIdx)
+  const posInList = list.findIndex(i=>i.id===item.id);
+  const displayIdx = posInList >= 0 ? posInList : annotateIdx;
+  if (counter) counter.textContent = `${displayIdx + 1} / ${list.length || 1}`;
+
+  const seasons = item.seasons || [];
+  const allSelected = SEASON_KEYS.every(s=>seasons.includes(s));
+
+  // Photo — update src only if changed (avoid flicker)
+  let img = photoInner.querySelector('img');
+  if (!img) {
+    photoInner.innerHTML = `<img draggable="false">`;
+    img = photoInner.querySelector('img');
+  }
+  if (img.dataset.src !== item.photoUrl) {
+    img.src = item.photoUrl;
+    img.dataset.src = item.photoUrl;
+  }
+
+  // Control panel
+  panel.innerHTML = `
+    <div class="ann-row">
+      <span class="ann-row-lbl">季节</span>
+      ${SEASON_KEYS.map(s=>`<button class="s-btn ${seasons.includes(s)?'on-'+s:''}" onclick="toggleAnnotateSeason('${item.id}','${s}')">${SEASON_ICONS[s]} ${SEASON_LABELS[s]}</button>`).join('')}
+      <button class="s-all-btn ${allSelected?'all-on':''}" onclick="toggleAllSeasons('${item.id}')"><span class="s-all-star">✦</span> 全选</button>
+    </div>
+    <div class="ann-row">
+      <span class="ann-row-lbl">眼缘</span>
+      <button class="v-btn ${item.vibe==='love'?'on-love':''}" onclick="setAnnotateVibe('${item.id}','love')">💛 喜欢</button>
+      <button class="v-btn ${item.vibe==='ok'?'on-ok':''}" onclick="setAnnotateVibe('${item.id}','ok')">○ 一般</button>
+      <button class="v-btn ${item.vibe==='retire'?'on-retire':''}" onclick="setAnnotateVibe('${item.id}','retire')">↓ 淘汰</button>
+    </div>
+    <div class="ann-row">
+      <span class="ann-row-lbl">备注</span>
+      <div class="ann-note-wrap">
+        <input class="ann-note-input" id="annNote" value="${(item.note||'').replace(/"/g,'&quot;')}" placeholder="搭配想法、什么场合穿...">
+      </div>
+    </div>`;
+
+  // Wire note auto-save
+  const noteEl = document.getElementById('annNote');
+  if (noteEl) {
+    noteEl.addEventListener('input', () => {
+      noteEl.classList.remove('saved');
+      clearTimeout(noteDebounceTimer);
+      noteDebounceTimer = setTimeout(async () => {
+        await patchItem(item.id, {note: noteEl.value.trim()});
+        noteEl.classList.add('saved');
+        setTimeout(()=>noteEl.classList.remove('saved'), 1800);
+      }, 700);
+    });
+  }
+}
+
+window.openImmersive = function() {
+  annotateIdx = 0;
+  annotateCurrentItemId = null;
+  const overlay = document.getElementById('immersiveOverlay');
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  // Switch status bar to dark
+  document.getElementById('themeColor').content = '#111010';
+  document.getElementById('appleStatusBar').content = 'black';
+  renderAnnotateBody();
+
+  // Attach swipe listeners ONCE on the photo area
+  if (!immListenersAttached) {
+    const photoArea = document.getElementById('immPhotoArea');
+    photoArea.addEventListener('touchstart', e => {
+      immSwipeStartX = e.touches[0].clientX;
+      immSwipeStartY = e.touches[0].clientY;
+      immSwipeLocked = false;
+    }, {passive: true});
+
+    photoArea.addEventListener('touchmove', e => {
+      if (immSwipeLocked) return;
+      const dx = Math.abs(e.touches[0].clientX - immSwipeStartX);
+      const dy = Math.abs(e.touches[0].clientY - immSwipeStartY);
+      // Determine direction on first significant move
+      if (dx > 8 || dy > 8) {
+        immSwipeLocked = true;
+        // Only prevent default for horizontal swipes
+        if (dx > dy) e.preventDefault();
+      }
+    }, {passive: false});
+
+    photoArea.addEventListener('touchend', e => {
+      const dx = e.changedTouches[0].clientX - immSwipeStartX;
+      const dy = e.changedTouches[0].clientY - immSwipeStartY;
+      if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+        swiperNav(dx < 0 ? 1 : -1);
+      }
+    }, {passive: true});
+
+    immListenersAttached = true;
+  }
+};
+
+window.closeImmersive = function() {
+  document.getElementById('immersiveOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+  // Restore status bar
+  document.getElementById('themeColor').content = '#faf7f2';
+  document.getElementById('appleStatusBar').content = 'default';
+  clearTimeout(noteDebounceTimer);
+};
+
+window.setAnnotateZone = function(val) {
+  annotateZoneId = val;
+  annotateIdx = 0;
+  annotateCurrentItemId = null;
+  renderAnnotateBody();
+};
+
+window.swiperNav = function(dir) {
+  clearTimeout(noteDebounceTimer);
+  const noteEl = document.getElementById('annNote');
+  const list = getAnnotateList();
+
+  // Determine current position: use locked item's position if available
+  const lockedPos = annotateCurrentItemId ? list.findIndex(i=>i.id===annotateCurrentItemId) : -1;
+  const currentPos = lockedPos >= 0 ? lockedPos : annotateIdx;
+
+  // Flush note
+  const item = list[currentPos];
+  if (noteEl && item && noteEl.value.trim() !== (item.note||'').trim()) {
+    patchItem(item.id, {note: noteEl.value.trim()}).catch(()=>{});
+  }
+
+  const newIdx = currentPos + dir;
+  if (newIdx < 0 || newIdx >= list.length) return;
+  annotateIdx = newIdx;
+  annotateCurrentItemId = null; // clear lock — let list drive
+  renderAnnotateBody();
+};
+
+async function patchItem(itemId, patch) {
+  const item = items.find(i=>i.id===itemId); if(!item) return;
+  await setDoc(doc(db,'items',itemId), {...item, ...patch, updatedAt:new Date().toISOString()});
+}
+
+window.toggleAnnotateSeason = async function(itemId, season) {
+  const item = items.find(i=>i.id===itemId); if(!item) return;
+  const seasons = [...(item.seasons||[])];
+  const idx = seasons.indexOf(season);
+  if (idx>=0) seasons.splice(idx,1); else seasons.push(season);
+  await patchItem(itemId, {seasons});
+};
+
+window.toggleAllSeasons = async function(itemId) {
+  const item = items.find(i=>i.id===itemId); if(!item) return;
+  const allSelected = SEASON_KEYS.every(s=>(item.seasons||[]).includes(s));
+  await patchItem(itemId, {seasons: allSelected ? [] : [...SEASON_KEYS]});
+};
+
+window.setAnnotateVibe = async function(itemId, vibe) {
+  const item = items.find(i=>i.id===itemId); if(!item) return;
+  await patchItem(itemId, {vibe: item.vibe===vibe ? null : vibe});
+};
+
+// ── CAMERA (system native) ────────────────────────────
+window.triggerZoneCamera = function(zoneId) {
+  currentZoneCameraId = zoneId;
+  const input = document.getElementById('zoneCameraInput');
+  input.value = '';
+  input.click();
+};
+
+window.handleZoneCameraPhoto = async function(input) {
+  const file = input.files[0]; if (!file) return;
+  input.value = '';
+  setSyncStatus('syncing');
+  try {
+    const compressed = await compressImage(file);
+    const itemId = Date.now().toString();
+    const storageRef = ref(storage, `wardrobe/${itemId}.webp`);
+    await uploadBytes(storageRef, compressed);
+    const photoUrl = await getDownloadURL(storageRef);
+    const defaultType = zoneTypes.find(t => t.zoneId === currentZoneCameraId);
+    await setDoc(doc(db, 'items', itemId), {
+      typeId: defaultType?.id || null,
+      zoneId: currentZoneCameraId,
+      vibe: null, note: '', photoUrl,
+      seasons: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
+    setSyncStatus('synced');
+    // 上传后切回"全部"，确保新衣物可见
+    activeSeasonFilter = 'all';
+    localStorage.setItem('wardrobeSeasonFilter', 'all');
+  } catch(e) {
+    alert('上传失败，请重试');
+    setSyncStatus('error');
+  }
+};
+
+// ── IMAGE COMPRESSION ─────────────────────────────────
+function compressImage(file, maxWidth=1000, quality=0.82) {
+  return new Promise((resolve,reject)=>{
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        let w=img.width, h=img.height;
+        if(w>maxWidth){h=Math.round(h*maxWidth/w);w=maxWidth}
+        const canvas=document.createElement('canvas');
+        canvas.width=w;canvas.height=h;
+        canvas.getContext('2d').drawImage(img,0,0,w,h);
+        // Use WebP for ~30% smaller files; fall back to JPEG if unsupported
+        canvas.toBlob(b=>{
+          if(b) resolve(b);
+          else canvas.toBlob(b2=>resolve(b2),'image/jpeg',quality);
+        },'image/webp',quality);
+      };
+      img.onerror=reject;
+      img.src=e.target.result;
+    };
+    reader.onerror=reject;
+    reader.readAsDataURL(file);
+  });
+}
+function formatSize(b){return b<1024?b+'B':b<1048576?(b/1024).toFixed(0)+'KB':(b/1048576).toFixed(1)+'MB'}
+
+// ── GALLERY PHOTO ─────────────────────────────────────
+window.handleGalleryPhoto = async function(input) {
+  const file = input.files[0]; if(!file) return;
+  document.getElementById('compressInfo').textContent = '压缩中...';
+  const compressed = await compressImage(file);
+  currentPhotoBlob = compressed;
+  document.getElementById('photoPreview').innerHTML = `<img src="${URL.createObjectURL(compressed)}">`;
+  document.getElementById('compressInfo').textContent = `${formatSize(file.size)} → ${formatSize(compressed.size)}`;
+  input.value='';
+};
+
+// ── ITEM MODAL ────────────────────────────────────────
+window.openItemModal = function(id) {
+  const item = items.find(i=>i.id===id); if(!item) return;
+  editingItemId = id;
+  currentPhotoBlob = null;
+  currentVibe = item.vibe || null;
+
+  document.getElementById('itemModalTitle').textContent = '编辑衣物';
+  document.getElementById('itemNote').value = item.note||'';
+  document.getElementById('btnItemDelete').style.display = 'block';
+  document.getElementById('compressInfo').textContent = '';
+  document.getElementById('photoPreview').innerHTML = item.photoUrl
+    ? `<img src="${item.photoUrl}">`
+    : `<div class="photo-icon">🧥</div>`;
+
+  setVibe(item.vibe||null);
+  populateTypeSelect(item.typeId);
+  renderItemSeasonRow(item.seasons||[]);
+  document.getElementById('itemModal').classList.add('open');
+};
+
+function renderItemSeasonRow(selectedSeasons) {
+  const row = document.getElementById('itemSeasonRow');
+  if (!row) return;
+  const defs = [
+    {key:'spring',icon:'🌸',label:'春'},
+    {key:'summer',icon:'☀️',label:'夏'},
+    {key:'autumn',icon:'🍂',label:'秋'},
+    {key:'winter',icon:'❄️',label:'冬'},
+  ];
+  row.innerHTML = defs.map(d=>`
+    <button class="item-s-btn ${selectedSeasons.includes(d.key)?'active-'+d.key:''}"
+      data-season="${d.key}"
+      onclick="toggleItemSeason(this,'${d.key}')">
+      ${d.icon} ${d.label}
+    </button>`).join('');
+}
+
+window.toggleItemSeason = function(btn, key) {
+  const cls = 'active-' + key;
+  btn.classList.toggle(cls);
+};
+
+function populateTypeSelect(selectedTypeId) {
+  const sel = document.getElementById('itemTypeSelect');
+  sel.innerHTML = zoneTypes.map(t=>`<option value="${t.id}" ${t.id===selectedTypeId?'selected':''}>${zones.find(z=>z.id===t.zoneId)?.name||''} · ${t.label}</option>`).join('');
+}
+
+window.setVibe = function(v) {
+  currentVibe = v;
+  document.querySelectorAll('.vibe-opt').forEach(b=>b.classList.toggle('active',b.dataset.vibe===v));
+};
+
+window.saveItem = async function() {
+  const btn = document.getElementById('btnItemSave');
+  btn.disabled = true; btn.textContent = '保存中...';
+  try {
+    const typeId = document.getElementById('itemTypeSelect').value;
+    const zone = zoneTypes.find(t=>t.id===typeId);
+    const existing = items.find(i=>i.id===editingItemId);
+
+    let photoUrl = existing?.photoUrl || null;
+    if (currentPhotoBlob) {
+      // delete old photo if exists
+      if (existing?.photoUrl) {
+        try { await deleteObject(ref(storage, existing.photoUrl)); } catch(e){}
+      }
+      const storageRef = ref(storage, `wardrobe/${editingItemId}.webp`);
+      await uploadBytes(storageRef, currentPhotoBlob);
+      photoUrl = await getDownloadURL(storageRef);
+    }
+
+    await setDoc(doc(db,'items',editingItemId), {
+      typeId,
+      zoneId: zone?.zoneId || existing?.zoneId || null,
+      vibe: currentVibe,
+      seasons: [...document.querySelectorAll('#itemSeasonRow .item-s-btn')]
+        .filter(b=>b.className.includes('active-'))
+        .map(b=>b.dataset.season),
+      note: document.getElementById('itemNote').value.trim(),
+      photoUrl,
+      createdAt: existing?.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
+    closeModal('itemModal');
+  } catch(e) { alert('保存失败'); setSyncStatus('error'); }
+  finally { btn.disabled=false; btn.textContent='保存'; }
+};
+
+window.deleteItem = async function() {
+  if(!editingItemId||!confirm('确定删除？')) return;
+  const item = items.find(i=>i.id===editingItemId);
+  await deleteDoc(doc(db,'items',editingItemId));
+  if(item?.photoUrl) {
+    try { await deleteObject(ref(storage,item.photoUrl)); } catch(e){}
+  }
+  closeModal('itemModal');
+};
+
+// ── ZONE MODAL ────────────────────────────────────────
+const EMOJI_ROW_EMOJIS = ['🧢','🪖','👒','🎩','🧣','🧤','👕','👔','🧥','🥼','👗','👘','👖','👟','👠','👡','👢','🥿','👜','👝','🎒','💼','💍','⌚','🕶️'];
+let selectedEmoji = '📦';
+
+window.openZoneModal = function(zoneId) {
+  editingZoneId = zoneId;
+  const zone = zoneId ? zones.find(z=>z.id===zoneId) : null;
+  document.getElementById('zoneModalTitle').textContent = zone ? '编辑分类' : '新建大分类';
+  document.getElementById('zoneName').value = zone?.name || '';
+  selectedEmoji = zone?.emoji || '📦';
+  renderEmojiPicker();
+  document.getElementById('zoneModal').classList.add('open');
+};
+
+function renderEmojiPicker() {
+  document.getElementById('emojiPicker').innerHTML = EMOJI_ROW_EMOJIS.map(e=>
+    `<span class="emoji-opt ${e===selectedEmoji?'selected':''}" onclick="selectEmoji('${e}')">${e}</span>`
+  ).join('');
+}
+
+window.selectEmoji = function(e) { selectedEmoji=e; renderEmojiPicker(); };
+
+window.saveZone = async function() {
+  const name = document.getElementById('zoneName').value.trim();
+  if(!name) { alert('请输入名称'); return; }
+  const id = editingZoneId || doc(collection(db,'zones')).id;
+  const existing = editingZoneId ? zones.find(z=>z.id===editingZoneId) : null;
+  await setDoc(doc(db,'zones',id), {
+    name, emoji: selectedEmoji,
+    order: existing?.order ?? zones.length,
+    createdAt: existing?.createdAt || new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  });
+  closeModal('zoneModal');
+};
+
+window.deleteZone = async function(zoneId) {
+  const types = zoneTypes.filter(t=>t.zoneId===zoneId);
+  const zoneItems = items.filter(i=>i.zoneId===zoneId);
+
+  if(zoneItems.length > 0) {
+    // must transfer items first - show transfer for whole zone
+    const otherTypes = zoneTypes.filter(t=>t.zoneId!==zoneId);
+    if(!otherTypes.length) { alert('没有其他分类可以转移，请先添加其他大分类或删除该分类下的衣物'); return; }
+    pendingDeleteZoneId = zoneId;
+    pendingDeleteTypeId = null;
+    document.getElementById('transferDesc').textContent =
+      `「${zones.find(z=>z.id===zoneId)?.name}」下共有 ${zoneItems.length} 件衣物，请选择转移目标分类：`;
+    document.getElementById('transferTarget').innerHTML = otherTypes.map(t=>
+      `<option value="${t.id}|${t.zoneId}">${zones.find(z=>z.id===t.zoneId)?.name||''} · ${t.label}</option>`
+    ).join('');
+    document.getElementById('transferModal').classList.add('open');
+    return;
+  }
+
+  if(!confirm(`删除「${zones.find(z=>z.id===zoneId)?.name}」及其所有小分类？`)) return;
+  const batch = writeBatch(db);
+  types.forEach(t=>batch.delete(doc(db,'zoneTypes',t.id)));
+  batch.delete(doc(db,'zones',zoneId));
+  await batch.commit();
+};
+
+// ── TYPE MODAL ────────────────────────────────────────
+window.openTypeModal = function(typeId, zoneId) {
+  editingTypeId = typeId;
+  editingTypeZoneId = zoneId;
+  const type = typeId ? zoneTypes.find(t=>t.id===typeId) : null;
+  document.getElementById('typeModalTitle').textContent = type ? '编辑小分类' : '新建小分类';
+  document.getElementById('typeName').value = type?.label || '';
+  document.getElementById('typeModal').classList.add('open');
+};
+
+window.saveType = async function() {
+  const label = document.getElementById('typeName').value.trim();
+  if(!label) { alert('请输入名称'); return; }
+  const id = editingTypeId || doc(collection(db,'zoneTypes')).id;
+  const existing = editingTypeId ? zoneTypes.find(t=>t.id===editingTypeId) : null;
+  await setDoc(doc(db,'zoneTypes',id), {
+    label, zoneId: editingTypeZoneId,
+    order: existing?.order ?? zoneTypes.filter(t=>t.zoneId===editingTypeZoneId).length,
+    createdAt: existing?.createdAt || new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  });
+  closeModal('typeModal');
+};
+
+window.deleteType = async function(typeId, zoneId) {
+  const affectedItems = items.filter(i=>i.typeId===typeId);
+  if(affectedItems.length > 0) {
+    const otherTypes = zoneTypes.filter(t=>t.id!==typeId);
+    if(!otherTypes.length) { alert('没有其他分类可以转移，请先添加其他分类'); return; }
+    pendingDeleteTypeId = typeId;
+    pendingDeleteZoneId = null;
+    const typeName = zoneTypes.find(t=>t.id===typeId)?.label||'';
+    document.getElementById('transferDesc').textContent =
+      `「${typeName}」下有 ${affectedItems.length} 件衣物，请选择转移目标：`;
+    document.getElementById('transferTarget').innerHTML = otherTypes.map(t=>
+      `<option value="${t.id}|${t.zoneId}">${zones.find(z=>z.id===t.zoneId)?.name||''} · ${t.label}</option>`
+    ).join('');
+    document.getElementById('transferModal').classList.add('open');
+    return;
+  }
+  if(!confirm('确定删除这个小分类？')) return;
+  await deleteDoc(doc(db,'zoneTypes',typeId));
+};
+
+window.confirmTransfer = async function() {
+  const val = document.getElementById('transferTarget').value;
+  if(!val) return;
+  const [newTypeId, newZoneId] = val.split('|');
+  const batch = writeBatch(db);
+  const now = new Date().toISOString();
+
+  if(pendingDeleteTypeId) {
+    // transfer items from deleted type
+    items.filter(i=>i.typeId===pendingDeleteTypeId).forEach(i=>{
+      batch.set(doc(db,'items',i.id), {...i, typeId:newTypeId, zoneId:newZoneId, updatedAt:now});
+    });
+    batch.delete(doc(db,'zoneTypes',pendingDeleteTypeId));
+
+  } else if(pendingDeleteZoneId) {
+    // transfer all items in zone, then delete all types and zone
+    items.filter(i=>i.zoneId===pendingDeleteZoneId).forEach(i=>{
+      batch.set(doc(db,'items',i.id), {...i, typeId:newTypeId, zoneId:newZoneId, updatedAt:now});
+    });
+    zoneTypes.filter(t=>t.zoneId===pendingDeleteZoneId).forEach(t=>{
+      batch.delete(doc(db,'zoneTypes',t.id));
+    });
+    batch.delete(doc(db,'zones',pendingDeleteZoneId));
+  }
+
+  await batch.commit();
+  pendingDeleteTypeId = null;
+  pendingDeleteZoneId = null;
+  closeModal('transferModal');
+};
+
+// ── NOTES ─────────────────────────────────────────────
+window.openNoteModal = function() {
+  editingNoteId = null;
+  document.getElementById('noteTitleLabel').textContent = '新建笔记';
+  ['noteTag','noteTitleInput','noteContent'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('noteDelete').style.display = 'none';
+  document.getElementById('noteModal').classList.add('open');
+};
+
+window.openEditNote = function(id) {
+  const note = notes.find(n=>n.id===id); if(!note) return;
+  editingNoteId = id;
+  document.getElementById('noteTitleLabel').textContent = '编辑笔记';
+  document.getElementById('noteTag').value = note.tag||'';
+  document.getElementById('noteTitleInput').value = note.title||'';
+  document.getElementById('noteContent').value = note.content||'';
+  document.getElementById('noteDelete').style.display = 'block';
+  document.getElementById('noteModal').classList.add('open');
+};
+
+window.saveNote = async function() {
+  const title = document.getElementById('noteTitleInput').value.trim();
+  if(!title) { alert('请输入标题'); return; }
+  const id = editingNoteId || doc(collection(db,'notes')).id;
+  await setDoc(doc(db,'notes',id), {
+    module:'wardrobe',
+    tag: document.getElementById('noteTag').value.trim(),
+    title, content: document.getElementById('noteContent').value.trim(),
+    createdAt: editingNoteId ? (notes.find(n=>n.id===editingNoteId)?.createdAt||new Date().toISOString()) : new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  });
+  closeModal('noteModal');
+};
+
+window.deleteNote = async function() {
+  if(!editingNoteId||!confirm('确定删除？')) return;
+  await deleteDoc(doc(db,'notes',editingNoteId));
+  closeModal('noteModal');
+};
+
+// ── UTILS ─────────────────────────────────────────────
+window.switchTab = function(tab, btn) {
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById(tab).classList.add('active');
+  btn.classList.add('active');
+  if (tab === 'annotate') renderAnnotate();
+  if (tab === 'stats') renderStats();
+};
+
+// ── STATS ──────────────────────────────────────────────
+function renderStats() {
+  const el = document.getElementById('statsContent');
+  if (!el) return;
+
+  const withPhoto = items.filter(i=>i.photoUrl);
+  const total = items.length;
+  const untagged = withPhoto.filter(i=>!(i.seasons||[]).length).length;
+
+  // per-zone counts
+  const zoneRows = zones.map(z=>{
+    const cnt = items.filter(i=>i.zoneId===z.id).length;
+    return {zone:z, cnt};
+  }).filter(r=>r.cnt>0);
+
+  // per-season counts (item can appear in multiple seasons)
+  const seasonData = [
+    {key:'spring', label:'春', icon:'🌸', bar:'bar-spring'},
+    {key:'summer', label:'夏', icon:'☀️', bar:'bar-summer'},
+    {key:'autumn', label:'秋', icon:'🍂', bar:'bar-autumn'},
+    {key:'winter', label:'冬', icon:'❄️', bar:'bar-winter'},
+  ].map(s=>({
+    ...s,
+    cnt: items.filter(i=>(i.seasons||[]).includes(s.key)).length
+  }));
+  const maxSeason = Math.max(...seasonData.map(s=>s.cnt), 1);
+
+  el.innerHTML = `
+    <div class="stats-hero">
+      <div class="stats-total-num">${total}</div>
+      <div class="stats-total-lbl">件衣物</div>
+      <div class="stats-zone-grid">
+        ${zoneRows.map(r=>`
+          <div class="stats-zone-item">
+            <span class="stats-zone-emoji">${r.zone.emoji||'📦'}</span>
+            <div class="stats-zone-info">
+              <div class="stats-zone-name">${r.zone.name}</div>
+              <div class="stats-zone-count">${r.cnt}</div>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>
+
+    <div class="stats-section-title">季节分布</div>
+    ${seasonData.map(s=>`
+      <div class="stats-season-card">
+        <div class="stats-season-header">
+          <span class="stats-season-label">${s.icon} ${s.label}</span>
+          <span class="stats-season-count">${s.cnt} 件</span>
+        </div>
+        <div class="stats-bar-track">
+          <div class="stats-bar-fill ${s.bar}" style="width:${Math.round(s.cnt/maxSeason*100)}%"></div>
+        </div>
+      </div>`).join('')}
+
+    <div class="stats-untagged-row">
+      <span class="stats-untagged-lbl">未标注季节</span>
+      <span class="stats-untagged-num">${untagged} 件</span>
+    </div>
+  `;
+
+  // Animate bars in after render
+  requestAnimationFrame(() => {
+    el.querySelectorAll('.stats-bar-fill').forEach(b => {
+      const w = b.style.width;
+      b.style.width = '0';
+      requestAnimationFrame(() => { b.style.width = w; });
+    });
+  });
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+window.closeModal = closeModal;
+
+document.querySelectorAll('.modal-overlay').forEach(o=>{
+  o.addEventListener('click', e=>{ if(e.target===o) o.classList.remove('open'); });
+});
+
+// ── INIT ──────────────────────────────────────────────
+async function init() {
+  setSyncStatus('syncing');
+  await seedAndMigrate();
+  initListeners();
+}
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,3091 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Gemini Echo</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js" defer></script>
+    <style>
+        /* ── Design Tokens ─────────────────────────────────────────── */
+        :root {
+            --bg-color: #F2F2F7;
+            --card-bg: #FFFFFF;
+            --text-primary: #000000;
+            --text-secondary: #8E8E93;
+            --accent-color: #007AFF;
+            --bubble-user-bg: #E5E5EA;
+            --bubble-model-bg: #FFFFFF;
+            --thought-bg: #F2F2F7;
+            --thought-border: #E5E5EA;
+            --shadow: 0 2px 8px rgba(0,0,0,0.04);
+            --header-bg: rgba(242,242,247,0.95);
+            --pill-bg: rgba(0,0,0,0.05);
+            --pill-hover: rgba(0,0,0,0.1);
+            --footer-hover: rgba(0,0,0,0.03);
+            --highlight-bg: #FFE336;
+            --highlight-current: #FF9F0A;
+            --scroll-thumb: rgba(0,0,0,0.2);
+            --scroll-thumb-hover: rgba(0,0,0,0.4);
+            --dash-border: #C7C7CC;
+        }
+        body.dark-mode {
+            --bg-color: #000000;
+            --card-bg: #1C1C1E;
+            --text-primary: #FFFFFF;
+            --text-secondary: #98989D;
+            --accent-color: #0A84FF;
+            --bubble-user-bg: #2C2C2E;
+            --bubble-model-bg: #1C1C1E;
+            --thought-bg: #252527;
+            --thought-border: #38383A;
+            --shadow: none;
+            --header-bg: rgba(0,0,0,0.95);
+            --pill-bg: rgba(255,255,255,0.1);
+            --pill-hover: rgba(255,255,255,0.2);
+            --footer-hover: rgba(255,255,255,0.05);
+            --highlight-bg: #635000;
+            --highlight-current: #A05A00;
+            --scroll-thumb: rgba(255,255,255,0.2);
+            --scroll-thumb-hover: rgba(255,255,255,0.4);
+            --dash-border: #48484A;
+        }
+
+        /* ── Base ──────────────────────────────────────────────────── */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* ── Scrollbar ─────────────────────────────────────────────── */
+        ::-webkit-scrollbar { width: 16px; height: 16px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb {
+            background-color: var(--scroll-thumb);
+            border-radius: 20px;
+            border: 4px solid transparent;
+            background-clip: content-box;
+        }
+        ::-webkit-scrollbar-thumb:hover { background-color: var(--scroll-thumb-hover); border: 2px solid transparent; }
+
+        /* ── Header ────────────────────────────────────────────────── */
+        .header {
+            padding: 0 16px;
+            background-color: var(--header-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 0.5px solid var(--thought-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+            z-index: 100;
+            height: 56px;
+            box-sizing: border-box;
+        }
+        .header h3 { margin: 0; font-size: 16px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-right: 10px; }
+        .controls { display: flex; gap: 4px; align-items: center; }
+        .btn {
+            background: none; border: none; cursor: pointer;
+            padding: 8px; color: var(--accent-color);
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 8px; transition: background 0.2s;
+        }
+        .btn:hover { background: rgba(128,128,128,0.1); }
+        .btn:active { opacity: 0.6; }
+        .btn svg { width: 22px; height: 22px; fill: currentColor; }
+        .upload-btn { font-size: 13px; color: var(--accent-color); font-weight: 500; cursor: pointer; padding: 6px 12px; background: rgba(0,122,255,0.1); border-radius: 14px; white-space: nowrap; margin-left: 4px; }
+        input[type="file"] { display: none; }
+
+        /* ── Firebase 同步状态指示器 ──────────────────────────────── */
+        .sync-badge {
+            display: flex; align-items: center; gap: 5px;
+            font-size: 11px; font-weight: 500; color: var(--text-secondary);
+            padding: 4px 9px; border-radius: 12px;
+            background: var(--pill-bg); white-space: nowrap;
+            transition: all 0.3s ease; cursor: default;
+            margin-left: 2px; flex-shrink: 0;
+        }
+        .sync-dot {
+            width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+            transition: background-color 0.3s;
+        }
+        .sync-badge.loading  .sync-dot { background: #FF9F0A; animation: pulse 1s infinite; }
+        .sync-badge.ok       .sync-dot { background: #34C759; }
+        .sync-badge.error    .sync-dot { background: #FF3B30; }
+        .sync-badge.idle     .sync-dot { background: var(--text-secondary); opacity: 0.4; }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+        /* ── Toast 通知 ───────────────────────────────────────────── */
+        .fb-toast {
+            position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+            background: var(--card-bg); color: var(--text-primary);
+            padding: 10px 18px; border-radius: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            font-size: 13px; font-weight: 500;
+            opacity: 0; transition: all 0.25s ease;
+            z-index: 9999; pointer-events: none;
+            border: 0.5px solid var(--thought-border);
+            max-width: calc(100vw - 48px); text-align: center;
+        }
+        .fb-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+        /* ── Export Menu ───────────────────────────────────────────── */
+        .export-menu {
+            display: none;
+            position: absolute;
+            top: 60px; right: 16px;
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            overflow: hidden;
+            z-index: 1000;
+            min-width: 140px;
+        }
+        .export-menu.show { display: block; animation: fadeIn 0.2s; }
+        .export-item {
+            padding: 12px 20px; cursor: pointer;
+            font-size: 14px; color: var(--text-primary);
+            transition: background 0.2s;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .export-item:hover { background: var(--pill-hover); }
+        .export-item:active { opacity: 0.6; }
+
+        /* ── Search Bar ────────────────────────────────────────────── */
+        .search-bar {
+            display: none;
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            padding: 10px 16px;
+            background-color: var(--header-bg);
+            border-bottom: 0.5px solid var(--thought-border);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            z-index: 999;
+            flex-direction: row;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+        .search-bar.open { display: flex; animation: slideIn 0.2s ease-out; }
+        .search-input {
+            flex: 1; min-width: 0;
+            padding: 8px 12px; border-radius: 8px;
+            border: 1px solid var(--thought-border);
+            background-color: var(--bubble-model-bg);
+            color: var(--text-primary); font-size: 14px; outline: none;
+        }
+        .search-info { font-size: 12px; color: var(--text-secondary); min-width: 40px; text-align: center; font-variant-numeric: tabular-nums; }
+        /* ── Search scope toggle ── */
+        .search-scope-btn {
+            font-size: 11px; font-weight: 600; padding: 5px 10px;
+            border-radius: 10px; border: 1px solid var(--thought-border);
+            background: var(--pill-bg); color: var(--text-secondary);
+            cursor: pointer; white-space: nowrap; transition: all 0.2s; flex-shrink: 0;
+        }
+        .search-scope-btn.global {
+            background: var(--accent-color); color: #fff; border-color: var(--accent-color);
+        }
+        /* ── Global search results ── */
+        .global-results-wrapper { padding: 16px 0 40px; }
+        .global-session-hdr {
+            font-size: 11px; font-weight: 700; color: var(--text-secondary);
+            text-transform: uppercase; letter-spacing: 0.5px;
+            padding: 16px 4px 6px; opacity: 0.7; border-bottom: 1px solid var(--thought-border);
+            margin-bottom: 8px;
+        }
+        .global-result-item {
+            padding: 10px 12px; border-radius: 12px; margin-bottom: 6px;
+            cursor: pointer; transition: background 0.15s;
+            border: 1px solid var(--thought-border);
+            background: var(--card-bg);
+        }
+        .global-result-item:hover { background: var(--bubble-user-bg); }
+        .global-result-role { font-size: 11px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px; }
+        .global-result-excerpt { font-size: 13px; color: var(--text-primary); line-height: 1.5; word-break: break-word; }
+        .global-result-excerpt mark { background: var(--highlight-bg); color: var(--text-primary); border-radius: 2px; padding: 0 1px; }
+        .global-result-excerpt mark.current { background: var(--highlight-current); color: #fff; }
+
+        /* ── Chat Container ────────────────────────────────────────── */
+        .chat-container {
+            flex: 1;
+            min-height: 0; /* flex child with overflow-y must have this or it busts the parent on old Safari */
+            overflow-y: auto;
+            padding: 0 max(20px, 15%) 40px max(25px, 15%);
+            scroll-behavior: smooth;
+            position: relative;
+        }
+        /* Pseudo-element top spacing keeps sticky headers flush */
+        .chat-container::before { content: ''; display: block; height: 30px; width: 100%; flex-shrink: 0; }
+
+        /* ── Empty State ───────────────────────────────────────────── */
+        .empty-state-wrapper { display: flex; flex: 1; align-items: center; justify-content: center; height: 100%; padding: 20px; box-sizing: border-box; }
+        .empty-state {
+            display: flex; flex-direction: column; align-items: center; gap: 20px;
+            color: var(--text-secondary);
+            border: 2px dashed var(--dash-border); border-radius: 24px;
+            padding: 50px 30px; width: 100%; max-width: 460px;
+            cursor: pointer; transition: all 0.2s ease;
+            background-color: rgba(0,0,0,0.01); text-align: center;
+        }
+        .empty-state:hover { border-color: var(--accent-color); background-color: rgba(0,122,255,0.03); transform: scale(1.01); }
+        .empty-icon { width: 56px; height: 56px; opacity: 0.4; fill: currentColor; margin-bottom: 10px; }
+        .empty-text-main { font-size: 20px; font-weight: 700; color: var(--text-primary); line-height: 1.3; letter-spacing: -0.5px; }
+        .empty-text-sub { font-size: 14px; opacity: 0.7; margin-top: 5px; }
+
+        /* ── Message Bubbles ───────────────────────────────────────── */
+        .msg-wrapper { margin-bottom: 32px; width: 100%; display: flex; flex-direction: column; align-items: flex-start; }
+        .message-bubble {
+            border-radius: 20px; border-top-left-radius: 4px;
+            max-width: 100%; position: relative;
+            box-shadow: var(--shadow);
+            overflow: visible; /* required for sticky thought headers */
+            display: flex; flex-direction: column;
+            background-color: var(--card-bg);
+        }
+        .message-bubble > :first-child { border-top-left-radius: 4px; border-top-right-radius: 20px; }
+
+        /* ── Thought Panel ─────────────────────────────────────────── */
+        .thought-panel { overflow: visible; background-color: transparent; border-bottom: 1px solid transparent; transition: all 0.3s ease; }
+        .thought-panel.open { background-color: var(--thought-bg); border-bottom: 1px solid var(--thought-border); }
+        .thought-header {
+            position: sticky; top: 0; z-index: 20;
+            padding: 14px 16px; display: flex; align-items: center; gap: 10px;
+            background-color: var(--thought-bg);
+            border-bottom: 1px solid transparent; transition: all 0.2s;
+            border-top-left-radius: 4px; border-top-right-radius: 20px;
+            cursor: pointer; user-select: none;
+        }
+        .thought-panel.open .thought-header { border-bottom: 1px solid var(--thought-border); box-shadow: 0 4px 10px -2px rgba(0,0,0,0.08); }
+        .thought-pill { display: flex; align-items: center; gap: 6px; background-color: var(--pill-bg); padding: 6px 12px; border-radius: 12px; transition: background 0.2s; }
+        .thought-pill:hover { background-color: var(--pill-hover); }
+        .thought-title { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+        .thought-icon { font-size: 10px; color: var(--text-secondary); transition: transform 0.3s; }
+        .thought-panel.open .thought-icon { transform: rotate(90deg); }
+        .trans-btn { font-size: 11px; color: var(--accent-color); background: none; border: none; cursor: pointer; font-weight: 500; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+        .thought-panel.open .trans-btn { opacity: 1; pointer-events: auto; }
+        .thought-body { display: none; padding: 10px 14px 20px 14px; font-size: 14px; color: var(--text-secondary); line-height: 1.6; }
+        .thought-panel.open .thought-body { display: block; animation: slideDown 0.2s ease-out; }
+        .thought-footer { display: none; padding: 12px; text-align: center; cursor: pointer; color: var(--accent-color); font-size: 12px; font-weight: 500; margin-top: 10px; border-top: 1px solid var(--thought-border); transition: background 0.2s; }
+        .thought-footer:hover { background-color: var(--footer-hover); }
+        .thought-panel.open .thought-footer { display: block; }
+
+        /* ── Message Text ──────────────────────────────────────────── */
+        .message-text { padding: 16px 14px; line-height: 1.65; font-size: 16px; }
+        .thought-panel + .message-text { padding-top: 16px; }
+
+        /* ── Markdown ──────────────────────────────────────────────── */
+        .markdown-body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        .markdown-body h1, .markdown-body h2, .markdown-body h3 { color: var(--text-primary); margin-top: 1.2em; margin-bottom: 0.5em; font-weight: 700; line-height: 1.3; }
+        .markdown-body ul, .markdown-body ol { padding-left: 20px; margin: 0.8em 0; }
+        .markdown-body li { margin: 0.3em 0; }
+        .markdown-body strong { color: var(--text-primary); font-weight: 700; }
+        .markdown-body code { font-family: SFMono-Regular, Consolas, monospace; background-color: rgba(128,128,128,0.1); color: var(--accent-color); padding: 2px 4px; border-radius: 4px; font-size: 0.9em; }
+        .markdown-body pre { background-color: rgba(0,0,0,0.03); padding: 12px; border-radius: 8px; overflow-x: auto; border: 0.5px solid var(--thought-border); }
+        .dark-mode .markdown-body pre { background-color: rgba(255,255,255,0.05); }
+        .markdown-body pre code { background: none; color: var(--text-primary); padding: 0; }
+        .markdown-body p { margin: 0.6em 0; }
+        .markdown-body img { max-width: 100%; width: auto; height: auto; border-radius: 8px; display: block; margin: 12px 0; border: 1px solid var(--thought-border); cursor: pointer; }
+
+        /* ── Main Wrapper & PC Push Layout ────────────────────────── */
+        .main-wrapper {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+        .content-column {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* ── Sidebar ───────────────────────────────────────────────── */
+        .sidebar-overlay {
+            /* Mobile default: fixed overlay */
+            position: fixed; top: 56px; left: -280px; width: 280px; bottom: 0;
+            background-color: var(--card-bg); border-right: 1px solid var(--thought-border);
+            z-index: 800; transition: transform 0.3s cubic-bezier(0.25,1,0.5,1);
+            transform: translateX(0); display: flex; flex-direction: column;
+            box-shadow: 4px 0 15px rgba(0,0,0,0.05);
+        }
+        .sidebar-overlay.open { transform: translateX(280px); }
+        .sidebar-header { padding: 16px; font-size: 14px; font-weight: 600; border-bottom: 1px solid var(--thought-border); color: var(--text-secondary); display: flex; justify-content: space-between; align-items: center; }
+        .file-list { flex: 1; overflow-y: auto; padding: 8px 0; }
+        .file-item { padding: 12px 16px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; transition: background 0.2s; border-left: 3px solid transparent; position: relative; }
+        .file-item:hover { background-color: var(--pill-bg); }
+        .file-item.active { background-color: var(--bubble-user-bg); border-left-color: var(--accent-color); }
+        .file-item.dragging { opacity: 0.4; }
+        .file-item.drag-above::before, .file-item.drag-below::after {
+            content: ''; position: absolute; left: 8px; right: 8px; height: 2px;
+            background: var(--accent-color); border-radius: 2px; pointer-events: none; z-index: 10;
+        }
+        .file-item.drag-above::before { top: -1px; }
+        .file-item.drag-below::after  { bottom: -1px; }
+        .file-name { font-size: 14px; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+        .file-info { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+        .sidebar-backdrop { display: none; position: fixed; top: 56px; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.3); z-index: 799; opacity: 0; transition: opacity 0.3s; }
+        .sidebar-overlay.open + .sidebar-backdrop { display: block; opacity: 1; }
+
+        /* ── PC Push Layout (≥768px) ───────────────────────────────── */
+        @media (min-width: 768px) {
+            .sidebar-overlay {
+                /* PC: 脱离 fixed，成为 flex 子元素，平推内容区 */
+                position: relative;
+                top: auto; left: auto; bottom: auto;
+                transform: none;
+                width: 0;
+                min-width: 0;
+                overflow: hidden;
+                transition: width 0.3s cubic-bezier(0.25,1,0.5,1),
+                            min-width 0.3s cubic-bezier(0.25,1,0.5,1);
+                box-shadow: none;
+                border-right: none;
+                flex-shrink: 0;
+            }
+            .sidebar-overlay.open {
+                width: 280px;
+                min-width: 280px;
+                transform: none;
+                border-right: 1px solid var(--thought-border);
+                box-shadow: none;
+            }
+            /* PC 端无需半透明遮罩 */
+            .sidebar-overlay.open + .sidebar-backdrop { display: none; }
+            /* search-bar 在 content-column 内，position: absolute 相对 content-column 定位 */
+            .search-bar { left: 0; right: 0; }
+        }
+
+        /* ── Image Module ──────────────────────────────────────────── */
+        .img-container { position: relative; display: block; margin: 12px 0; max-width: 420px; width: 100%; }
+        .img-container img { display: block; width: 100%; height: auto; border-radius: 12px; border: 1px solid rgba(0,0,0,0.1); background-color: var(--card-bg); }
+        .img-del-btn {
+            position: absolute; top: 8px; right: 8px;
+            background: rgba(0,0,0,0.4); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            color: rgba(255,255,255,0.95); border: 0.5px solid rgba(255,255,255,0.3);
+            border-radius: 8px; width: 28px; height: 28px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 14px; opacity: 0; transition: all 0.2s ease; z-index: 10;
+        }
+        .img-del-btn:hover { background: rgba(255,59,48,0.9); transform: scale(1.05); }
+        .img-container:hover .img-del-btn { opacity: 1; }
+
+        /* ── Role Label ────────────────────────────────────────────── */
+        .role-label { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; margin-left: 4px; font-weight: 600; opacity: 0.8; min-height: 24px; }
+        .add-img-btn-small { cursor: pointer; color: var(--text-secondary); opacity: 0; transition: all 0.2s; padding: 4px 6px; border-radius: 6px; display: flex; align-items: center; justify-content: center; margin-top: 1px; }
+        .add-img-btn-small:hover { color: var(--accent-color); background: var(--pill-hover); }
+        .msg-wrapper:hover .add-img-btn-small { opacity: 1; }
+        /* Legacy — hide old button styles if any remain */
+        .msg-footer, .add-img-btn { display: none !important; }
+
+        /* ── Timestamp ─────────────────────────────────────────────── */
+        .msg-timestamp { font-size: 11px; font-weight: 400; color: var(--text-secondary); opacity: 0.65; letter-spacing: 0; }
+
+        /* ── System Instructions ───────────────────────────────────── */
+        .system-instruction-wrapper { width: 100%; margin: 0 0 28px 0; flex-shrink: 0; }
+        .system-instruction-label { font-size: 11px; font-weight: 600; color: var(--text-secondary); letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 6px; margin-left: 4px; opacity: 0.8; display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+        .system-instruction-label svg { width: 12px; height: 12px; fill: currentColor; opacity: 0.7; }
+        .system-instruction-textarea { width: 100%; min-height: 72px; max-height: 260px; padding: 14px 16px; border-radius: 16px; border: 1px solid var(--thought-border); background-color: var(--card-bg); color: var(--text-primary); font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.6; resize: vertical; outline: none; box-shadow: var(--shadow); box-sizing: border-box; transition: border-color 0.2s, box-shadow 0.2s; }
+        .system-instruction-textarea::placeholder { color: var(--text-secondary); opacity: 0.6; }
+        .system-instruction-textarea:focus { border-color: var(--accent-color); box-shadow: 0 0 0 3px rgba(0,122,255,0.12); }
+        .system-instruction-textarea.saved-flash { border-color: #34C759; box-shadow: 0 0 0 3px rgba(52,199,89,0.15); transition: border-color 0.15s, box-shadow 0.15s; }
+        .model-name-pill { font-size: 10px; font-weight: 500; letter-spacing: 0.2px; text-transform: none; color: var(--text-secondary); background: var(--pill-bg); border: 1px solid var(--thought-border); border-radius: 8px; padding: 2px 8px; white-space: nowrap; margin-left: auto; }
+
+        /* ── Sidebar Rename Input ──────────────────────────────────── */
+        .file-name-input { background: var(--card-bg); border: 1px solid var(--accent-color); border-radius: 4px; padding: 0 6px; outline: none; width: 100%; font-size: 14px; color: var(--text-primary); font-family: inherit; line-height: 1.4; }
+
+        /* ── Delete Button ─────────────────────────────────────────── */
+        .del-session-btn { padding: 8px; color: var(--text-secondary); cursor: pointer; opacity: 0; transition: all 0.2s; border-radius: 4px; }
+        .del-session-btn:hover { background-color: rgba(255,59,48,0.1); color: #FF3B30; }
+        .file-item:hover .del-session-btn { opacity: 1; }
+
+        /* ── Group ─────────────────────────────────────────────────── */
+        .group-header {
+            display: flex; align-items: center; gap: 6px;
+            padding: 8px 12px 6px 12px;
+            cursor: pointer; user-select: none;
+            color: var(--text-secondary);
+            font-size: 11px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase;
+            border-top: 1px solid var(--thought-border);
+            margin-top: 4px;
+            position: relative;
+        }
+        .group-header:first-child { border-top: none; margin-top: 0; }
+        .group-header:hover { color: var(--text-primary); }
+        .group-chevron {
+            width: 12px; height: 12px; fill: currentColor; flex-shrink: 0;
+            transition: transform 0.2s ease;
+        }
+        .group-header.collapsed .group-chevron { transform: rotate(-90deg); }
+        .group-name-text { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .group-actions { display: flex; gap: 2px; opacity: 0; transition: opacity 0.2s; }
+        .group-header:hover .group-actions { opacity: 1; }
+        .group-action-btn {
+            background: none; border: none; cursor: pointer; padding: 3px 5px;
+            color: var(--text-secondary); border-radius: 4px; font-size: 11px;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.15s;
+        }
+        .group-action-btn:hover { background: var(--pill-hover); color: var(--text-primary); }
+        .group-action-btn.del:hover { background: rgba(255,59,48,0.1); color: #FF3B30; }
+        .group-items { overflow: hidden; transition: max-height 0.25s ease; }
+        .group-header.collapsed + .group-items { max-height: 0 !important; }
+        .group-header.drag-over-group { background: var(--bubble-user-bg); border-radius: 6px; color: var(--accent-color); }
+        /* 未分组区 */
+        .ungrouped-label {
+            padding: 8px 12px 4px 12px;
+            font-size: 11px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase;
+            color: var(--text-secondary); opacity: 0.5;
+            border-top: 1px solid var(--thought-border); margin-top: 4px;
+        }
+        .ungrouped-label:first-child { border-top: none; margin-top: 0; }
+
+        /* ── Search Highlight ──────────────────────────────────────── */
+        mark { background-color: var(--highlight-bg); color: var(--text-primary); border-radius: 3px; padding: 0 1px; }
+        mark.current { background-color: var(--highlight-current); color: #fff; }
+
+        /* ── Lightbox ──────────────────────────────────────────────── */
+        .lightbox-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.88); z-index: 9999; cursor: zoom-out; align-items: center; justify-content: center; }
+        .lightbox-overlay.open { display: flex; animation: pureFadeIn 0.18s ease-out; }
+        .lightbox-overlay img { max-width: 92vw; max-height: 92vh; border-radius: 8px; object-fit: contain; cursor: default; box-shadow: 0 24px 80px rgba(0,0,0,0.6); }
+        .lightbox-close { position: absolute; top: 20px; right: 24px; color: rgba(255,255,255,0.75); font-size: 28px; background: none; border: none; cursor: pointer; padding: 8px; line-height: 1; }
+        .lightbox-close:hover { color: #fff; }
+
+        /* ── Drag & Drop Overlay ───────────────────────────────────── */
+        .drag-overlay { display: none; position: fixed; inset: 0; background: rgba(0,122,255,0.05); border: 3px dashed var(--accent-color); z-index: 2000; align-items: center; justify-content: center; pointer-events: none; box-sizing: border-box; }
+        .drag-overlay.active { display: flex; }
+        .drag-overlay-label { font-size: 18px; font-weight: 600; color: var(--accent-color); background: var(--card-bg); padding: 16px 32px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.12); }
+
+        /* ── Animations ────────────────────────────────────────────── */
+        /* uiFadeIn：含位移，用于菜单、搜索栏等小型 UI 弹出元素 */
+        @keyframes fadeIn    { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideIn   { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-5px);  } to { opacity: 1; transform: translateY(0); } }
+        /*
+         * pureFadeIn：纯透明度过渡，专用于 Lightbox 全屏遮罩。
+         * 宪法规定：图片密集弹窗禁止 scale，同理禁止 translateY。
+         * 原因：全屏遮罩在图片加载瞬间做位移，会在 GPU 合成层边界
+         * 产生明显的"内容跳动感"；纯 opacity 由合成器完成，不触发重排。
+         */
+        @keyframes pureFadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* ── Utility classes（替代 JS 内联 style.cssText）─────────── */
+        /* Batch 5：将原本散落在 JS 中的内联样式提升为具名 class，
+           使 DevTools 可追踪来源，避免 JS 与样式混合维护。        */
+        .sidebar-text-wrap  { overflow: hidden; flex: 1; }
+        .role-label-left    { display: flex; align-items: center; gap: 8px; }
+
+        /* ── Mobile ────────────────────────────────────────────────── */
+        @media (max-width: 768px) {
+            .header { padding: 0 12px; }
+            .search-bar { padding: 10px 8px; gap: 6px; }
+            .search-input { min-width: 0; flex: 1; }
+            .chat-container { padding: 0 12px 120px 24px; }
+            .chat-container::before { height: 20px; }
+            .message-bubble { max-width: 100%; }
+            .img-container { max-width: 100%; }
+            .add-img-btn-small { opacity: 0.6; padding: 6px 12px; }
+            .img-del-btn { opacity: 1; width: 32px; height: 32px; }
+            .del-session-btn { opacity: 1; }
+            .sidebar-overlay { width: 85%; left: -85%; }
+            .sidebar-overlay.open { transform: translateX(100%); }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ── Header ─────────────────────────────────────────────────────── -->
+<div class="header">
+    <div style="display:flex; align-items:center; gap:8px; overflow:hidden;">
+        <button class="btn" data-action="sidebar-toggle" title="会话列表">
+            <svg viewBox="0 0 24 24"><path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z"/></svg>
+        </button>
+        <h3 id="headerTitle">Gemini Echo</h3>
+    </div>
+    <div class="controls">
+        <button class="btn" data-action="search-toggle" title="搜索">
+            <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+        </button>
+        <button class="btn" data-action="export-menu" title="导出">
+            <svg viewBox="0 0 24 24"><path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67l2.59-2.58L17 11.5l-5 5-5-5 1.41-1.41L11 12.67V3h2z"/></svg>
+        </button>
+        <button class="btn" data-action="scroll-top" title="回到顶部">
+            <svg viewBox="0 0 24 24"><path d="M4 12l1.41 1.41L11 7.83V20h2V7.83l5.58 5.59L20 12l-8-8-8 8z"/></svg>
+        </button>
+        <button class="btn" data-action="scroll-bottom" title="跳到底部">
+            <svg viewBox="0 0 24 24"><path d="M20 12l-1.41-1.41L13 16.17V4h-2v12.17l-5.58-5.59L4 12l8 8 8-8z"/></svg>
+        </button>
+        <label for="fileInput" class="upload-btn">导入</label>
+        <div class="sync-badge idle" id="syncBadge" title="Firebase 同步状态">
+            <div class="sync-dot"></div>
+            <span id="syncLabel">云端</span>
+        </div>
+        <button class="btn" data-action="theme-toggle" title="切换模式">
+            <svg id="icon-sun" viewBox="0 0 24 24" style="display:none"><path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58c-.39-.39-1.03-.39-1.41 0-.39.39-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37c-.39-.39-1.03-.39-1.41 0-.39.39-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0 .39-.39.39-1.03 0-1.41l-1.06-1.06zm1.06-10.96c.39-.39.39-1.03 0-1.41-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06zM7.05 18.36c.39-.39.39-1.03 0-1.41-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06z"/></svg>
+            <svg id="icon-moon" viewBox="0 0 24 24"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/></svg>
+        </button>
+    </div>
+</div>
+
+<!--
+  accept 属性故意留空：Windows 下 Gemini 导出文件名形如 "01 文件.json"、"12 文件.json"，
+  系统依赖文件类型关联而非扩展名过滤，添加 accept 会导致用户无法在文件选择器中选中目标文件。
+  文件类型合法性校验已在 App.Parser.parseGeminiData() 的 JSON.parse 及结构检测中完成。
+-->
+<input type="file" id="fileInput" multiple />
+<!--
+  imgInserter：onchange 属性已移除（死代码）。
+  triggerInsert() 每次点击时动态覆写 inserter.onchange 以绑定当前气泡的闭包上下文，
+  此处的静态 onchange 不会生效，对应的空函数 handleInsert 已一并删除。
+-->
+<input type="file" id="imgInserter" accept="image/*" style="display:none" />
+
+<!-- ── Main Wrapper（PC 平推布局容器）──────────────────────────── -->
+<div class="main-wrapper">
+
+<!-- ── Sidebar ────────────────────────────────────────────────────── -->
+<div class="sidebar-overlay" id="sidebar">
+    <div class="sidebar-header">
+        <span>会话列表</span>
+        <div style="display:flex;gap:6px;align-items:center;">
+            <button id="addGroupBtn" title="新建分组" style="background:none;border:none;cursor:pointer;color:var(--accent-color);font-size:13px;font-weight:600;padding:2px 6px;border-radius:6px;display:flex;align-items:center;gap:3px;opacity:0.8;" onmouseover="this.style.opacity=1;this.style.background='var(--pill-hover)'" onmouseout="this.style.opacity=0.8;this.style.background='none'">
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
+                分组
+            </button>
+            <label for="fileInput" style="cursor:pointer; color:var(--accent-color); font-size:20px; line-height:1;">+</label>
+        </div>
+    </div>
+    <div class="file-list" id="fileList"></div>
+</div>
+<div class="sidebar-backdrop" data-action="sidebar-backdrop"></div>
+
+<!-- ── Content Column（search bar + chat）────────────────────────── -->
+<div class="content-column">
+
+<!-- ── Search Bar ─────────────────────────────────────────────────── -->
+<div class="search-bar" id="searchBar">
+    <input type="text" class="search-input" id="searchInput" placeholder="查找...">
+    <span class="search-info" id="searchInfo">0/0</span>
+    <button class="search-scope-btn" id="searchScopeBtn" data-action="search-scope" title="切换搜索范围">当前</button>
+    <button class="btn" data-action="search-prev"><svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" transform="rotate(90 12 12)"/></svg></button>
+    <button class="btn" data-action="search-next"><svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" transform="rotate(-90 12 12)"/></svg></button>
+    <button class="btn" data-action="search-close" style="color:var(--text-secondary)">✕</button>
+</div>
+
+<!-- ── Main Chat Area ─────────────────────────────────────────────── -->
+<div class="chat-container" id="chatContainer">
+    <div class="empty-state-wrapper">
+        <label for="fileInput" class="empty-state">
+            <svg class="empty-icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-5.5-2.5l7.51-3.22-3.22-7.51-7.51 3.22 3.22 7.51z"/></svg>
+            <div class="empty-text-main">Context Window: Infinite.<br>Memory: Ready.</div>
+            <div class="empty-text-sub">(请投喂你的聊天记录。)</div>
+        </label>
+    </div>
+</div>
+
+</div><!-- /.content-column -->
+</div><!-- /.main-wrapper -->
+
+<!-- ── Export Menu ────────────────────────────────────────────────── -->
+<div class="export-menu" id="exportMenu">
+    <div class="export-item" data-action="export-html">📄 导出 HTML</div>
+    <div class="export-item" data-action="export-markdown">📝 导出 Markdown</div>
+    <div class="export-item" data-action="export-txt">📋 导出 TXT</div>
+    <div class="export-item" data-action="export-user-md">💬 导出用户消息</div>
+</div>
+
+<!-- ── Firebase Toast ─────────────────────────────────────────────── -->
+<div class="fb-toast" id="fbToast"></div>
+
+<!-- ── Lightbox ───────────────────────────────────────────────────── -->
+<div class="lightbox-overlay" id="lightboxOverlay" data-action="lightbox-close">
+    <button class="lightbox-close" data-action="lightbox-close" title="关闭（Esc）">✕</button>
+    <img id="lightboxImg" src="" alt="预览">
+</div>
+
+<!-- ── File Drop Overlay ──────────────────────────────────────────── -->
+<div class="drag-overlay" id="dragOverlay">
+    <div class="drag-overlay-label">松开以导入对话文件</div>
+</div>
+
+<script>
+/* ================================================================
+   GEMINI ECHO
+   ================================================================
+   § 1.  App Namespace & Constants
+   § 2.  State
+   § 3.  Utilities
+   § 4.  Theme
+   § 5.  VirtualScroller
+   § 6.  Search
+   § 7.  FileImport
+   § 8.  Parser
+   § 9.  Sessions
+   § 10. Sidebar
+   § 11. Renderer
+   § 12. Images
+   § 13. Export
+   § 14. Init
+   ================================================================ */
+
+
+/* ================================================================
+   § 1. APP NAMESPACE & CONSTANTS
+   ================================================================ */
+const App = {};
+
+/**
+ * CONFIG — 所有逻辑参数的唯一来源。
+ * 修改行为参数时只改这里，不要在业务代码中散落魔数。
+ *
+ * SCROLL   : 虚拟滚动器参数
+ * IMAGE    : 图片压缩参数
+ * TIMING   : 防抖 / 延迟时间 (ms)
+ * SEARCH   : 全局搜索摘要截取长度 / 翻译最大字符数
+ */
+const CONFIG = {
+    SCROLL: {
+        EST_ITEM_HEIGHT: 260,   // 未测量条目的预估高度 (px)
+        RENDER_BUFFER:     6,   // 视口上下各额外保留的渲染条目数
+    },
+    IMAGE: {
+        MAX_DIMENSION:  1600,   // 压缩后图片最长边上限 (px)
+        JPEG_QUALITY:   0.82,   // JPEG 压缩质量 (0–1)
+    },
+    TIMING: {
+        SEARCH_DEBOUNCE:  300,  // 搜索输入防抖 (ms)
+        CLICK_DELAY:      250,  // 单击/双击冲突消歧延迟 (ms)
+        SAVE_DEBOUNCE:    800,  // System Prompt 保存防抖 (ms)
+        SAVE_FLASH:      1200,  // System Prompt 保存闪烁持续时长 (ms)
+        NAVIGATE_THROTTLE: 300, // 搜索结果上下翻页的连击节流 (ms)
+    },
+    SEARCH: {
+        EXCERPT_BEFORE:    60,  // 全局搜索摘要：关键词前保留字符数
+        EXCERPT_AFTER:     80,  // 全局搜索摘要：关键词后保留字符数
+        TRANSLATE_MAX_CHARS: 4000, // 发送至翻译服务的最大字符数
+    },
+};
+
+
+/* ================================================================
+   § 2. STATE
+   All mutable runtime state lives here. No bare globals elsewhere.
+   ================================================================ */
+App.state = {
+    sessions:          [],       // Array<Session>  – all loaded sessions
+    groups:            [],       // Array<Group>    – { id, name, sortOrder, collapsed }
+    currentSessionId:  null,     // string|null
+    currentScroller:   null,     // VirtualScroller|null
+    scrollPositions:   {},       // { [sessionId]: scrollTop }
+    _idSeq:            0,        // auto-increment for ID generation
+    /**
+     * viewMode — 当前视图的状态机枚举，集中管理视图层互斥状态。
+     * 'empty'         : 无会话，展示空状态引导页
+     * 'chat'          : 正常对话视图（含虚拟滚动）
+     * 'search_global' : 全局搜索结果覆盖聊天区
+     *
+     * 注：本字段由 App.Renderer / App.Search 写入，
+     * 为第四批重构（Search 状态机）预留，当前仅声明占位。
+     */
+    viewMode: 'empty',           // 'empty' | 'chat' | 'search_global'
+};
+
+
+/* ================================================================
+   § 3. UTILITIES
+   Pure helpers with no side effects.
+   ================================================================ */
+App.Utils = (() => {
+
+    /** Collision-safe unique ID (counter + timestamp + random) */
+    function generateId() {
+        return `${Date.now()}-${++App.state._idSeq}-${Math.random().toString(36).slice(2, 7)}`;
+    }
+
+    /** Strip characters illegal in Windows/Unix filenames */
+    function sanitizeFilename(name) {
+        return name.replace(/[/\\:*?"<>|]/g, '_').trim() || 'export';
+    }
+
+    /**
+     * Render Markdown safely.
+     * marked is loaded via CDN. If unavailable, falls back to plain text.
+     * NOTE: For a personal-use tool this is acceptable. If you ever expose
+     * this to untrusted input, add a sanitizer such as DOMPurify.
+     */
+    function safeMarkdown(text) {
+        if (typeof marked !== 'undefined') {
+            try {
+                return marked.parse(text, { breaks: true, gfm: true });
+            } catch (e) { /* fall through */ }
+        }
+        // Plain-text fallback
+        const el = document.createElement('div');
+        el.textContent = text;
+        return el.innerHTML;
+    }
+
+    /**
+     * Format a UTC ISO timestamp to a readable local string (Asia/Shanghai).
+     * Returns fallback string on parse error.
+     */
+    function formatTime(isoStr, { showDate = true, showTime = true } = {}) {
+        try {
+            const d = new Date(isoStr);
+            const opt = { timeZone: 'Asia/Shanghai', hour12: false };
+            if (showDate) { opt.month = '2-digit'; opt.day = '2-digit'; }
+            if (showTime) { opt.hour = '2-digit'; opt.minute = '2-digit'; }
+            return d.toLocaleString('zh-CN', opt);
+        } catch (e) {
+            return isoStr ? isoStr.slice(0, 16) : '';
+        }
+    }
+
+    /** Trigger a file download in the browser */
+    function downloadFile(content, filename, mimeType) {
+        const blob = new Blob([content], { type: `${mimeType};charset=utf-8` });
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    return { generateId, sanitizeFilename, safeMarkdown, formatTime, downloadFile };
+})();
+
+
+/* ================================================================
+   § 4. THEME
+   ================================================================ */
+App.Theme = (() => {
+    const body     = document.body;
+    const iconSun  = document.getElementById('icon-sun');
+    const iconMoon = document.getElementById('icon-moon');
+
+    function _apply(dark) {
+        body.classList.toggle('dark-mode', dark);
+        iconSun.style.display  = dark ? 'block' : 'none';
+        iconMoon.style.display = dark ? 'none'  : 'block';
+    }
+
+    function init() {
+        try { _apply(localStorage.getItem('theme') === 'dark'); } catch (e) { /* no localStorage */ }
+    }
+
+    function toggle() {
+        const isDark = !body.classList.contains('dark-mode');
+        _apply(isDark);
+        try { localStorage.setItem('theme', isDark ? 'dark' : 'light'); } catch (e) {}
+    }
+
+    return { init, toggle };
+})();
+
+
+/* ================================================================
+   § 5. VIRTUAL SCROLLER
+   Renders only the items near the viewport for performance.
+
+   Bugs fixed vs previous version:
+   - _updating re-entry lock: prevents scrollTop compensation from
+     triggering a second update() call, which caused the jitter/
+     speed-oscillation bug.
+   - destroy() is now properly called before switching sessions,
+     preventing scroll event listener leaks.
+   ================================================================ */
+class VirtualScroller {
+    constructor(container, items, renderFn) {
+        this.container  = container;
+        this.items      = items;
+        this.renderFn   = renderFn;
+        this.EST_H      = CONFIG.SCROLL.EST_ITEM_HEIGHT;   // initial estimated item height (px)
+        this.BUFFER     = CONFIG.SCROLL.RENDER_BUFFER;     // extra items to render above/below viewport
+        this.heights    = new Array(items.length).fill(this.EST_H);
+        this._measured  = new Set(); // indices with real measured heights
+        this.rendered   = new Map(); // index → DOM element
+        this.isFullRender = false;
+        this._raf       = null;
+        this._updating  = false; // re-entry lock for scrollTop compensation
+        this._isFirstUpdate = true; // suppress compensation on initial mount
+        // ── Offset cache (Batch 2 优化) ───────────────────────────────
+        // _cachedOffsets: Float64Array，存储每个 item 的累积偏移量前缀和。
+        // _offsetsDirty : 脏标记，仅当 heights[] 实际发生变化时置 true，
+        //                 使 _offsets() 热路径降为 O(1) 直接返回缓存引用。
+        this._cachedOffsets = null;  // Float64Array | null
+        this._offsetsDirty  = true;  // 初始为脏，首次调用时强制重建
+        this.topSpacer  = document.createElement('div');
+        this.botSpacer  = document.createElement('div');
+        this._onScroll  = () => {
+            if (this._raf) return;
+            this._raf = requestAnimationFrame(() => { this._raf = null; this.update(); });
+        };
+    }
+
+    mount() {
+        this.container.appendChild(this.topSpacer);
+        this.container.appendChild(this.botSpacer);
+        this.container.addEventListener('scroll', this._onScroll, { passive: true });
+        this.update();
+    }
+
+    destroy() {
+        this.container.removeEventListener('scroll', this._onScroll);
+        if (this._raf) cancelAnimationFrame(this._raf);
+        for (const [, el] of this.rendered) el.remove();
+        this.rendered.clear();
+        this.topSpacer.remove();
+        this.botSpacer.remove();
+        this._cachedOffsets = null; // 释放 Float64Array 占用的内存
+    }
+
+    /**
+     * pause() — 暂停 scroll 监听与挂起的 rAF。
+     * 在 Lightbox 打开或 document.hidden 时调用，
+     * 避免被遮挡的画布继续执行无意义的虚拟滚动计算（加速发热耗电）。
+     */
+    pause() {
+        this.container.removeEventListener('scroll', this._onScroll);
+        if (this._raf) { cancelAnimationFrame(this._raf); this._raf = null; }
+    }
+
+    /**
+     * resume() — 恢复 scroll 监听并立即触发一次 update()。
+     * Lightbox 关闭或页面重新可见时调用，同步 Lightbox 开启期间
+     * 可能发生的尺寸变化（如窗口 resize）。
+     */
+    resume() {
+        this.container.addEventListener('scroll', this._onScroll, { passive: true });
+        this.update();
+    }
+
+    _offsets() {
+        // 热路径 O(1)：heights[] 未变化时直接返回缓存引用。
+        // 在大会话下，每帧 scroll 触发的 update() 最多调用 _offsets() 3 次，
+        // 稳定滚动期间全部命中缓存，消除了原先每帧 O(N) × 3 的累积开销。
+        if (!this._offsetsDirty && this._cachedOffsets) return this._cachedOffsets;
+
+        // 冷路径 O(N)：高度发生变化时重建前缀和。
+        // 使用 Float64Array 代替普通数组：
+        //   - 内存连续，避免 V8 对 SMI 数组的隐式类型转换
+        //   - 元素为 float64，与 offsetHeight 的原始精度一致
+        const n = this.items.length;
+        const o = new Float64Array(n + 1);
+        for (let i = 0; i < n; i++) o[i + 1] = o[i] + this.heights[i];
+        this._cachedOffsets = o;
+        this._offsetsDirty  = false;
+        return o;
+    }
+
+    _bisect(arr, v) {
+        let lo = 0, hi = arr.length - 1;
+        while (lo < hi) { const m = (lo + hi) >> 1; if (arr[m] < v) lo = m + 1; else hi = m; }
+        return Math.max(0, lo - 1);
+    }
+
+    _visibleRange(offsets) {
+        const st = this.container.scrollTop, vh = this.container.clientHeight;
+        return {
+            start: Math.max(0, this._bisect(offsets, st) - this.BUFFER),
+            end:   Math.min(this.items.length - 1, this._bisect(offsets, st + vh) + this.BUFFER),
+        };
+    }
+
+    _measure() {
+        // 仅当 offsetHeight 与缓存值真实不同时才更新 heights[] 并标脏。
+        // 原版"h > 0 即写入"会在每次 update() 调用时无条件刷新所有已渲染节点，
+        // 导致 _offsetsDirty 永远为 true，使缓存失效从而无法享受 O(1) 优化。
+        for (const [i, el] of this.rendered) {
+            const h = el.offsetHeight;
+            if (h > 0 && this.heights[i] !== h) {
+                this.heights[i]    = h;
+                this._measured.add(i);
+                this._offsetsDirty = true; // 有真实变化才置脏
+            }
+        }
+    }
+
+    update() {
+        if (this.isFullRender || this._updating) return;
+        this._updating = true;
+
+        const c  = this.container;
+        const st = c.scrollTop;
+
+        // Anchor: record which item sits at the viewport top and its absolute
+        // position BEFORE any DOM changes. Used for precise scroll compensation
+        // that is immune to large 'start' jumps (e.g. End key).
+        const oldOff       = this._offsets();
+        const anchorIdx    = this._bisect(oldOff, st);
+        const anchorOldPos = oldOff[anchorIdx] || 0;
+
+        // Bottom-lock: if already at (or within 2 px of) the physical bottom,
+        // pin there after layout — don't let DOM growth push us back up.
+        const oldMaxTop   = c.scrollHeight - c.clientHeight;
+        const wasAtBottom = (oldMaxTop <= 0) || (st >= oldMaxTop - 2);
+
+        this._measure();
+        const newOff = this._offsets();
+        const { start, end } = this._visibleRange(newOff);
+
+        // Remove items that have scrolled out of range.
+        for (const [i, el] of this.rendered) {
+            if (i < start || i > end) { el.remove(); this.rendered.delete(i); }
+        }
+
+        // Insert newly visible items in DOM order.
+        for (let i = start; i <= end; i++) {
+            if (this.rendered.has(i)) continue;
+            const el = this.renderFn(this.items[i], i);
+            this.rendered.set(i, el);
+            let before = this.botSpacer;
+            for (let j = i + 1; j <= end; j++) {
+                if (this.rendered.has(j)) { before = this.rendered.get(j); break; }
+            }
+            c.insertBefore(el, before);
+        }
+
+        // Re-measure after insertion so newly mounted nodes contribute.
+        this._measure();
+        const finalOff = this._offsets();
+        const total    = finalOff[this.items.length];
+        this.topSpacer.style.height = finalOff[start] + 'px';
+        this.botSpacer.style.height = Math.max(0, total - (finalOff[end + 1] || total)) + 'px';
+
+        // Scroll compensation — skip on the very first call (session restoration
+        // sets scrollTop externally; compensating would double-add the offset).
+        if (!this._isFirstUpdate) {
+            if (wasAtBottom) {
+                // Bottom-lock: pin to new physical bottom.
+                c.scrollTop = c.scrollHeight;
+            } else {
+                // Anchor compensation: shift by exactly how much the anchor item
+                // moved. Keeps visible content still during incremental renders.
+                const anchorNewPos = finalOff[anchorIdx] || 0;
+                const delta        = anchorNewPos - anchorOldPos;
+                if (delta !== 0) {
+                    const maxTop   = c.scrollHeight - c.clientHeight;
+                    const targeted = st + delta;
+                    if (targeted <= maxTop) c.scrollTop = targeted;
+                }
+            }
+        }
+
+        this._isFirstUpdate = false;
+        this._updating = false;
+    }
+
+    /** Render all items at once (required before text search) */
+    renderAll() {
+        this._measure();
+        for (const [, el] of this.rendered) el.remove();
+        this.rendered.clear();
+        this.topSpacer.style.height = '0';
+        this.botSpacer.style.height = '0';
+        for (let i = 0; i < this.items.length; i++) {
+            const el = this.renderFn(this.items[i], i);
+            this.rendered.set(i, el);
+            this.botSpacer.before(el);
+        }
+        this.isFullRender = true;
+    }
+
+    /** Restore virtual scrolling after search is closed */
+    restoreVirtual() {
+        if (!this.isFullRender) return;
+        this._measure();
+        for (const [, el] of this.rendered) el.remove();
+        this.rendered.clear();
+        this.isFullRender = false;
+        this._isFirstUpdate = true; // reset so spacer compensation is skipped on re-mount
+        this.update();
+    }
+
+    /** Scroll to a specific item index */
+    scrollToIndex(i) {
+        const off = this._offsets();
+        this.container.scrollTop = off[Math.min(i, this.items.length - 1)];
+        this.update();
+    }
+}
+
+// Called by the thought-panel toggle to re-measure item heights
+window.notifyVSResize = () => {
+    if (App.state.currentScroller) requestAnimationFrame(() => App.state.currentScroller.update());
+};
+
+
+/* ================================================================
+   § 6. SEARCH
+   Text search with highlight, navigation, and debounce.
+
+   Bug fixed: wrapper <span> elements were accumulating in the DOM
+   across multiple search sessions. They are now tagged with
+   data-search-wrap and explicitly unwrapped in clearHighlight().
+
+   Batch 4 重构：用 App.state.viewMode 替换双布尔状态。
+   原有 _isGlobal (bool) + _globalActive (bool) 会产生
+   非法状态组合（两者同时 false 但含义不同），改为：
+   - _isGlobal : 保留为局部变量，仅表示"搜索范围按钮的切换状态"
+                 （scope 按钮的 UI 状态，与 chatContainer 内容无关）
+   - App.state.viewMode === 'search_global' : 替换 _globalActive，
+                 表示"chatContainer 当前正在展示全局搜索结果"这一唯一事实。
+   这样 viewMode 成为 chatContainer 内容状态的单一来源，
+   其他模块（如 visibilitychange）只需读 viewMode 即可判断当前视图。
+   ================================================================ */
+App.Search = (() => {
+    let matches       = [];
+    let currentIdx    = -1;
+    let isNavigating  = false;
+    let debounceTimer;
+    let _isGlobal     = false; // scope 按钮状态：false='当前' | true='全部'
+
+    function toggle() {
+        const bar      = document.getElementById('searchBar');
+        const willOpen = !bar.classList.contains('open');
+        bar.classList.toggle('open');
+        if (willOpen) {
+            if (App.state.currentScroller && !App.state.currentScroller.isFullRender)
+                App.state.currentScroller.renderAll();
+            document.getElementById('searchInput').focus();
+        } else {
+            _exitGlobal();
+            clearHighlight();
+            if (App.state.currentScroller) App.state.currentScroller.restoreVirtual();
+            _isGlobal = false;
+            const btn = document.getElementById('searchScopeBtn');
+            if (btn) { btn.textContent = '当前'; btn.classList.remove('global'); }
+        }
+    }
+
+    function toggleScope() {
+        _isGlobal = !_isGlobal;
+        const btn = document.getElementById('searchScopeBtn');
+        if (btn) { btn.textContent = _isGlobal ? '全部' : '当前'; btn.classList.toggle('global', _isGlobal); }
+        clearHighlight();
+        if (!_isGlobal) {
+            _exitGlobal();
+        } else {
+            if (App.state.currentScroller && !App.state.currentScroller.isFullRender)
+                App.state.currentScroller.restoreVirtual();
+        }
+        const val = document.getElementById('searchInput').value;
+        if (val) {
+            if (_isGlobal) _runGlobal(val);
+            else {
+                if (App.state.currentScroller && !App.state.currentScroller.isFullRender)
+                    App.state.currentScroller.renderAll();
+                _run(val);
+            }
+        }
+    }
+
+    function onInput() {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+            clearHighlight();
+            const val = document.getElementById('searchInput').value;
+            if (val) {
+                if (_isGlobal) _runGlobal(val);
+                else {
+                    if (App.state.currentScroller && !App.state.currentScroller.isFullRender)
+                        App.state.currentScroller.renderAll();
+                    _run(val);
+                }
+            } else if (App.state.viewMode === 'search_global') {
+                _exitGlobal();
+            }
+        }, CONFIG.TIMING.SEARCH_DEBOUNCE);
+    }
+
+    function _run(query) {
+        if (App.state.currentScroller && !App.state.currentScroller.isFullRender)
+            App.state.currentScroller.renderAll();
+
+        const container = document.getElementById('chatContainer');
+        const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, {
+            acceptNode(node) {
+                const tag = node.parentElement && node.parentElement.tagName;
+                if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'TEXTAREA') return NodeFilter.FILTER_REJECT;
+                return NodeFilter.FILTER_ACCEPT;
+            },
+        });
+
+        const nodesToWrap = [];
+        let node;
+        while ((node = walker.nextNode())) {
+            if (node.nodeValue.toLowerCase().includes(query.toLowerCase())) nodesToWrap.push(node);
+        }
+
+        const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex   = new RegExp(`(${escaped})`, 'gi');
+
+        nodesToWrap.forEach(n => {
+            const span = document.createElement('span');
+            span.setAttribute('data-search-wrap', '1');
+            const safe = n.nodeValue
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+            span.innerHTML = safe.replace(regex, '<mark>$1</mark>');
+            n.parentNode.replaceChild(span, n);
+        });
+
+        matches = Array.from(document.querySelectorAll('mark'));
+        document.getElementById('searchInfo').textContent =
+            `${matches.length > 0 ? 1 : 0}/${matches.length}`;
+        if (matches.length > 0) { currentIdx = 0; _highlight(0); }
+    }
+
+    function _runGlobal(query) {
+        const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex   = new RegExp(`(${escaped})`, 'gi');
+
+        const container = document.getElementById('chatContainer');
+        if (App.state.currentScroller) { App.state.currentScroller.destroy(); App.state.currentScroller = null; }
+        container.innerHTML = '';
+        App.state.viewMode = 'search_global'; // ← 替换 _globalActive = true
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'global-results-wrapper';
+        const allMarks = [];
+        let totalCount = 0;
+
+        App.state.sessions.forEach(sess => {
+            const matchingTurns = (sess.turns || []).filter(t => {
+                return ((t.messageText || '') + ' ' + (t.thoughtText || '')).toLowerCase().includes(query.toLowerCase());
+            });
+            if (matchingTurns.length === 0) return;
+
+            const sessionBlock = document.createElement('div');
+            const hdr = document.createElement('div');
+            hdr.className = 'global-session-hdr';
+            hdr.textContent = '📁 ' + sess.name + '  (' + matchingTurns.length + ' 条)';
+            sessionBlock.appendChild(hdr);
+
+            matchingTurns.forEach(turn => {
+                const turnIdx = sess.turns.indexOf(turn);
+                const item = document.createElement('div');
+                item.className = 'global-result-item';
+
+                const roleEl = document.createElement('div');
+                roleEl.className = 'global-result-role';
+                roleEl.textContent = turn.role.toUpperCase() + (turn.timestamp ? '  ' + App.Utils.formatTime(turn.timestamp) : '');
+
+                const fullText = (turn.messageText || turn.thoughtText || '').replace(/\s+/g, ' ').trim();
+                const matchPos = fullText.toLowerCase().indexOf(query.toLowerCase());
+                const start    = Math.max(0, matchPos - CONFIG.SEARCH.EXCERPT_BEFORE);
+                const end      = Math.min(fullText.length, matchPos + query.length + CONFIG.SEARCH.EXCERPT_AFTER);
+                const excerpt  = (start > 0 ? '\u2026' : '') + fullText.slice(start, end) + (end < fullText.length ? '\u2026' : '');
+
+                const excerptEl = document.createElement('div');
+                excerptEl.className = 'global-result-excerpt';
+                const safeExcerpt = excerpt.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+                excerptEl.innerHTML = safeExcerpt.replace(regex, '<mark>$1</mark>');
+                allMarks.push(...excerptEl.querySelectorAll('mark'));
+                totalCount++;
+
+                item.appendChild(roleEl);
+                item.appendChild(excerptEl);
+                item.addEventListener('click', () => {
+                    _exitGlobal(true);
+                    App.Sessions.switchTo(sess.id);
+                    setTimeout(() => {
+                        const el = document.getElementById('msg-' + turnIdx);
+                        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        else if (App.state.currentScroller) App.state.currentScroller.scrollToIndex(turnIdx);
+                    }, 350);
+                });
+                sessionBlock.appendChild(item);
+            });
+            wrapper.appendChild(sessionBlock);
+        });
+
+        if (totalCount === 0) {
+            const empty = document.createElement('div');
+            empty.style.cssText = 'text-align:center;padding:60px 20px;color:var(--text-secondary);font-size:14px;';
+            empty.textContent = '没有找到相关内容';
+            wrapper.appendChild(empty);
+        }
+
+        container.appendChild(wrapper);
+        matches    = allMarks;
+        currentIdx = matches.length > 0 ? 0 : -1;
+        document.getElementById('searchInfo').textContent = (matches.length > 0 ? '1' : '0') + '/' + matches.length;
+        if (matches.length > 0) _highlight(0);
+    }
+
+    function _exitGlobal(keepScroller) {
+        if (App.state.viewMode !== 'search_global') return; // ← 替换 if (!_globalActive) return
+        // viewMode 将由 renderSession / showEmptyState 写入正确值
+        const s = App.state;
+        if (s.currentSessionId) {
+            const session = s.sessions.find(sess => sess.id === s.currentSessionId);
+            if (session) App.Renderer.renderSession(session.turns, session, s.scrollPositions[s.currentSessionId] || 0);
+        } else {
+            App.Renderer.showEmptyState();
+        }
+    }
+
+    function next(forward) {
+        if (matches.length === 0) return;
+        if (isNavigating) return;
+        isNavigating = true;
+        setTimeout(() => { isNavigating = false; }, CONFIG.TIMING.NAVIGATE_THROTTLE);
+        currentIdx = forward
+            ? (currentIdx + 1) % matches.length
+            : (currentIdx - 1 + matches.length) % matches.length;
+        _highlight(currentIdx);
+    }
+
+    function _highlight(idx) {
+        document.querySelectorAll('mark.current').forEach(m => m.classList.remove('current'));
+        const target = matches[idx];
+        if (!target) return;
+        target.classList.add('current');
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        document.getElementById('searchInfo').textContent = (idx + 1) + '/' + matches.length;
+    }
+
+    function clearHighlight() {
+        if (App.state.viewMode !== 'search_global') { // ← 替换 if (!_globalActive)
+            const container = document.getElementById('chatContainer');
+            container.querySelectorAll('mark').forEach(mark => mark.replaceWith(document.createTextNode(mark.textContent)));
+            container.querySelectorAll('[data-search-wrap]').forEach(span => span.replaceWith(...span.childNodes));
+            container.normalize();
+        }
+        matches    = [];
+        currentIdx = -1;
+        document.getElementById('searchInfo').textContent = '0/0';
+    }
+
+    function reset() {
+        _exitGlobal();
+        clearHighlight();
+        _isGlobal = false;
+        const btn = document.getElementById('searchScopeBtn');
+        if (btn) { btn.textContent = '当前'; btn.classList.remove('global'); }
+    }
+
+    return { toggle, toggleScope, onInput, next, clearHighlight, reset };
+})();
+
+
+/* ================================================================
+   § 7. FILE IMPORT
+   Handles <input type="file"> and drag-and-drop import.
+   Internal sidebar drags are isolated via _isInternalDrag flag.
+   ================================================================ */
+App.FileImport = (() => {
+    let _dragCounter    = 0;
+    let _isInternalDrag = false;
+
+    function init() {
+        const input = document.getElementById('fileInput');
+        if (input) input.addEventListener('change', _onInputChange);
+
+        document.addEventListener('dragenter', (e) => {
+            if (_isInternalDrag) return;
+            e.preventDefault();
+            _dragCounter++;
+            document.getElementById('dragOverlay').classList.add('active');
+        });
+        document.addEventListener('dragleave', () => {
+            if (_isInternalDrag) return;
+            _dragCounter--;
+            if (_dragCounter <= 0) {
+                _dragCounter = 0;
+                document.getElementById('dragOverlay').classList.remove('active');
+            }
+        });
+        document.addEventListener('dragover',  (e) => { if (!_isInternalDrag) e.preventDefault(); });
+        document.addEventListener('drop', (e) => {
+            if (_isInternalDrag) return;
+            e.preventDefault();
+            _dragCounter = 0;
+            document.getElementById('dragOverlay').classList.remove('active');
+            Array.from(e.dataTransfer.files).forEach(processFile);
+        });
+    }
+
+    function _onInputChange(event) {
+        Array.from(event.target.files).forEach(f => processFile(f));
+        event.target.value = '';
+    }
+
+    function processFile(file) {
+        const reader = new FileReader();
+        reader.onerror = () => alert('文件读取失败，请检查文件是否损坏。');
+        reader.onload = (e) => {
+            let json;
+            try {
+                json = JSON.parse(e.target.result);
+            } catch (_) {
+                alert(`导入失败：文件不是有效的 JSON 格式。\n文件名：${file.name}`);
+                return;
+            }
+
+            const turns = App.Parser.parseGeminiData(json);
+            if (!turns) {
+                alert(`导入失败：无法识别文件结构。\n请确认这是 Gemini 导出的聊天记录文件。`);
+                return;
+            }
+            if (turns.length === 0) {
+                alert(`导入成功，但文件中没有有效的对话内容。\n文件名：${file.name}`);
+                return;
+            }
+
+            const session = {
+                id:                App.Utils.generateId(),
+                name:              file.name.replace(/\.(json|txt)$/i, ''),
+                turns,
+                systemInstruction: json.systemInstruction?.text ?? '',
+                modelName:         json.runSettings?.model?.replace(/^models\//, '') ?? '',
+                timestamp:         new Date().toISOString(),
+                sortOrder:         App.state.sessions.length, // 追加到当前列表末尾
+            };
+
+            App.state.sessions.push(session);
+            // Sort alphabetically/numerically by name on each import
+            App.state.sessions.sort((a, b) =>
+                a.name.localeCompare(b.name, 'zh-CN', { numeric: true })
+            );
+
+            // Firebase：将新 Session 同步到 Firestore
+            if (window.DB) {
+                window.setSyncStatus?.('loading', '同步中…');
+                window.DB.createSession(session)
+                    .then(() => {
+                        window.setSyncStatus?.('ok', '已同步');
+                        window.showToast?.('✅ 已上传至云端：' + session.name);
+                    })
+                    .catch(err => {
+                        console.error('[Firebase] 同步 Session 失败:', err);
+                        window.setSyncStatus?.('error', '同步失败');
+                        window.showToast?.('⚠️ 云端同步失败，仅保存在本地。\n' + (err.message || err), 5000);
+                    });
+            }
+
+            App.Sidebar.render();
+            App.Sessions.switchTo(session.id);
+        };
+        reader.readAsText(file);
+    }
+
+    /** Called by Sidebar drag handlers to suppress the file-drop overlay */
+    function setInternalDrag(value) {
+        _isInternalDrag = value;
+        if (!value) {
+            _dragCounter = 0;
+            document.getElementById('dragOverlay').classList.remove('active');
+        }
+    }
+
+    return { init, processFile, setInternalDrag };
+})();
+
+
+/* ================================================================
+   § 8. PARSER
+   Converts raw Gemini JSON into a normalized array of Turn objects.
+   Pure functions — no DOM or state side effects.
+
+   Turn shape:
+   {
+     role:        'user' | 'model',
+     hasThought:  boolean,
+     thoughtText: string,
+     messageText: string,
+     images:      Array<{ id, base64 }>,
+     timestamp:   string | null,   // ISO 8601
+   }
+   ================================================================ */
+App.Parser = (() => {
+
+    function parseGeminiData(data) {
+        let rawChunks = [];
+        if (data.chunkedPrompt?.chunks)       rawChunks = data.chunkedPrompt.chunks;
+        else if (Array.isArray(data.contents)) rawChunks = data.contents;
+        else if (Array.isArray(data))          rawChunks = data;
+        else return null;
+
+        // Normalise each chunk to { role, isThought, text, createTime }
+        const items = rawChunks.map(chunk => {
+            let text      = '';
+            let isThought = chunk.isThought === true;
+            if (Array.isArray(chunk.parts)) {
+                text = chunk.parts.map(p => p.text || '').join('');
+                if (!isThought && chunk.parts.some(p => p.thought === true)) isThought = true;
+            } else if (chunk.text) {
+                text = chunk.text;
+            }
+            return { role: chunk.role || 'model', isThought, text, createTime: chunk.createTime || null };
+        });
+
+        // Merge consecutive same-role chunks into Turns
+        const turns = [];
+        if (items.length === 0) return turns;
+
+        let current = { role: items[0].role, thoughts: [], messages: [], timestamp: items[0].createTime };
+        _addItem(items[0], current);
+
+        for (let i = 1; i < items.length; i++) {
+            const item = items[i];
+            if (item.role === current.role) {
+                _addItem(item, current);
+            } else {
+                turns.push(_finalize(current));
+                current = { role: item.role, thoughts: [], messages: [], timestamp: item.createTime };
+                _addItem(item, current);
+            }
+        }
+        turns.push(_finalize(current));
+        return turns;
+    }
+
+    function _addItem(item, turn) {
+        if (item.isThought) turn.thoughts.push(item.text);
+        else                turn.messages.push(item.text);
+    }
+
+    function _finalize(turn) {
+        return {
+            role:        turn.role,
+            hasThought:  turn.thoughts.length > 0,
+            thoughtText: turn.thoughts.join('\n\n'),
+            messageText: _smartJoin(turn.messages),
+            images:      turn.images || [],
+            timestamp:   turn.timestamp || null,
+        };
+    }
+
+    /**
+     * Join chunked message parts and attempt to repair Markdown tokens
+     * that were split across chunk boundaries (e.g. **bold** → ** bold **).
+     */
+    function _smartJoin(messages) {
+        if (messages.length === 0) return '';
+        if (messages.length === 1) return messages[0];
+
+        let result = messages.join('');
+
+        // Repair split bold markers
+        result = result.replace(/\*\*([^*\n]+?)\*\*([^*]*?)\*\*/g, (match, p1, p2) =>
+            p2.includes('\n') ? match : `**${p1}${p2}**`
+        );
+        // Repair split inline code markers
+        result = result.replace(/`([^`\n]+?)`([^`]*?)`/g, (match, p1, p2) =>
+            p2.includes('\n') ? match : `\`${p1}${p2}\``
+        );
+        return result;
+    }
+
+    return { parseGeminiData };
+})();
+
+
+/* ================================================================
+   § 9. SESSION MANAGEMENT
+   CRUD operations on App.state.sessions.
+
+   Bug fixed: scrollPositions is now cleaned up on session delete,
+   preventing unbounded memory growth.
+   ================================================================ */
+App.Sessions = (() => {
+
+    async function switchTo(id) {
+        const s = App.state;
+
+        // Save current scroll position before leaving
+        if (s.currentSessionId) {
+            s.scrollPositions[s.currentSessionId] =
+                document.getElementById('chatContainer').scrollTop;
+        }
+
+        s.currentSessionId = id;
+        const session = s.sessions.find(s => s.id === id);
+        if (!session) return;
+
+        // Reset search state (must happen before renderSession destroys DOM)
+        App.Search.reset();
+        const searchBar = document.getElementById('searchBar');
+        if (searchBar.classList.contains('open')) {
+            document.getElementById('searchInput').value = '';
+        }
+
+        document.getElementById('headerTitle').textContent = session.name;
+
+        // ── 懒加载 turns（Storage SDK getBytes，无 CORS 限制）────────
+        // session.turns === null  → 尚未从 Storage 加载
+        // session.turns === []    → 已加载，内容为空
+        if (session.turns === null && session.turnsStoragePath && window.DB) {
+            App.Renderer.showLoadingState(session.name);
+            window.setSyncStatus?.('loading', '加载对话…');
+            try {
+                session.turns = await window.DB.fetchTurns(session.turnsStoragePath);
+                window.setSyncStatus?.('ok', `已同步 ${s.sessions.length} 个`);
+            } catch (err) {
+                console.error('[Firebase] 加载 turns 失败:', err);
+                window.setSyncStatus?.('error', '加载失败');
+                window.showToast?.('⚠️ 对话加载失败：' + (err.message || err), 5000);
+                session.turns = [];
+            }
+        }
+
+        // 兜底：turns 仍为 null（离线 / 无 URL），降级为空数组
+        if (!Array.isArray(session.turns)) session.turns = [];
+
+        const savedScroll = s.scrollPositions[id] || 0;
+        App.Renderer.renderSession(session.turns, session, savedScroll);
+
+        // scrollTop already set inside renderSession; just sync in case of 0
+        if (savedScroll === 0) document.getElementById('chatContainer').scrollTop = 0;
+
+        App.Sidebar.render();
+
+        if (window.innerWidth < 768) {
+            document.getElementById('sidebar').classList.remove('open');
+        }
+    }
+
+    function deleteSession(e, id) {
+        e.stopPropagation();
+        if (!confirm('确定删除此会话吗？')) return;
+
+        const s = App.state;
+        const target = s.sessions.find(sess => sess.id === id);
+        s.sessions = s.sessions.filter(sess => sess.id !== id);
+
+        // Firebase：连根拔起删除（Firestore 文档 + 所有关联 Storage 图片）
+        if (target && window.DB) {
+            window.setSyncStatus?.('loading', '删除中…');
+            window.DB.deleteSessionCompletely(target)
+                .then(() => {
+                    window.setSyncStatus?.('ok', '已同步');
+                    window.showToast?.('🗑️ 已从云端删除');
+                })
+                .catch(err => {
+                    console.error('[Firebase] 删除会话失败:', err);
+                    window.setSyncStatus?.('error', '删除失败');
+                    window.showToast?.('⚠️ 云端删除失败：' + (err.message || err), 5000);
+                });
+        }
+
+        // Clean up orphaned scroll position — prevents memory leak
+        delete s.scrollPositions[id];
+
+        if (s.currentSessionId === id) {
+            if (s.currentScroller) { s.currentScroller.destroy(); s.currentScroller = null; }
+            s.currentSessionId = null;
+            document.getElementById('headerTitle').textContent = 'Gemini Echo';
+
+            if (s.sessions.length > 0) {
+                switchTo(s.sessions[0].id);
+            } else {
+                App.Renderer.showEmptyState();
+            }
+        }
+        App.Sidebar.render();
+    }
+
+    return { switchTo, deleteSession };
+})();
+
+
+/* ================================================================
+   § 10. SIDEBAR
+   File list rendering + groups + drag-to-reorder + rename.
+   ================================================================ */
+App.Sidebar = (() => {
+
+    function toggle() {
+        document.getElementById('sidebar').classList.toggle('open');
+    }
+
+    /* ── 新建分组 ────────────────────────────────────────────────── */
+    function createGroup() {
+        const name = prompt('分组名称：', '新分组');
+        if (!name || !name.trim()) return;
+        const group = {
+            id:        App.Utils.generateId(),
+            name:      name.trim(),
+            sortOrder: App.state.groups.length,
+            collapsed: false,
+        };
+        App.state.groups.push(group);
+        if (window.DB) {
+            window.DB.saveGroup(group)
+                .then(() => window.setSyncStatus?.('ok', '已同步'))
+                .catch(err => {
+                    console.error('[Firebase] 保存分组失败:', err);
+                    window.setSyncStatus?.('error', '同步失败');
+                });
+        }
+        render();
+    }
+
+    /* ── 删除分组（不删会话，会话变为无分组）────────────────────── */
+    function deleteGroup(e, groupId) {
+        e.stopPropagation();
+        if (!confirm('删除分组？其中的会话将移至未分组。')) return;
+        App.state.sessions.forEach(s => { if (s.groupId === groupId) s.groupId = null; });
+        App.state.groups = App.state.groups.filter(g => g.id !== groupId);
+        if (window.DB) {
+            window.DB.deleteGroup(groupId)
+                .then(() => {
+                    // 将受影响会话的 groupId 也同步清空
+                    const affected = App.state.sessions.filter(s => !s.groupId || s.groupId === null);
+                    return Promise.all(affected.map(s => window.DB.patchSession(s.id, { groupId: null })));
+                })
+                .then(() => window.setSyncStatus?.('ok', '已同步'))
+                .catch(err => console.error('[Firebase] 删除分组失败:', err));
+        }
+        render();
+    }
+
+    /* ── 重命名分组 ──────────────────────────────────────────────── */
+    function renameGroup(e, group) {
+        e.stopPropagation();
+        const name = prompt('重命名分组：', group.name);
+        if (!name || !name.trim() || name.trim() === group.name) return;
+        group.name = name.trim();
+        if (window.DB) {
+            window.DB.saveGroup(group)
+                .then(() => window.setSyncStatus?.('ok', '已同步'))
+                .catch(err => console.error('[Firebase] 重命名分组失败:', err));
+        }
+        render();
+    }
+
+    /* ── 折叠/展开 ───────────────────────────────────────────────── */
+    function toggleCollapse(group) {
+        group.collapsed = !group.collapsed;
+        if (window.DB) {
+            window.DB.saveGroup(group).catch(err =>
+                console.error('[Firebase] 折叠状态同步失败:', err)
+            );
+        }
+        render();
+    }
+
+    /* ── 构建单条 session item（复用于分组内和未分组）────────────── */
+    function _buildSessionItem(sess) {
+        const div = document.createElement('div');
+        div.className = `file-item ${sess.id === App.state.currentSessionId ? 'active' : ''}`;
+        div.setAttribute('draggable', 'true');
+        div.dataset.id = sess.id;
+
+        // ── Drag: session reorder / group assignment ─────────────
+        div.addEventListener('dragstart', (e) => {
+            e.stopPropagation();
+            App.FileImport.setInternalDrag(true);
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'session', id: sess.id }));
+            div.classList.add('dragging');
+        });
+        div.addEventListener('dragend', () => {
+            App.FileImport.setInternalDrag(false);
+            div.classList.remove('dragging');
+            document.querySelectorAll('.file-item, .group-header').forEach(el => {
+                el.classList.remove('drag-above', 'drag-below', 'drag-over-group');
+            });
+        });
+        div.addEventListener('dragover', (e) => {
+            e.preventDefault(); e.stopPropagation();
+            e.dataTransfer.dropEffect = 'move';
+            document.querySelectorAll('.file-item').forEach(el =>
+                el.classList.remove('drag-above', 'drag-below'));
+            const rect = div.getBoundingClientRect();
+            div.classList.add(e.clientY < rect.top + rect.height / 2 ? 'drag-above' : 'drag-below');
+        });
+        div.addEventListener('drop', (e) => {
+            e.preventDefault(); e.stopPropagation();
+            let payload;
+            try { payload = JSON.parse(e.dataTransfer.getData('text/plain')); } catch { return; }
+            if (payload.type !== 'session' || payload.id === sess.id) return;
+
+            const sessions  = App.state.sessions;
+            const fromIdx   = sessions.findIndex(s => s.id === payload.id);
+            let   toIdx     = sessions.findIndex(s => s.id === sess.id);
+            if (fromIdx < 0 || toIdx < 0) return;
+
+            const rect        = div.getBoundingClientRect();
+            const insertAfter = e.clientY >= rect.top + rect.height / 2;
+            const [moved]     = sessions.splice(fromIdx, 1);
+            toIdx             = sessions.findIndex(s => s.id === sess.id);
+            sessions.splice(insertAfter ? toIdx + 1 : toIdx, 0, moved);
+
+            // 拖入目标所在分组
+            moved.groupId = sess.groupId ?? null;
+
+            // 写回 sortOrder 并云同步
+            sessions.forEach((s, i) => { s.sortOrder = i; });
+            _syncOrderAndGroups(sessions);
+            render();
+        });
+
+        // ── Click / double-click ─────────────────────────────────
+        let clickTimer = null;
+        div.addEventListener('click', (e) => {
+            if (e.target.closest('.del-session-btn')) return;
+            if (e.target.closest('.file-name-input')) return;
+            clearTimeout(clickTimer);
+            clickTimer = setTimeout(() => App.Sessions.switchTo(sess.id), CONFIG.TIMING.CLICK_DELAY);
+        });
+
+        // ── Name (double-click = rename) ─────────────────────────
+        const nameEl = document.createElement('div');
+        nameEl.className = 'file-name';
+        nameEl.textContent = sess.name;
+        nameEl.title = '双击重命名';
+        nameEl.setAttribute('draggable', 'false');
+        nameEl.addEventListener('dblclick', (e) => {
+            e.stopPropagation();
+            clearTimeout(clickTimer);
+            const input = document.createElement('input');
+            input.className = 'file-name-input';
+            input.value = sess.name;
+            nameEl.replaceWith(input);
+            input.focus(); input.select();
+            const commit = () => {
+                sess.name = input.value.trim() || sess.name;
+                if (App.state.currentSessionId === sess.id)
+                    document.getElementById('headerTitle').textContent = sess.name;
+                if (window.DB) {
+                    window.setSyncStatus?.('loading', '同步中…');
+                    window.DB.patchSession(sess.id, { name: sess.name, updatedAt: new Date().toISOString() })
+                        .then(() => window.setSyncStatus?.('ok', '已同步'))
+                        .catch(err => {
+                            console.error('[Firebase] 重命名同步失败:', err);
+                            window.setSyncStatus?.('error', '同步失败');
+                            window.showToast?.('⚠️ 重命名云端同步失败', 4000);
+                        });
+                }
+                render();
+            };
+            input.addEventListener('blur', commit);
+            input.addEventListener('keydown', (ev) => {
+                if (ev.key === 'Enter')  { ev.preventDefault(); commit(); }
+                if (ev.key === 'Escape') { ev.preventDefault(); render(); }
+                ev.stopPropagation();
+            });
+        });
+
+        // ── Info line ────────────────────────────────────────────
+        const infoEl = document.createElement('div');
+        infoEl.className = 'file-info';
+        const turns      = Array.isArray(sess.turns) ? sess.turns : [];
+        const count      = turns.length || sess.turnCount || 0;
+        const tsArr      = turns.filter(t => t.timestamp);
+        if (tsArr.length >= 2) {
+            const range = `${App.Utils.formatTime(tsArr[0].timestamp)} → ${App.Utils.formatTime(tsArr[tsArr.length - 1].timestamp)}`;
+            infoEl.textContent = `${count} 条 • ${range}`;
+        } else {
+            infoEl.textContent = `${count} 条对话 • ${new Date(sess.timestamp).toLocaleDateString()}`;
+        }
+
+        // ── Delete ───────────────────────────────────────────────
+        const delBtn = document.createElement('div');
+        delBtn.className = 'del-session-btn';
+        delBtn.title = '删除会话';
+        delBtn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>`;
+        delBtn.addEventListener('click', (e) => App.Sessions.deleteSession(e, sess.id));
+
+        // ── Assembly ─────────────────────────────────────────────
+        const textWrap = document.createElement('div');
+        textWrap.className = 'sidebar-text-wrap';
+        textWrap.appendChild(nameEl);
+        textWrap.appendChild(infoEl);
+        div.appendChild(textWrap);
+        div.appendChild(delBtn);
+        return div;
+    }
+
+    /* ── 构建分组 header 行 ──────────────────────────────────────── */
+    function _buildGroupHeader(group) {
+        const hdr = document.createElement('div');
+        hdr.className = `group-header${group.collapsed ? ' collapsed' : ''}`;
+        hdr.dataset.groupId = group.id;
+
+        // 支持 session 拖入分组 header
+        hdr.addEventListener('dragover', (e) => {
+            e.preventDefault(); e.stopPropagation();
+            let payload;
+            try { payload = JSON.parse(e.dataTransfer.getData('text/plain')); } catch { return; }
+            if (payload.type === 'session') hdr.classList.add('drag-over-group');
+        });
+        hdr.addEventListener('dragleave', () => hdr.classList.remove('drag-over-group'));
+        hdr.addEventListener('drop', (e) => {
+            e.preventDefault(); e.stopPropagation();
+            hdr.classList.remove('drag-over-group');
+            let payload;
+            try { payload = JSON.parse(e.dataTransfer.getData('text/plain')); } catch { return; }
+            if (payload.type !== 'session') return;
+            const sess = App.state.sessions.find(s => s.id === payload.id);
+            if (!sess || sess.groupId === group.id) return;
+            sess.groupId = group.id;
+            App.state.sessions.forEach((s, i) => { s.sortOrder = i; });
+            _syncOrderAndGroups(App.state.sessions);
+            render();
+        });
+
+        const chevron = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        chevron.setAttribute('viewBox', '0 0 24 24');
+        chevron.classList.add('group-chevron');
+        const cp = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        cp.setAttribute('d', 'M7 10l5 5 5-5z');
+        chevron.appendChild(cp);
+
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'group-name-text';
+        nameSpan.textContent = group.name;
+
+        const actions = document.createElement('div');
+        actions.className = 'group-actions';
+
+        const renameBtn = document.createElement('button');
+        renameBtn.className = 'group-action-btn';
+        renameBtn.title = '重命名';
+        renameBtn.innerHTML = `<svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>`;
+        renameBtn.addEventListener('click', (e) => renameGroup(e, group));
+
+        const delBtn = document.createElement('button');
+        delBtn.className = 'group-action-btn del';
+        delBtn.title = '删除分组';
+        delBtn.innerHTML = `<svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>`;
+        delBtn.addEventListener('click', (e) => deleteGroup(e, group.id));
+
+        actions.appendChild(renameBtn);
+        actions.appendChild(delBtn);
+        hdr.appendChild(chevron);
+        hdr.appendChild(nameSpan);
+        hdr.appendChild(actions);
+
+        hdr.addEventListener('click', (e) => {
+            if (e.target.closest('.group-action-btn')) return;
+            toggleCollapse(group);
+        });
+
+        return hdr;
+    }
+
+    /* ── 批量同步 sortOrder + groupId 到云端 ─────────────────────── */
+    function _syncOrderAndGroups(sessions) {
+        if (!window.DB) return;
+        window.setSyncStatus?.('loading', '同步中…');
+        Promise.all(
+            sessions.map(s => window.DB.patchSession(s.id, {
+                sortOrder: s.sortOrder,
+                groupId:   s.groupId ?? null,
+            }))
+        )
+        .then(() => window.setSyncStatus?.('ok', '已同步'))
+        .catch(err => {
+            console.error('[Firebase] 排序/分组同步失败:', err);
+            window.setSyncStatus?.('error', '同步失败');
+        });
+    }
+
+    /* ── 主渲染函数 ──────────────────────────────────────────────── */
+    function render() {
+        const list = document.getElementById('fileList');
+        list.innerHTML = '';
+
+        const groups   = [...App.state.groups].sort((a, b) => a.sortOrder - b.sortOrder);
+        const sessions = App.state.sessions;
+
+        // 按分组分桶
+        const buckets = {};
+        groups.forEach(g => { buckets[g.id] = []; });
+        const ungrouped = [];
+        sessions.forEach(s => {
+            if (s.groupId && buckets[s.groupId]) buckets[s.groupId].push(s);
+            else ungrouped.push(s);
+        });
+
+        // 渲染各分组
+        groups.forEach(group => {
+            const hdr   = _buildGroupHeader(group);
+            const items = document.createElement('div');
+            items.className = 'group-items';
+
+            const groupSessions = buckets[group.id];
+            const totalHeight   = groupSessions.length * 64; // 预估高度，用于动画
+            items.style.maxHeight = group.collapsed ? '0' : `${totalHeight + 200}px`;
+
+            groupSessions.forEach(sess => items.appendChild(_buildSessionItem(sess)));
+
+            list.appendChild(hdr);
+            list.appendChild(items);
+        });
+
+        // 渲染未分组
+        if (ungrouped.length > 0) {
+            if (groups.length > 0) {
+                const label = document.createElement('div');
+                label.className = 'ungrouped-label';
+                label.textContent = '未分组';
+                list.appendChild(label);
+            }
+            ungrouped.forEach(sess => list.appendChild(_buildSessionItem(sess)));
+        }
+    }
+
+    // 绑定「新建分组」按钮
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('addGroupBtn')?.addEventListener('click', createGroup);
+    });
+
+    return { toggle, render, createGroup };
+})();
+
+
+/* ================================================================
+   § 11. RENDERER
+   Builds and mounts the chat view for a given session.
+
+   Bug fixed: currentScroller.destroy() is now called explicitly
+   before clearing chatContainer.innerHTML, preventing the previous
+   scroll event listener from leaking into memory on every session
+   switch.
+
+   Bug fixed: thought-header now uses addEventListener instead of
+   setAttribute('onclick', ...) string injection, which was
+   inconsistent, undebuggable, and incompatible with strict CSP.
+   ================================================================ */
+App.Renderer = (() => {
+
+    function renderSession(turns, session, initialScrollTop = 0) {
+        const container = document.getElementById('chatContainer');
+
+        // Destroy old scroller first — prevents event listener leak
+        if (App.state.currentScroller) {
+            App.state.currentScroller.destroy();
+            App.state.currentScroller = null;
+        }
+        container.innerHTML = '';
+
+        // System Instructions panel
+        if (session) {
+            const siWrapper  = document.createElement('div');
+            siWrapper.className = 'system-instruction-wrapper';
+
+            const siLabel   = document.createElement('div');
+            siLabel.className = 'system-instruction-label';
+            siLabel.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 15l-5-5 1.41-1.41L12 14.17l7.59-7.59L21 8l-9 9z"/></svg> System Instructions`;
+
+            if (session.modelName) {
+                const pill      = document.createElement('span');
+                pill.className  = 'model-name-pill';
+                pill.textContent = session.modelName;
+                siLabel.appendChild(pill);
+            }
+
+            const siTextarea    = document.createElement('textarea');
+            siTextarea.className = 'system-instruction-textarea';
+            siTextarea.placeholder = '在此输入 System Prompt / Instructions（留空则忽略）';
+            siTextarea.value    = session.systemInstruction || '';
+
+            let siSaveTimer;
+            siTextarea.addEventListener('input', () => {
+                session.systemInstruction = siTextarea.value;
+                clearTimeout(siSaveTimer);
+                siSaveTimer = setTimeout(() => {
+                    siTextarea.classList.add('saved-flash');
+                    setTimeout(() => siTextarea.classList.remove('saved-flash'), CONFIG.TIMING.SAVE_FLASH);
+                    // Firebase：同步 System Instruction
+                    if (window.DB) {
+                        window.DB.patchSession(session.id, {
+                            systemInstruction: session.systemInstruction,
+                            updatedAt: new Date().toISOString()
+                        })
+                        .then(() => window.setSyncStatus?.('ok', '已同步'))
+                        .catch(err => {
+                            console.error('[Firebase] System Prompt 同步失败:', err);
+                            window.setSyncStatus?.('error', '同步失败');
+                            window.showToast?.('⚠️ System Prompt 云端同步失败', 4000);
+                        });
+                    }
+                }, CONFIG.TIMING.SAVE_DEBOUNCE);
+            });
+
+            siWrapper.appendChild(siLabel);
+            siWrapper.appendChild(siTextarea);
+            container.appendChild(siWrapper);
+        }
+
+        const validTurns = turns.filter(t =>
+            (t.messageText || '').trim() || (t.thoughtText || '').trim()
+        );
+        if (validTurns.length > 0) {
+            // Set scroll position BEFORE mounting so the first update() renders
+            // the correct visible range, not always from the top.
+            if (initialScrollTop > 0) container.scrollTop = initialScrollTop;
+            App.state.viewMode = 'chat'; // chatContainer 正在展示对话视图
+            App.state.currentScroller = new VirtualScroller(container, validTurns, createBubbleNode);
+            App.state.currentScroller.mount();
+        }
+    }
+
+    function showEmptyState() {
+        const container = document.getElementById('chatContainer');
+        if (App.state.currentScroller) {
+            App.state.currentScroller.destroy();
+            App.state.currentScroller = null;
+        }
+        App.state.viewMode = 'empty'; // chatContainer 正在展示空状态引导页
+        container.innerHTML = `
+            <div class="empty-state-wrapper">
+                <label for="fileInput" class="empty-state">
+                    <svg class="empty-icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-5.5-2.5l7.51-3.22-3.22-7.51-7.51 3.22 3.22 7.51z"/></svg>
+                    <div class="empty-text-main">Context Window: Infinite.<br>Memory: Ready.</div>
+                    <div class="empty-text-sub">(请投喂你的聊天记录。)</div>
+                </label>
+            </div>`;
+    }
+
+    function createBubbleNode(item, index) {
+        const wrapper   = document.createElement('div');
+        wrapper.className = `msg-wrapper ${item.role === 'user' ? 'user' : 'model'}`;
+        wrapper.id      = `msg-${index}`;
+
+        // ── Role label ────────────────────────────────────────────
+        const label     = document.createElement('div');
+        label.className = `role-label ${item.role === 'user' ? 'user' : ''}`;
+
+        const leftGroup = document.createElement('span');
+        leftGroup.className = 'role-label-left';
+
+        const roleText  = document.createElement('span');
+        roleText.textContent = item.role.toUpperCase();
+        leftGroup.appendChild(roleText);
+
+        if (item.timestamp) {
+            const tsEl      = document.createElement('span');
+            tsEl.className  = 'msg-timestamp';
+            tsEl.textContent = App.Utils.formatTime(item.timestamp);
+            leftGroup.appendChild(tsEl);
+        }
+
+        const addImgBtn   = document.createElement('div');
+        addImgBtn.className = 'add-img-btn-small';
+        addImgBtn.title   = '插入图片';
+        addImgBtn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-5.04-6.71l-2.75 3.54-1.96-2.36L6.5 17h11l-3.54-4.71z"/></svg>`;
+
+        label.appendChild(leftGroup);
+        label.appendChild(addImgBtn);
+
+        const bubble    = document.createElement('div');
+        bubble.className = 'message-bubble';
+
+        addImgBtn.addEventListener('click', (e) => App.Images.triggerInsert(e, bubble, item));
+
+        // ── Thought panel ─────────────────────────────────────────
+        if (item.hasThought && item.thoughtText) {
+            const thoughtPanel  = document.createElement('div');
+            // Restore previously-saved open state (survives VirtualScroller re-renders)
+            thoughtPanel.className = item._thoughtOpen ? 'thought-panel open' : 'thought-panel';
+
+            const header        = document.createElement('div');
+            header.className    = 'thought-header';
+            // Use addEventListener (not setAttribute onclick string) for
+            // correctness, debuggability, and CSP compatibility.
+            header.addEventListener('click', (e) => {
+                if (e.target.classList.contains('trans-btn')) return;
+                _toggleThought(header);
+            });
+
+            const pill          = document.createElement('div');
+            pill.className      = 'thought-pill';
+            const geminiIcon    = `<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 2L14.5 9L22 12L14.5 15L12 22L9.5 15L2 12L9.5 9L12 2Z"/></svg>`;
+            pill.innerHTML      = `<span class="thought-icon" style="display:flex;align-items:center">${geminiIcon}</span> <span class="thought-title">Thoughts</span>`;
+
+            const transBtn      = document.createElement('button');
+            transBtn.className  = 'trans-btn';
+            transBtn.textContent = 'Translate';
+            transBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const bodyEl = thoughtPanel.querySelector('.thought-body');
+                if (bodyEl) {
+                    const text = bodyEl.textContent || bodyEl.innerText;
+                    window.open(`https://translate.google.com/?sl=auto&tl=zh-CN&text=${encodeURIComponent(text.substring(0, CONFIG.SEARCH.TRANSLATE_MAX_CHARS))}`, '_blank');
+                }
+            });
+
+            header.appendChild(pill);
+            header.appendChild(transBtn);
+
+            const bodyEl        = document.createElement('div');
+            bodyEl.className    = 'thought-body markdown-body';
+            bodyEl.innerHTML    = App.Utils.safeMarkdown(item.thoughtText);
+
+            thoughtPanel.appendChild(header);
+            thoughtPanel.appendChild(bodyEl);
+            bubble.appendChild(thoughtPanel);
+        }
+
+        // ── Message text ──────────────────────────────────────────
+        if (item.messageText) {
+            const msgContent    = document.createElement('div');
+            msgContent.className = 'message-text markdown-body';
+            msgContent.innerHTML = App.Utils.safeMarkdown(item.messageText);
+            bubble.appendChild(msgContent);
+        }
+
+        // ── Attached images ───────────────────────────────────────
+        if (Array.isArray(item.images)) {
+            item.images.forEach(imgData => {
+                bubble.appendChild(App.Images.buildImageNode(imgData, item));
+            });
+        }
+
+        wrapper.appendChild(label);
+        wrapper.appendChild(bubble);
+        return wrapper;
+    }
+
+    function _toggleThought(header) {
+        const panel = header.closest('.thought-panel');
+        if (!panel) return;
+        panel.classList.toggle('open');
+        const isOpen = panel.classList.contains('open');
+        // Persist open state on the item data so VirtualScroller re-renders restore it
+        const wrapper = panel.closest('.msg-wrapper');
+        if (wrapper) {
+            const idx = parseInt(wrapper.id.replace('msg-', ''), 10);
+            if (App.state.currentScroller && !isNaN(idx)) {
+                const item = App.state.currentScroller.items[idx];
+                if (item) item._thoughtOpen = isOpen;
+            }
+        }
+        if (!isOpen) {
+            const rect = header.getBoundingClientRect();
+            if (rect.top < 50) header.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        window.notifyVSResize && window.notifyVSResize();
+    }
+
+    function scrollToTop() {
+        const c = document.getElementById('chatContainer');
+        if (App.state.currentScroller) {
+            App.state.currentScroller.scrollToIndex(0);
+        } else {
+            c.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    }
+
+    function scrollToBottom() {
+        const c  = document.getElementById('chatContainer');
+        const sc = App.state.currentScroller;
+        if (sc) {
+            // Step 1: raw push to current physical bottom.
+            c.scrollTop = c.scrollHeight;
+            // Step 2: force-mount the real bottom DOM nodes.
+            sc.update();
+            // Step 3: after reflow, push again to absorb height growth
+            //         from real node heights exceeding estimates.
+            requestAnimationFrame(() => { c.scrollTop = c.scrollHeight; });
+        } else {
+            c.scrollTo({ top: c.scrollHeight, behavior: 'smooth' });
+        }
+    }
+
+    function showLoadingState(sessionName) {
+        const container = document.getElementById('chatContainer');
+        if (App.state.currentScroller) {
+            App.state.currentScroller.destroy();
+            App.state.currentScroller = null;
+        }
+        App.state.viewMode = 'empty';
+        container.innerHTML = `
+            <div class="empty-state-wrapper">
+                <div class="empty-state" style="cursor:default; border-style:solid; border-color:var(--accent-color);">
+                    <svg class="empty-icon" viewBox="0 0 24 24" style="opacity:0.6; animation:pulse 1s infinite;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
+                    <div class="empty-text-main" style="font-size:16px;">${sessionName || '加载中'}</div>
+                    <div class="empty-text-sub">正在从云端加载对话内容…</div>
+                </div>
+            </div>`;
+    }
+
+    return { renderSession, showEmptyState, showLoadingState, createBubbleNode, scrollToTop, scrollToBottom };
+})();
+
+// ── 向后兼容桩（Legacy Shim）─────────────────────────────────────────
+// 旧版本（Batch 3 重构前）通过 setAttribute('onclick', ...) 生成的导出 HTML 中，
+// thought-header 含有字符串形式的 onclick="toggleThought(this)"。
+// 当前代码已改用 addEventListener，不再生成此类字符串，
+// 但保留此桩以确保历史导出文件仍可正常工作。
+// 【禁止删除，禁止挂载新功能于此】
+window.toggleThought = function(header) {
+    header.click(); // The header now has a native click listener
+};
+
+
+/* ================================================================
+   § 12. IMAGES
+   Insert, compress, render, delete, and lightbox for images.
+
+   Bug fixed: currentImgTarget is now a local closure variable inside
+   triggerInsert, not a shared global. Rapid sequential clicks no
+   longer risk targeting the wrong bubble.
+   ================================================================ */
+App.Images = (() => {
+    let _imgIdSeq = 0;
+
+    function triggerInsert(e, bubbleElement, turnData) {
+        e.stopPropagation();
+        // Capture target in a local variable tied to this specific click,
+        // eliminating the shared-global race condition.
+        const target = { bubble: bubbleElement, turnData };
+        const inserter = document.getElementById('imgInserter');
+        // Replace the handler each time to bind the correct target closure
+        inserter.onchange = (ev) => _handleInsert(ev, target);
+        inserter.click();
+    }
+
+    // handleInsert (inline onchange fallback) has been removed:
+    // triggerInsert() overwrites inserter.onchange with a closure each time,
+    // so the static HTML onchange was never reachable. Dead code deleted in Batch 3.
+
+    function _handleInsert(event, target) {
+        const file = event.target.files[0];
+        if (!file) return;
+        event.target.value = '';
+
+        // ── 找到当前 Session（在 await 前冻结上下文，防止异步竞态）──
+        const sessionId = App.state.currentSessionId;
+        const imgId     = `img-${++_imgIdSeq}-${Date.now()}`;
+
+        if (window.DB) {
+            // ── Firebase 路径：WebP 压缩 → Storage 上传 → 乐观更新 ──
+            const storagePath = `attachments/${sessionId}_${imgId}.webp`;
+
+            // Step 1：本地 Blob URL 立即展示预览（零延迟体验）
+            const previewUrl = URL.createObjectURL(file);
+            const imgData    = { id: imgId, base64: previewUrl, _isPreview: true };
+            const node       = buildImageNode(imgData, target.turnData);
+            target.bubble.appendChild(node);
+            if (!target.turnData.images) target.turnData.images = [];
+            target.turnData.images.push(imgData);
+
+            // Step 2：后台静默压缩 + 上传
+            (async () => {
+                window.setSyncStatus?.('loading', '上传图片…');
+                try {
+                    const blob = await window.DB.compress(file);
+                    const photoUrl = await window.DB.uploadPhoto(storagePath, blob);
+                    URL.revokeObjectURL(previewUrl); // 释放预览内存
+
+                    // Step 3：竞态兜底——上传期间用户可能已删除该 Session 或图片
+                    const stillInSession = App.state.sessions.find(s => s.id === sessionId);
+                    const stillInTurn    = target.turnData.images?.find(i => i.id === imgId);
+                    if (!stillInSession || !stillInTurn) {
+                        await window.DB.deletePhoto(storagePath).catch(() => {});
+                        window.setSyncStatus?.('ok', '已同步');
+                        return;
+                    }
+
+                    // Step 4：更新内存中的 imgData，替换为云端 URL
+                    const idx = target.turnData.images.findIndex(i => i.id === imgId);
+                    if (idx !== -1) {
+                        target.turnData.images[idx] = { id: imgId, photoUrl, photoStoragePath: storagePath };
+                    }
+                    const imgEl = document.querySelector(`#container-${imgId} img`);
+                    if (imgEl) imgEl.src = photoUrl;
+
+                    // Step 5：重传 turns JSON 到 Storage（含最新图片 URL）
+                    const session = App.state.sessions.find(s => s.id === sessionId);
+                    if (session) {
+                        await window.DB.uploadSessionTurns(sessionId, session.turns);
+                    }
+                    window.setSyncStatus?.('ok', '已同步');
+                    window.showToast?.('🖼️ 图片已上传');
+                } catch (err) {
+                    console.error('[Firebase] 图片上传失败:', err);
+                    URL.revokeObjectURL(previewUrl);
+                    document.getElementById(`container-${imgId}`)?.remove();
+                    if (target.turnData.images) {
+                        target.turnData.images = target.turnData.images.filter(i => i.id !== imgId);
+                    }
+                    window.setSyncStatus?.('error', '上传失败');
+                    window.showToast?.('⚠️ 图片上传失败，请检查网络后重试', 5000);
+                }
+            })();
+        } else {
+            // ── 离线降级路径：Base64 本地存储 ──
+            _compress(file, (base64) => {
+                if (!base64) { alert('图片处理失败，请重试'); return; }
+                const imgData = { id: imgId, base64 };
+                const node    = buildImageNode(imgData, target.turnData);
+                target.bubble.appendChild(node);
+                if (!target.turnData.images) target.turnData.images = [];
+                target.turnData.images.push(imgData);
+            });
+        }
+    }
+
+    /** Build a reusable image DOM node (used by Renderer and _handleInsert) */
+    function buildImageNode(imgData, turnData) {
+        const container    = document.createElement('div');
+        container.className = 'img-container';
+        container.id       = `container-${imgData.id}`;
+
+        const img          = document.createElement('img');
+        // 优先使用云端 photoUrl，回退到 base64（本地遗留 / 预览阶段）
+        img.src            = imgData.photoUrl || imgData.base64 || '';
+        img.loading        = 'lazy';
+        img.style.cursor   = 'zoom-in';
+        img.addEventListener('click', () => openLightbox(img.src));
+        img.addEventListener('load',  () => window.notifyVSResize && window.notifyVSResize());
+
+        const delBtn       = document.createElement('button');
+        delBtn.className   = 'img-del-btn';
+        delBtn.innerHTML   = '✕';
+        delBtn.title       = '删除图片';
+        delBtn.addEventListener('click', () => _deleteImage(imgData.id, turnData));
+
+        container.appendChild(img);
+        container.appendChild(delBtn);
+        return container;
+    }
+
+    function _deleteImage(imgId, turnData) {
+        document.getElementById(`container-${imgId}`)?.remove();
+        if (turnData.images) {
+            const target = turnData.images.find(img => img.id === imgId);
+            turnData.images = turnData.images.filter(img => img.id !== imgId);
+
+            // Firebase：删除 Storage 图片 + 更新 Firestore
+            if (target && window.DB) {
+                const storagePath = target.photoStoragePath;
+                (async () => {
+                    if (storagePath) {
+                        await window.DB.deletePhoto(storagePath).catch(() => {});
+                    }
+                    const sessionId = App.state.currentSessionId;
+                    const session   = App.state.sessions.find(s => s.id === sessionId);
+                    if (session) {
+                        await window.DB.uploadSessionTurns(sessionId, session.turns).catch(err =>
+                            console.error('[Firebase] 更新 turns 失败:', err)
+                        );
+                    }
+                })();
+            }
+        }
+    }
+
+    /** Compress image to max CONFIG.IMAGE.MAX_DIMENSION px longest side, JPEG quality CONFIG.IMAGE.JPEG_QUALITY */
+    function _compress(file, callback) {
+        const reader = new FileReader();
+        reader.onerror = () => callback(null);
+        reader.onload  = (e) => {
+            const img  = new Image();
+            img.onerror = () => callback(null);
+            img.onload = () => {
+                const MAX = CONFIG.IMAGE.MAX_DIMENSION;
+                let { width, height } = img;
+                if (width > MAX || height > MAX) {
+                    if (width > height) { height = Math.round(height * MAX / width); width = MAX; }
+                    else                { width  = Math.round(width  * MAX / height); height = MAX; }
+                }
+                const canvas = document.createElement('canvas');
+                canvas.width  = width;
+                canvas.height = height;
+                canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+                callback(canvas.toDataURL('image/jpeg', CONFIG.IMAGE.JPEG_QUALITY));
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function openLightbox(src) {
+        document.getElementById('lightboxImg').src = src;
+        document.getElementById('lightboxOverlay').classList.add('open');
+        document.body.style.overflow = 'hidden';
+        // Lightbox 遮挡画布时暂停虚拟滚动的 rAF，避免无意义渲染（宪法：弹窗打开时暂停后台渲染）
+        if (App.state.currentScroller) App.state.currentScroller.pause();
+    }
+
+    function closeLightbox() {
+        document.getElementById('lightboxOverlay').classList.remove('open');
+        document.getElementById('lightboxImg').src = '';
+        document.body.style.overflow = '';
+        // 恢复虚拟滚动，同步 Lightbox 开启期间可能发生的尺寸变化
+        if (App.state.currentScroller) App.state.currentScroller.resume();
+    }
+
+    return { triggerInsert, buildImageNode, openLightbox, closeLightbox };
+})();
+
+
+/* ================================================================
+   § 13. EXPORT
+   HTML, Markdown, and TXT export.
+
+   Bug fixed: search highlights and wrapper spans are cleared before
+   generating the HTML snapshot, preventing polluted <mark> and
+   <span data-search-wrap> nodes from ending up in the exported file.
+
+   Security fix: <!-- sequences are now escaped in the injected data
+   script, in addition to the existing <\/script> escaping.
+   ================================================================ */
+App.Export = (() => {
+
+    function showMenu(event) {
+        event.stopPropagation();
+        document.getElementById('exportMenu').classList.toggle('show');
+    }
+
+    function exportAs(format) {
+        if (App.state.sessions.length === 0) { alert('没有可导出的内容'); return; }
+
+        if (format === 'html') {
+            const sizeMB = _estimateSizeMB();
+            if (sizeMB > 20 && !confirm(`预估导出文件约 ${sizeMB.toFixed(0)} MB，继续吗？`)) return;
+            App.Utils.downloadFile(
+                _generateHTML(),
+                `Gemini-Echo-${new Date().toISOString().slice(0, 10)}.html`,
+                'text/html'
+            );
+            return;
+        }
+
+        // 导出全部会话的用户消息（跨 session 汇总）
+        if (format === 'user-md') {
+            App.Utils.downloadFile(
+                _toAllUserMarkdown(),
+                `Gemini-UserMessages-${new Date().toISOString().slice(0, 10)}.md`,
+                'text/plain'
+            );
+            return;
+        }
+
+        const session = App.state.sessions.find(s => s.id === App.state.currentSessionId);
+        if (!session) { alert('请先选择一个会话'); return; }
+        const fname = App.Utils.sanitizeFilename(session.name);
+
+        if (format === 'markdown') {
+            App.Utils.downloadFile(_toMarkdown(session), `${fname}.md`, 'text/plain');
+        } else if (format === 'txt') {
+            App.Utils.downloadFile(_toTXT(session), `${fname}.txt`, 'text/plain');
+        }
+    }
+
+    function _estimateSizeMB() {
+        let total = 0;
+        App.state.sessions.forEach(s =>
+            (s.turns || []).forEach(t =>
+                (t.images || []).forEach(img => { total += img.base64.length; })
+            )
+        );
+        return ((total / 1.37) + 512 * 1024) / (1024 * 1024);
+    }
+
+    function _generateHTML() {
+        // Clear search state before snapshotting DOM, to avoid exporting
+        // <mark> highlights and data-search-wrap spans into the output file.
+        App.Search.clearHighlight();
+
+        const parser = new DOMParser();
+        const doc    = parser.parseFromString(document.documentElement.outerHTML, 'text/html');
+
+        // Clean transient UI state
+        doc.getElementById('sidebar')?.classList.remove('open');
+        doc.getElementById('searchBar')?.classList.remove('open');
+        doc.getElementById('exportMenu')?.classList.remove('show');
+        const fileList = doc.getElementById('fileList');
+        if (fileList) fileList.innerHTML = '';
+        const chatContainer = doc.getElementById('chatContainer');
+        if (chatContainer) chatContainer.innerHTML = '';
+
+        // Inject session data as a bootstrap script
+        // Security: escape <\/script>, <!-- and Unicode line terminators
+        const safeData = JSON.stringify(App.state.sessions)
+            .replace(/<\/script>/gi, '<\\/script>')
+            .replace(/<!--/g, '<\\!--')
+            .replace(/\u2028/g, '\\u2028')
+            .replace(/\u2029/g, '\\u2029');
+
+        const script = doc.createElement('script');
+        script.textContent =
+            `window.restoredSessions = ${safeData}; ` +
+            `window.restoredSessionId = ${JSON.stringify(App.state.currentSessionId)};`;
+        doc.body.appendChild(script);
+
+        return '<!DOCTYPE html>\n' + doc.documentElement.outerHTML;
+    }
+
+    function _toMarkdown(session) {
+        let md = `# ${session.name}\n\n`;
+        if (session.systemInstruction?.trim()) {
+            md += `## SYSTEM\n\n${session.systemInstruction.trim()}\n\n---\n\n`;
+        }
+        session.turns.forEach(turn => {
+            md += `## ${turn.role.toUpperCase()}\n\n`;
+            if (turn.hasThought) {
+                md += `> **💭 Thoughts**\n>\n> ${turn.thoughtText.replace(/\n/g, '\n> ')}\n\n`;
+            }
+            md += `${turn.messageText}\n\n---\n\n`;
+        });
+        return md;
+    }
+
+    function _toTXT(session) {
+        let txt = `${session.name}\n${'='.repeat(40)}\n\n`;
+        if (session.systemInstruction?.trim()) {
+            txt += `【SYSTEM】\n${session.systemInstruction.trim()}\n\n${'-'.repeat(40)}\n\n`;
+        }
+        session.turns.forEach(turn => {
+            txt += `【${turn.role.toUpperCase()}】\n`;
+            if (turn.hasThought) txt += `[思考]: ${turn.thoughtText}\n`;
+            txt += `${turn.messageText}\n\n${'-'.repeat(40)}\n\n`;
+        });
+        return txt;
+    }
+
+    /**
+     * 导出所有会话中的用户消息，汇总为一个 Markdown 文件。
+     * 结构：每个会话用 # 标题分隔，每条用户消息前缀 ▶ 符号。
+     * 跳过 turns 尚未加载（null）的会话，并在末尾附注说明。
+     */
+    function _toAllUserMarkdown() {
+        const sessions = App.state.sessions;
+        let md = '';
+        const skipped = [];
+
+        sessions.forEach(session => {
+            // turns 为 null 表示尚未懒加载，跳过并记录
+            if (!Array.isArray(session.turns)) {
+                skipped.push(session.name);
+                return;
+            }
+            const userTurns = session.turns.filter(t => t.role === 'user' && (t.messageText || '').trim());
+            if (userTurns.length === 0) return;
+
+            md += `# ${session.name}\n\n`;
+            userTurns.forEach(turn => {
+                md += `▶ ${turn.messageText.trim()}\n\n`;
+            });
+            md += '\n';
+        });
+
+        if (md === '') md = '（没有可导出的用户消息）\n';
+
+        if (skipped.length > 0) {
+            md += `---\n\n> ⚠️ 以下会话因尚未打开过、内容未加载，已跳过：\n`;
+            skipped.forEach(name => { md += `> - ${name}\n`; });
+            md += '\n> 请先逐一点击这些会话后，再重新导出。\n';
+        }
+
+        return md;
+    }
+
+    return { showMenu, exportAs };
+})();
+
+
+/* ================================================================
+   § 14. EVENTS
+   全局事件委派层（Global Event Delegation）。
+
+   设计决策：
+   - 使用单一 document 级 click 监听器 + data-action 路由取代
+     分散在 HTML 模板中的 14 处内联 onclick/oninput/onchange。
+   - HTML 模板只负责声明意图（data-action="xxx"），
+     逻辑全部收拢在此模块，逻辑与模板彻底解耦。
+   - searchInput 的 input/keydown 因无法用 data-action 表达，
+     在 init() 中通过 getElementById 直接绑定。
+   - lightboxImg 的 stopPropagation 同理在 init() 中绑定，
+     防止点击图片本身触发 lightbox-close 路由。
+
+   导出菜单关闭策略：
+   - 任意 click 到达 document 时，若点击目标不是导出按钮本身
+     （data-action="export-menu"），则自动关闭菜单。
+   - 这样无论点击菜单项还是页面其他区域，菜单都会先关闭，
+     再由路由执行对应操作，无需在各 case 中重复写关闭逻辑。
+   ================================================================ */
+App.Events = (() => {
+
+    function init() {
+
+        // ── Global click router ──────────────────────────────────────
+        document.addEventListener('click', (e) => {
+
+            // 导出菜单：点击导出按钮以外的任意位置均关闭菜单。
+            // 原版依赖第二个 document 监听器 + stopPropagation 实现；
+            // 现在两者合并在同一个处理器内，逻辑更清晰。
+            if (!e.target.closest('[data-action="export-menu"]')) {
+                document.getElementById('exportMenu').classList.remove('show');
+            }
+
+            const el = e.target.closest('[data-action]');
+            if (!el) return;
+
+            switch (el.dataset.action) {
+                case 'sidebar-toggle':
+                case 'sidebar-backdrop':   App.Sidebar.toggle();           break;
+                case 'search-toggle':      App.Search.toggle();            break;
+                case 'search-scope':       App.Search.toggleScope();       break;
+                case 'search-prev':        App.Search.next(false);         break;
+                case 'search-next':        App.Search.next(true);          break;
+                case 'search-close':       App.Search.toggle();            break;
+                case 'export-menu':        App.Export.showMenu(e);         break;
+                case 'export-html':        App.Export.exportAs('html');     break;
+                case 'export-markdown':    App.Export.exportAs('markdown'); break;
+                case 'export-txt':         App.Export.exportAs('txt');      break;
+                case 'export-user-md':     App.Export.exportAs('user-md'); break;
+                case 'scroll-top':         App.Renderer.scrollToTop();     break;
+                case 'scroll-bottom':      App.Renderer.scrollToBottom();  break;
+                case 'theme-toggle':       App.Theme.toggle();             break;
+                case 'lightbox-close':     App.Images.closeLightbox();     break;
+            }
+        });
+
+        // ── searchInput：input / keydown ─────────────────────────────
+        // oninput / onkeydown 无法用 data-action 路由（非 click 事件），
+        // 在此处直接绑定，与路由层分开但同样集中管理。
+        const searchInput = document.getElementById('searchInput');
+        searchInput.addEventListener('input',   ()  => App.Search.onInput());
+        searchInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') App.Search.next(true); });
+
+        // ── lightboxImg：阻止点击图片冒泡至 lightbox-close 路由 ──────
+        // 原版使用内联 onclick="event.stopPropagation()"；
+        // 现移至此处统一管理，保持 HTML 模板纯净。
+        document.getElementById('lightboxImg').addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+    }
+
+    return { init };
+})();
+
+
+/* ================================================================
+   § 15. INIT
+   Boot sequence and global event listeners.
+   ================================================================ */
+App.Theme.init();
+App.FileImport.init();
+App.Events.init();
+
+// Global keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        const lb  = document.getElementById('lightboxOverlay');
+        const bar = document.getElementById('searchBar');
+        if (lb.classList.contains('open'))  { App.Images.closeLightbox(); return; }
+        if (bar.classList.contains('open')) { App.Search.toggle(); return; }
+    }
+    if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
+        e.preventDefault();
+        const bar = document.getElementById('searchBar');
+        if (!bar.classList.contains('open')) App.Search.toggle();
+        else document.getElementById('searchInput').focus();
+    }
+    // Route End / Home through the virtual scroller so the bottom-lock and
+    // anchor compensation handle them, rather than the browser jumping
+    // directly to raw scrollHeight (which could retrigger feedback loops).
+    if (e.key === 'End' || e.key === 'Home') {
+        const tag = document.activeElement && document.activeElement.tagName;
+        if (tag !== 'INPUT' && tag !== 'TEXTAREA') {
+            if (App.state.currentScroller && !App.state.currentScroller.isFullRender) {
+                e.preventDefault();
+                if (e.key === 'End') App.Renderer.scrollToBottom();
+                else                 App.Renderer.scrollToTop();
+            }
+        }
+    }
+});
+
+// 页面可见性：标签页切换到后台时暂停虚拟滚动，回到前台时恢复。
+// 宪法：document.hidden === true 时主动暂停持续性 rAF 动画，
+// 减少后台 CPU/GPU 占用，防止设备无谓发热耗电。
+document.addEventListener('visibilitychange', () => {
+    const sc = App.state.currentScroller;
+    if (!sc) return;
+    if (document.hidden) sc.pause();
+    else                 sc.resume();
+});
+
+// Restore sessions embedded in the HTML on load (from a previous HTML export)
+// Firebase 加载完成后会调用 App._cloudRestore() 覆盖此处的数据
+window.addEventListener('DOMContentLoaded', () => {
+    if (window.restoredSessions && Array.isArray(window.restoredSessions)) {
+        App.state.sessions = window.restoredSessions;
+        const targetId = window.restoredSessionId ||
+            (App.state.sessions.length > 0 ? App.state.sessions[0].id : null);
+        if (targetId) App.Sessions.switchTo(targetId);
+        App.Sidebar.render();
+    }
+});
+
+/**
+ * App._cloudRestore — 由 Firebase module script 在加载完成后调用。
+ * sessions 只含元数据（turns === null），turns 由 switchTo 懒加载。
+ */
+App._cloudRestore = function(sessions, groups = []) {
+    if (!Array.isArray(sessions) || sessions.length === 0) return;
+    App.state.sessions = sessions;
+    App.state.groups   = groups;
+    const currentId   = App.state.currentSessionId;
+    const stillExists = currentId && sessions.find(s => s.id === currentId);
+    if (stillExists) {
+        App.Sidebar.render();
+    } else {
+        App.Sessions.switchTo(sessions[0].id);
+        App.Sidebar.render();
+    }
+};
+
+</script>
+<!-- ================================================================
+     § 16. FIREBASE
+     架构：Firestore 存轻量元数据 + Storage 存 turns JSON。
+     彻底解决单文档 1MB 上限，支持任意长度对话。
+     ================================================================ -->
+<script type="module">
+import { initializeApp }
+    from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
+import {
+    getFirestore, collection, doc,
+    getDocs, setDoc, deleteDoc, query, where
+} from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
+import {
+    getStorage, ref, uploadBytes, getDownloadURL, deleteObject, getBytes
+} from "https://www.gstatic.com/firebasejs/12.9.0/firebase-storage.js";
+
+/* ── Firebase 初始化 ──────────────────────────────────────────── */
+const firebaseConfig = {
+    apiKey:            "AIzaSyCq0apieaxh4xaAoJBJ5Evam_jnNOr8yBw",
+    authDomain:        "gen-lang-client-0378444111.firebaseapp.com",
+    projectId:         "gen-lang-client-0378444111",
+    storageBucket:     "gen-lang-client-0378444111.firebasestorage.app",
+    messagingSenderId: "440342290540",
+    appId:             "1:440342290540:web:894148c0d604d2eaa33849"
+};
+
+const firebaseApp = initializeApp(firebaseConfig);
+const db          = getFirestore(firebaseApp);
+const storage     = getStorage(firebaseApp);
+
+/* ── UI 反馈工具 ──────────────────────────────────────────────── */
+let _toastTimer;
+
+function showToast(msg, duration = 3000) {
+    const el = document.getElementById('fbToast');
+    if (!el) return;
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(_toastTimer);
+    _toastTimer = setTimeout(() => el.classList.remove('show'), duration);
+}
+
+function setSyncStatus(state, label) {
+    const badge = document.getElementById('syncBadge');
+    const txt   = document.getElementById('syncLabel');
+    if (!badge || !txt) return;
+    badge.className = `sync-badge ${state}`;
+    txt.textContent = label;
+}
+
+/* ── 常量 ─────────────────────────────────────────────────────── */
+const COL   = 'notes';
+const QUERY = () => query(
+    collection(db, COL),
+    where('domain', '==', 'explore'),
+    where('type',   '==', 'gemini_echo_session')
+);
+
+/* ── 图片压缩（宪法标准两级 compressWebP）────────────────────── */
+function compress(file, maxW = 800, quality = 0.75, preMax = 2048) {
+    return new Promise((resolve, reject) => {
+        const img       = new Image();
+        const objectUrl = URL.createObjectURL(file);
+        img.onload = () => {
+            URL.revokeObjectURL(objectUrl);
+            let w = img.width, h = img.height;
+            if (w > preMax || h > preMax) {
+                const s = Math.min(preMax / w, preMax / h);
+                w = w * s | 0; h = h * s | 0;
+            }
+            if (w > maxW || h > maxW) {
+                if (w > h) { h = h * maxW / w | 0; w = maxW; }
+                else        { w = w * maxW / h | 0; h = maxW; }
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = w; canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            canvas.toBlob(
+                blob => { if (blob) return resolve(blob);
+                    canvas.toBlob(b => b ? resolve(b) : reject('compress fail'),
+                        'image/jpeg', quality); },
+                'image/webp', quality
+            );
+        };
+        img.onerror = () => { URL.revokeObjectURL(objectUrl); reject('image load fail'); };
+        img.src = objectUrl;
+    });
+}
+
+/* ── 剥离 base64 预览，只保留已上传的云端 URL ─────────────────── */
+function stripBase64(turns) {
+    return (turns || []).map(t => ({
+        role:        t.role,
+        hasThought:  t.hasThought  ?? false,
+        thoughtText: t.thoughtText ?? '',
+        messageText: t.messageText ?? '',
+        timestamp:   t.timestamp   ?? null,
+        images: (t.images || [])
+            .filter(img => img.photoUrl)
+            .map(img => ({
+                id:               img.id,
+                photoUrl:         img.photoUrl,
+                photoStoragePath: img.photoStoragePath,
+            })),
+    }));
+}
+
+/* ── turns JSON 上传到 Storage ────────────────────────────────── */
+async function _uploadTurnsJSON(sessionId, turns) {
+    const clean = stripBase64(turns);
+    const blob  = new Blob([JSON.stringify(clean)], { type: 'application/json' });
+    const path  = `sessions/${sessionId}.json`;
+    const sr    = ref(storage, path);
+    await uploadBytes(sr, blob);
+    const url = await getDownloadURL(sr);
+    return { path, url };
+}
+
+/* ── Session ↔ Firestore 文档互转（纯元数据，不含 turns）──────── */
+function sessionToMetaDoc(session, turnsStoragePath, turnsUrl) {
+    const now = new Date().toISOString();
+    return {
+        domain:            'explore',
+        type:              'gemini_echo_session',
+        name:              session.name              ?? '',
+        systemInstruction: session.systemInstruction ?? '',
+        modelName:         session.modelName         ?? '',
+        turnsStoragePath:  turnsStoragePath,
+        turnsUrl:          turnsUrl,
+        turnCount:         (session.turns || []).length,
+        sortOrder:         session.sortOrder         ?? 0,
+        groupId:           session.groupId           ?? null,
+        createdAt:         session.createdAt         ?? now,
+        updatedAt:         now,
+    };
+}
+
+function docToSession(id, data) {
+    return {
+        id,
+        name:              data.name              ?? '未命名会话',
+        systemInstruction: data.systemInstruction ?? '',
+        modelName:         data.modelName         ?? '',
+        turns:             null,          // null = 尚未加载，由 switchTo 懒加载
+        turnsStoragePath:  data.turnsStoragePath ?? null,
+        turnsUrl:          data.turnsUrl          ?? null,
+        turnCount:         data.turnCount         ?? 0,
+        sortOrder:         data.sortOrder         ?? 0,
+        groupId:           data.groupId           ?? null,
+        timestamp:         data.createdAt         ?? data.updatedAt ?? new Date().toISOString(),
+        createdAt:         data.createdAt         ?? new Date().toISOString(),
+        updatedAt:         data.updatedAt         ?? new Date().toISOString(),
+    };
+}
+
+/* ================================================================
+   DB 层——所有 Firebase 操作的唯一入口
+   ================================================================ */
+const DB = {
+
+    // ── 工具函数（供业务代码使用）──────────────────────────────
+    compress,
+    stripBase64,
+
+    // ── turns 懒加载（Storage SDK getBytes，不走浏览器 fetch，无 CORS 问题）──
+    fetchTurns: async (storagePath) => {
+        const bytes      = await getBytes(ref(storage, storagePath));
+        const jsonString = new TextDecoder().decode(bytes);
+        return JSON.parse(jsonString);
+    },
+
+    // ── Session CRUD ───────────────────────────────────────────
+
+    /**
+     * 创建新 Session：
+     * 1. turns JSON → 上传到 Storage → 拿到 URL
+     * 2. 元数据（含 URL）→ 写入 Firestore
+     * Firestore 文档永远不超过几 KB，彻底解决 1MB 限制
+     */
+    createSession: async (session) => {
+        const { path, url } = await _uploadTurnsJSON(session.id, session.turns || []);
+        await setDoc(
+            doc(db, COL, session.id),
+            sessionToMetaDoc(session, path, url)
+        );
+    },
+
+    /** 只拉元数据，不含 turns（Sidebar 渲染用） */
+    loadSessions: async () => {
+        const snap     = await getDocs(QUERY());
+        const sessions = snap.docs.map(d => docToSession(d.id, d.data()));
+        // 有 sortOrder 时按 sortOrder 升序；sortOrder 相同（如旧数据全为0）则 fallback 名称序
+        sessions.sort((a, b) =>
+            a.sortOrder !== b.sortOrder
+                ? a.sortOrder - b.sortOrder
+                : a.name.localeCompare(b.name, 'zh-CN', { numeric: true })
+        );
+        return sessions;
+    },
+
+    /** 更新元数据字段（重命名、System Prompt、sortOrder、groupId） */
+    patchSession: async (id, patch) => {
+        await setDoc(
+            doc(db, COL, id),
+            { ...patch, updatedAt: new Date().toISOString() },
+            { merge: true }
+        );
+    },
+
+    // ── 分组 CRUD ──────────────────────────────────────────────
+
+    loadGroups: async () => {
+        const q    = query(collection(db, COL),
+            where('domain', '==', 'explore'),
+            where('type',   '==', 'gemini_echo_group'));
+        const snap = await getDocs(q);
+        const groups = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        groups.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+        return groups;
+    },
+
+    saveGroup: async (group) => {
+        await setDoc(doc(db, COL, group.id), {
+            domain:    'explore',
+            type:      'gemini_echo_group',
+            name:      group.name,
+            sortOrder: group.sortOrder ?? 0,
+            collapsed: group.collapsed ?? false,
+            updatedAt: new Date().toISOString(),
+        }, { merge: true });
+    },
+
+    deleteGroup: async (groupId) => {
+        await deleteDoc(doc(db, COL, groupId));
+    },
+
+    /**
+     * 重传 turns JSON 到 Storage（图片增删后调用）。
+     * Storage 同路径上传自动覆盖旧文件，但 Download Token 会变，
+     * 所以同时 patch Firestore 更新 turnsUrl。
+     */
+    uploadSessionTurns: async (sessionId, turns) => {
+        const { path, url } = await _uploadTurnsJSON(sessionId, turns);
+        await setDoc(
+            doc(db, COL, sessionId),
+            { turnsUrl: url, turnsStoragePath: path,
+              turnCount: (turns || []).length,
+              updatedAt: new Date().toISOString() },
+            { merge: true }
+        );
+        // 同步更新内存中的 session.turnsUrl，避免下次懒加载用旧 URL
+        const session = (typeof App !== 'undefined')
+            ? App.state.sessions.find(s => s.id === sessionId)
+            : null;
+        if (session) { session.turnsUrl = url; session.turnsStoragePath = path; }
+        return url;
+    },
+
+    /**
+     * 连根拔起删除 Session：
+     * 1. 删 Firestore 元数据文档
+     * 2. 删 Storage turns JSON
+     * 3. 并行删所有关联图片
+     */
+    deleteSessionCompletely: async (session) => {
+        // 收集图片路径（turns 可能已懒加载到内存）
+        const imgPaths = [];
+        (session.turns || []).forEach(t => {
+            (t.images || []).forEach(img => {
+                if (img.photoStoragePath) imgPaths.push(img.photoStoragePath);
+            });
+        });
+
+        await deleteDoc(doc(db, COL, session.id));
+
+        const toDelete = [];
+        if (session.turnsStoragePath) {
+            toDelete.push(deleteObject(ref(storage, session.turnsStoragePath)).catch(() => {}));
+        }
+        imgPaths.forEach(p => toDelete.push(deleteObject(ref(storage, p)).catch(() => {})));
+        await Promise.all(toDelete);
+    },
+
+    // ── Storage 图片操作 ───────────────────────────────────────
+    uploadPhoto: async (path, blob) => {
+        const sr = ref(storage, path);
+        await uploadBytes(sr, blob);
+        return getDownloadURL(sr);
+    },
+
+    deletePhoto: (storagePath) => deleteObject(ref(storage, storagePath)),
+};
+
+/* ── 挂载到 window ────────────────────────────────────────────── */
+window.DB            = DB;
+window.showToast     = showToast;
+window.setSyncStatus = setSyncStatus;
+
+/* ── 等待 DOM + App 模块就绪 ──────────────────────────────────── */
+function waitForDOM() {
+    return new Promise(resolve => {
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', resolve, { once: true });
+        } else {
+            resolve();
+        }
+    });
+}
+
+/* ── 页面启动：拉元数据列表，触发首个会话懒加载 ─────────────────── */
+(async () => {
+    await waitForDOM();
+    setSyncStatus('loading', '加载中…');
+
+    try {
+        const [sessions, groups] = await Promise.all([
+            DB.loadSessions(),
+            DB.loadGroups(),
+        ]);
+
+        if (sessions.length === 0 && groups.length === 0) {
+            setSyncStatus('ok', '云端为空');
+            showToast('☁️ 云端暂无会话，请导入文件');
+        } else {
+            setSyncStatus('ok', `已同步 ${sessions.length} 个`);
+            if (typeof App !== 'undefined' && App._cloudRestore) {
+                App._cloudRestore(sessions, groups);
+            }
+        }
+    } catch (err) {
+        console.error('[Firebase] 加载失败:', err);
+        setSyncStatus('error', '加载失败');
+        showToast('⚠️ 云端加载失败：' + (err.message || err), 5000);
+    }
+})();
+</script>
+
+</body>
+</html>

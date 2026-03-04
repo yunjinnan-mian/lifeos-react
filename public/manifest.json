@@ -1,0 +1,18 @@
+{
+  "name": "我的生活之树 | LifeOS",
+  "short_name": "LifeOS",
+  "description": "生活系统导航页",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f4f6f0",
+  "theme_color": "#f4f6f0",
+  "icons": [
+    {
+      "src": "icon-512.jpeg",
+      "sizes": "1024x1024",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ]
+}
