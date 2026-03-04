@@ -271,8 +271,7 @@ function drawTile(gx, gy, type, sx, sy, tw, th) {
       if (w1 < 3) { r(0, (h >> 3) % 5 + 2, TS, 1, '#3a70cc'); if (w1 === 0) r(h % 5, ((h >> 3) % 5) + 1, 3, 1, 'rgba(255,255,255,0.7)'); }
       const w2 = ((_animTick >> 4) + gx * 7 + gy * 3 + 20) & 63;
       if (w2 < 2) r(0, (h >> 5) % 6 + 1, TS, 1, '#2a5cb8');
-      // 光点：只用tile固有hash决定位置和是否存在，不参与animTick，静态常驻
-      if (h % 23 === 0) r(h % (TS - 1), (h >> 4) % (TS - 1), 1, 1, 'rgba(255,255,255,0.55)');
+      if (((_animTick * 3 + gx * 11 + gy * 7) & 127) === 0) r(h % 6, (h >> 4) % 6, 1, 1, 'rgba(255,255,255,0.9)');
       break;
     }
     case T.SHALLOW: {

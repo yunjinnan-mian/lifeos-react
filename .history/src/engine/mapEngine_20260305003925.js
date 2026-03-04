@@ -266,20 +266,65 @@ function drawTile(gx, gy, type, sx, sy, tw, th) {
 
   switch (type) {
     case T.DEEP: {
-      if (h % 9 === 0) r(0, 0, TS, TS, '#122e6e');
-      const w1 = ((_animTick >> 3) + gx * 3 + gy * 7) & 63;
-      if (w1 < 3) { r(0, (h >> 3) % 5 + 2, TS, 1, '#3a70cc'); if (w1 === 0) r(h % 5, ((h >> 3) % 5) + 1, 3, 1, 'rgba(255,255,255,0.7)'); }
-      const w2 = ((_animTick >> 4) + gx * 7 + gy * 3 + 20) & 63;
-      if (w2 < 2) r(0, (h >> 5) % 6 + 1, TS, 1, '#2a5cb8');
-      // 光点：只用tile固有hash决定位置和是否存在，不参与animTick，静态常驻
-      if (h % 23 === 0) r(h % (TS - 1), (h >> 4) % (TS - 1), 1, 1, 'rgba(255,255,255,0.55)');
+      // 每块tile有自己的颜色微变，打破网格感
+      const hue = (h % 7);
+      if (hue === 0) r(0, 0, TS, TS, '#122e6e');
+      else if (hue === 1) r(0, 0, TS, TS, '#163380');
+      else if (hue === 2) r(0, 0, TS, TS, '#0e2860');
+
+      // 斜向波纹：每条波用 gx+gy*k 让波沿对角线传播，不同tile相位不同
+      const wPhase1 = (h & 0x1f);                          // tile自己的相位偏移 0~31
+      const wPhase2 = ((h >> 5) & 0x1f);
+      const wSpeed1 = (_animTick >> 3);
+      const wSpeed2 = (_animTick >> 4);
+
+      // 第一组波：沿 gx - gy*0.7 方向
+      const w1 = (wSpeed1 + Math.imul(gx, 5) - Math.imul(gy, 3) + wPhase1) & 63;
+      if (w1 < 4) {
+        const wy = (h >> 3) % (TS - 2) + 1;
+        const wlen = 3 + (h & 3);          // 波长3~6
+        r(0, wy, wlen, 1, '#3a70cc');
+        if (w1 === 0) r(h % (TS - 3), wy - 1, 3, 1, 'rgba(255,255,255,0.75)');
+      }
+
+      // 第二组波：沿 gx*0.5 + gy 方向，速度更慢
+      const w2 = (wSpeed2 + Math.imul(gx, 3) + Math.imul(gy, 5) + wPhase2 + 20) & 79;
+      if (w2 < 3) {
+        const wy2 = (h >> 5) % (TS - 2) + 1;
+        r(TS - (2 + (h & 3)), wy2, 2 + (h & 3), 1, '#2a5cb8');
+      }
+
+      // 第三组短碎波，更稀疏
+      const w3 = ((_animTick >> 5) + Math.imul(gx, 11) - Math.imul(gy, 7) + wPhase1) & 95;
+      if (w3 < 2) r((h >> 1) % (TS - 2), (h >> 4) % (TS - 2), 2, 1, '#4a80d8');
+
+      // 稀疏光点：每帧只有极少tile亮，且位置用tile固有hash + 时间决定，避免闪烁规律
+      const sparkle = (_animTick + h * 7) & 0xFF;
+      if (sparkle < 2 && (h % 5) < 3) {
+        r((h * 3) % (TS - 1), (h * 7) % (TS - 1), 1, 1, 'rgba(255,255,255,0.85)');
+      }
       break;
     }
     case T.SHALLOW: {
+      // 浅水颜色微变
       if (h % 5 === 0) r(0, 0, TS, TS, '#59C9F1');
-      if (h % 4 === 0) r((h >> 2) % 5 + 1, (h >> 5) % 5 + 1, 2, 1, 'rgba(255,255,255,.55)');
-      const ws = ((_animTick >> 3) + gx * 5 + gy * 4) & 47;
-      if (ws < 4) r(0, (h >> 3) % 5 + 2, TS, 1, 'rgba(255,255,255,0.25)');
+      else if (h % 7 === 0) r(0, 0, TS, TS, '#4ab8e0');
+
+      // 斜向小碎波
+      const wPhaseS = (h & 0x1f);
+      const ws1 = ((_animTick >> 3) + Math.imul(gx, 5) + Math.imul(gy, 3) + wPhaseS) & 47;
+      if (ws1 < 4) {
+        const wy = (h >> 3) % (TS - 2) + 1;
+        r(0, wy, 3 + (h & 3), 1, 'rgba(255,255,255,0.35)');
+        if (ws1 < 2) r((h >> 2) % (TS - 2), wy - 1, 2, 1, 'rgba(255,255,255,0.55)');
+      }
+
+      // 固定浅色纹理点，不动，增加沙质感
+      if (h % 4 === 0) r((h >> 2) % (TS - 1), (h >> 5) % (TS - 1), 2, 1, 'rgba(255,255,255,0.30)');
+
+      // 偶尔光点
+      const sparkleS = (_animTick + h * 11) & 0xFF;
+      if (sparkleS < 3 && h % 4 === 0) r((h * 5) % (TS - 1), (h * 9) % (TS - 1), 1, 1, 'rgba(255,255,255,0.70)');
       break;
     }
     case T.SAND: {
