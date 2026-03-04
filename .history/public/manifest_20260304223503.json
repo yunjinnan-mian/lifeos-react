@@ -1,7 +1,7 @@
 {
   "name": "我的生活之树 | LifeOS",
   "short_name": "LifeOS",
-  "description": "我的生活系统",
+  "description": "生活系统导航页",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",

@@ -3,9 +3,10 @@ export default function WardrobeHeader({ syncStatus }) {
 
   return (
     <header className="wrd-header">
-      <div className="wrd-logo">
-        装备耐久 <span>· 衣橱</span>
-        <div className={`sync-dot ${syncStatus}`} title={label} style={{ display: 'inline-block', marginLeft: '8px', verticalAlign: 'middle' }}></div>
+      <div className="wrd-logo">装备耐久 <span>· 衣橱</span></div>
+      <div className="sync-status">
+        <div className={`sync-dot ${syncStatus}`}></div>
+        <span>{label}</span>
       </div>
     </header>
   );
