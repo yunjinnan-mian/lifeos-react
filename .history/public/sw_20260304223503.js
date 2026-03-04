@@ -6,7 +6,8 @@ const CACHE_NAME = 'lifeos-v1';
 const CORE_ASSETS = [
   '/',
   '/index.html',
-  '/icon-512.jpeg'
+  '/icon-192.png',
+  '/icon-512.png'
 ];
 
 // 安装阶段：预缓存核心资源
