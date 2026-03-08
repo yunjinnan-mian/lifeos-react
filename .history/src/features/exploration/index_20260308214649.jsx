@@ -185,7 +185,8 @@ function EntryCard({ entry, showDate }) {
     <div className="exp-entry-card">
       {showDate && (
         <div className="exp-entry-date">
-          {parseInt(m)}·{parseInt(d)}
+          <span>{parseInt(m)}月</span>
+          <span>{parseInt(d)}日</span>
         </div>
       )}
 
