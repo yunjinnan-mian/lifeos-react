@@ -17,7 +17,7 @@
 .exp-wrapper {
   position: relative;
   width: 100%;
-  max-width: 420px;
+  max-width: min(92vw, 600px);
   max-height: 84vh;
   border-radius: 14px;
   overflow: hidden;
@@ -187,12 +187,12 @@
 .exp-date-dot.active .exp-date-dot-label { color: #5a4a30; font-weight: 600; }
 
 /* ── 条目区域
-   padding-top: 8px 使首行 baseline 对齐背景线
-   line-height: 28px 与网格精确匹配
-   padding-left: 48px 让文字从页边线右侧开始
+   padding-top 是 28 的整倍数，保证第一行 baseline 对齐背景线
+   padding-left: 52px 留出左侧页边线空间（日期 absolute 放这里）
    ─────────────────────────────────────────────────────────── */
 .exp-entries-area {
-  padding: 8px 16px 56px 48px;
+  padding: 0 16px 56px 52px;
+  position: relative;
 }
 
 /* ── 条目卡片：透明背景，直接融入纸张
@@ -200,39 +200,40 @@
    ─────────────────────────────────────────────────────────── */
 .exp-entry-card {
   position: relative;
-  margin-bottom: 8px;
-  /* 顶部 1px 分隔线，颜色比背景线深一点 */
   padding-top: 28px;
-}
-.exp-entry-card + .exp-entry-card {
-  border-top: 1px solid rgba(180,160,130,.4);
-}
-
-.exp-entry-meta {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  /* meta 行占一个 line-height */
-  line-height: 28px;
   margin-bottom: 0;
 }
+.exp-entry-card + .exp-entry-card {
+  border-top: 1px solid rgba(180,160,130,.35);
+}
+
+/* 日期：绝对定位到左侧页边线区域，不占正文宽度 */
 .exp-entry-date {
-  font-size: 11px;
-  color: #a09080;
-  letter-spacing: 1px;
-}
-.exp-entry-star {
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  font-size: 14px;
-  padding: 0;
+  position: absolute;
+  left: -48px;
+  top: 28px;
+  width: 44px;
+  text-align: right;
+  font-size: 10px;
+  color: #b09880;
+  letter-spacing: 0.3px;
   line-height: 28px;
-  opacity: .35;
-  transition: opacity .12s, transform .12s;
-  font-family: inherit;
-  flex-shrink: 0;
+  white-space: nowrap;
+  /* 竖排月/日 */
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0;
 }
+/* meta 行：只剩 star，靠右 */
+.exp-entry-meta {
+  display: flex;
+  justify-content: flex-end;
+  line-height: 28px;
+}
+
+
+
 .exp-entry-star.starred { opacity: 1; }
 .exp-entry-star:hover    { opacity: .75; transform: scale(1.2); }
 
@@ -262,8 +263,8 @@
 }
 .exp-photo-frame img {
   display: block;
-  width: 112px;
-  height: 142px;
+  width: 100px;
+  height: 112px;   /* 4×28 = 112px，精确对齐格线 */
   object-fit: cover;
   user-select: none;
 }
@@ -276,11 +277,10 @@
 }
 .exp-photo-nobg {
   display: block;
-  max-width: 130px;
-  max-height: 160px;
+  max-width: 120px;
+  max-height: 112px;  /* 4×28 */
   object-fit: contain;
   user-select: none;
-  /* 去背图无白色托底，直接融入纸张 */
   filter: drop-shadow(1px 2px 4px rgba(0,0,0,.22));
 }
 .exp-photo-nobg.float-left {

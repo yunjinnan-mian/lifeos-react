@@ -266,18 +266,9 @@ export default function ExplorationModal({ isOpen, zone, onClose }) {
                   <div style={{ fontSize: '12px', opacity: .6 }}>点击「今日记录」开始第一篇观察</div>
                 </div>
               )}
-              {!loading && current.map((entry, idx) => {
-                // 同一天的第一条才显示日期
-                const showDate = idx === 0 || current[idx - 1].date !== entry.date;
-                return (
-                  <EntryCard
-                    key={entry.id}
-                    entry={entry}
-                    showDate={showDate}
-                    onToggleStar={() => handleToggleStar(entry)}
-                  />
-                );
-              })}
+              {!loading && current.map(entry => (
+                <EntryCard key={entry.id} entry={entry} onToggleStar={() => handleToggleStar(entry)} />
+              ))}
             </div>
           </div>
 
@@ -299,24 +290,16 @@ export default function ExplorationModal({ isOpen, zone, onClose }) {
 // ============================================================
 // 条目卡片
 // ============================================================
-function EntryCard({ entry, showDate, onToggleStar }) {
+function EntryCard({ entry, onToggleStar }) {
   const photos     = entry.photos ?? [];
   const hasNobg    = photos.some(p => p.nobg);
   const rot1       = deterministicRotation(entry.id + '_0');
   const rot2       = deterministicRotation(entry.id + '_1');
-  const [m, d]     = entry.date ? entry.date.split('-').slice(1) : ['', ''];
 
   return (
     <div className="exp-entry-card">
-      {/* 日期：只在当天第一条显示，放左侧页边 */}
-      {showDate && (
-        <div className="exp-entry-date">
-          <span>{parseInt(m)}月</span>
-          <span>{parseInt(d)}日</span>
-        </div>
-      )}
-
       <div className="exp-entry-meta">
+        <span className="exp-entry-date">{fmtDateFull(entry.date)}</span>
         <button className={`exp-entry-star${entry.starred ? ' starred' : ''}`} onClick={onToggleStar}>
           {entry.starred ? '★' : '☆'}
         </button>
