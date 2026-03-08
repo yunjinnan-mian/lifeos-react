@@ -10,7 +10,6 @@ import StatsModal       from './components/StatsModal.jsx';
 import ZoneDetailModal  from './components/ZoneDetailModal.jsx';
 import ZoneNewModal     from './components/ZoneNewModal.jsx';
 import Wardrobe         from './features/wardrobe/index.jsx';
-import Finance         from './features/finance/index.jsx';
 
 export default function App() {
   // ── Page routing ──────────────────────────────────────────
@@ -391,44 +390,6 @@ export default function App() {
     );
   }
 
-  // ── Finance page ──────────────────────────────────────────
-  if (currentPage === 'finance') {
-    return (
-      <div className="fin-scope">
-        <Finance />
-        <button
-          onClick={() => setCurrentPage('map')}
-          style={{
-            position: 'fixed',
-            top: '12px',
-            right: '12px',
-            zIndex: 9999,
-            width: '40px',
-            height: '40px',
-            border: 'none',
-            background: 'none',
-            boxShadow: 'none',
-            cursor: 'pointer',
-            fontSize: '24px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            transition: 'transform 0.1s, opacity 0.1s',
-            opacity: 0.85,
-            padding: 0,
-          }}
-          onMouseEnter={e => e.currentTarget.style.opacity = '1'}
-          onMouseLeave={e => e.currentTarget.style.opacity = '0.85'}
-          onMouseDown={e => e.currentTarget.style.transform = 'scale(0.88)'}
-          onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
-          title="返回地图"
-        >
-          🏝️
-        </button>
-      </div>
-    );
-  }
-
   // ── Map page (default) ────────────────────────────────────
   return (
     <>
@@ -473,37 +434,6 @@ export default function App() {
         title="衣柜"
       >
         👗
-      </button>
-
-      {/* 记账入口：衣柜按钮正下方 */}
-      <button
-        onClick={() => setCurrentPage('finance')}
-        style={{
-          position: 'fixed',
-          top: '60px',
-          right: '12px',
-          zIndex: 9999,
-          width: '40px',
-          height: '40px',
-          border: 'none',
-          background: 'none',
-          boxShadow: 'none',
-          cursor: 'pointer',
-          fontSize: '24px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          transition: 'transform 0.1s, opacity 0.1s',
-          opacity: 0.85,
-          padding: 0,
-        }}
-        onMouseEnter={e => e.currentTarget.style.opacity = '1'}
-        onMouseLeave={e => e.currentTarget.style.opacity = '0.85'}
-        onMouseDown={e => e.currentTarget.style.transform = 'scale(0.88)'}
-        onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
-        title="记账"
-      >
-        💰
       </button>
 
     <div className="rpgui-content" id="ui-root">
