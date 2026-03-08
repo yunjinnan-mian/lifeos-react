@@ -856,13 +856,3 @@ body{overflow:hidden;background:#0a0806;font-family:'Zpix','VT323',monospace}
 .stat-card * {
   text-shadow: none !important;
 }
-
-/* 输入框 placeholder 和 modal 内所有文字兜底 */
-.rpgui-input,
-.rpgui-input::placeholder,
-input::placeholder,
-textarea::placeholder,
-.modal-box,
-.modal-box * {
-  text-shadow: none !important;
-}
