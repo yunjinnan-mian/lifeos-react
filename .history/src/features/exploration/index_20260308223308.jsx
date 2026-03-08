@@ -319,35 +319,6 @@ function EntryCard({ entry, showDate, dateRef }) {
   const rot1     = deterministicRotation(entry.id + '_0');
   const rot2     = deterministicRotation(entry.id + '_1');
   const [, m, d] = entry.date ? entry.date.split('-') : ['', '', ''];
-  const textRef  = useRef(null);
-  // 用 ref 追踪最新保存的文字，避免 onBlur 闭包捕获旧值
-  const savedText = useRef(entry.text ?? '');
-
-  // 当 Firebase 外部更新时同步内容（非编辑状态下）
-  useEffect(() => {
-    const el = textRef.current;
-    if (!el) return;
-    if (document.activeElement !== el && el.innerText.replace(/\n$/, '') !== (entry.text ?? '')) {
-      el.innerText = entry.text ?? '';
-      savedText.current = entry.text ?? '';
-    }
-  }, [entry.text]);
-
-  function handleBlur() {
-    const el = textRef.current;
-    if (!el) return;
-    const current = el.innerText.replace(/\n$/, '').trim();
-    if (current === savedText.current) return;
-    savedText.current = current;
-    DB.patchExplorationEntry(entry.id, { text: current }).catch(e => console.error('patch text:', e));
-  }
-
-  // 粘贴时剥离 HTML，只保留纯文本
-  function handlePaste(e) {
-    e.preventDefault();
-    const text = e.clipboardData.getData('text/plain');
-    document.execCommand('insertText', false, text);
-  }
 
   return (
     <div className="exp-entry-card" ref={dateRef} data-date={entry.date}>
@@ -355,16 +326,9 @@ function EntryCard({ entry, showDate, dateRef }) {
         <div className="exp-entry-date">{parseInt(m)}·{parseInt(d)}</div>
       )}
 
-      <div
-        ref={textRef}
-        className="exp-entry-text"
-        contentEditable
-        suppressContentEditableWarning
-        spellCheck={false}
-        onBlur={handleBlur}
-        onPaste={handlePaste}
-        dangerouslySetInnerHTML={{ __html: entry.text ?? '' }}
-      />
+      {entry.text && (
+        <div className="exp-entry-text">{entry.text}</div>
+      )}
 
       {photos.length > 0 && (
         <div className="exp-entry-photos-sticker">
@@ -383,48 +347,61 @@ function EntryCard({ entry, showDate, dateRef }) {
 // 行内编辑器
 // ============================================================
 function InlineComposer({ zone, activeCat, onSave }) {
+  // photos: [{ previewUrl, file }]
+  const [text,   setText]   = useState('');
   const [photos, setPhotos] = useState([]);
   const [saving, setSaving] = useState(false);
-  const fileRef    = useRef(null);
-  const contentRef = useRef(null);
-  const today      = todayStr();
+  const fileRef     = useRef(null);
+  const textareaRef = useRef(null);
+  const today       = todayStr();
 
   useEffect(() => {
     return () => { photos.forEach(p => URL.revokeObjectURL(p.previewUrl)); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  function handleTextChange(e) {
+    setText(e.target.value);
+    // 自动撑高：reset 后取 scrollHeight
+    const ta  = e.target;
+    ta.style.height = 'auto';
+    ta.style.height = ta.scrollHeight + 'px';
+  }
+
   function handleAddPhoto() {
     if (photos.length >= 2) return;
     fileRef.current?.click();
   }
+
   function handleFileChange(e) {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
     setPhotos(prev => [...prev, { previewUrl: URL.createObjectURL(file), file }]);
   }
+
   function handleRemovePhoto(idx) {
     setPhotos(prev => {
       URL.revokeObjectURL(prev[idx].previewUrl);
       return prev.filter((_, i) => i !== idx);
     });
   }
-  function handlePaste(e) {
-    e.preventDefault();
-    const text = e.clipboardData.getData('text/plain');
-    document.execCommand('insertText', false, text);
-  }
 
   async function handleSave() {
-    if (saving) return;
-    const text = contentRef.current?.innerText.replace(/\n$/, '').trim() ?? '';
-    if (!text && photos.length === 0) return;
+    if (saving || (!text.trim() && photos.length === 0)) return;
     setSaving(true);
     try {
-      await onSave({ text, photos, date: today, islandId: zone.id, categoryId: activeCat ?? null });
-      if (contentRef.current) contentRef.current.innerText = '';
+      await onSave({
+        text:       text.trim(),
+        photos,
+        date:       today,
+        islandId:   zone.id,
+        categoryId: activeCat ?? null,
+      });
+      // 清空
+      setText('');
       setPhotos([]);
+      if (textareaRef.current) textareaRef.current.style.height = 'auto';
     } catch (e) {
       console.error('save:', e);
     } finally {
@@ -432,16 +409,18 @@ function InlineComposer({ zone, activeCat, onSave }) {
     }
   }
 
+  const canSave = !saving && (!!text.trim() || photos.length > 0);
+
   return (
     <div className="exp-composer">
-      <div
-        ref={contentRef}
-        className="exp-composer-content"
-        contentEditable={!saving}
-        suppressContentEditableWarning
-        spellCheck={false}
-        onPaste={handlePaste}
-        data-placeholder="写下今天观察到的…"
+      <textarea
+        ref={textareaRef}
+        className="exp-composer-textarea"
+        placeholder="写下今天观察到的…"
+        value={text}
+        onChange={handleTextChange}
+        rows={2}
+        disabled={saving}
       />
       <div className="exp-composer-toolbar">
         <div className="exp-composer-photos">
@@ -457,7 +436,11 @@ function InlineComposer({ zone, activeCat, onSave }) {
             <button className="exp-composer-attach" onClick={handleAddPhoto}>附图</button>
           )}
         </div>
-        <button className="exp-composer-save" onClick={handleSave} disabled={saving}>
+        <button
+          className={`exp-composer-save${canSave ? '' : ' muted'}`}
+          onClick={handleSave}
+          disabled={!canSave}
+        >
           {saving ? '…' : '保存'}
         </button>
       </div>

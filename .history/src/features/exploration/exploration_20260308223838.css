@@ -8,22 +8,21 @@
 .exp-scope {
   font-family: 'LXGW WenKai', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 14px;
-  color: #2c2416 !important;
+  color: #2c2416;
   box-sizing: border-box;
-  color-scheme: light;
+  color-scheme: light; /* 阻止 iOS 对表单元素应用暗色模式 */
+}
+/* 重置全局 button 污染（index.css 的 #1a1a1a 背景） */
+.exp-scope button {
+  background-color: transparent;
+  border-radius: 0;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+  font-weight: inherit;
 }
 .exp-scope *, .exp-scope *::before, .exp-scope *::after {
   box-sizing: border-box;
-}
-/* 强制 exp-scope 内所有表单元素回亮色，覆盖全局 color: white 和 color-scheme: dark */
-.exp-scope input,
-.exp-scope textarea,
-.exp-scope button,
-.exp-scope select {
-  color-scheme: light;
-  color: inherit !important;
-  background-color: transparent;
-  border-radius: 0;
 }
 
 /* ── 弹窗外框 ────────────────────────────────────────────── */
@@ -307,19 +306,11 @@
 }
 .exp-empty-icon { font-size: 32px; margin-bottom: 8px; opacity: .5; }
 
-/* exp-entry-text 编辑态：光标和 outline */
-.exp-entry-text[contenteditable] {
-  outline: none;
-  cursor: text;
-  min-height: 28px;
-  caret-color: #7a6248;
-}
-
 /* ── 行内编辑器 ─────────────────────────────────────────── */
 .exp-composer {
   position: relative;
   padding-top: 28px;
-  padding-bottom: 0;
+  padding-bottom: 8px;
 }
 /* 上方分隔线 */
 .exp-composer::before {
@@ -330,29 +321,41 @@
   background: rgba(122,98,72,.25);
 }
 
-/* contenteditable div — 和 exp-entry-text 完全一致，无需对抗 UA */
-.exp-composer-content {
+.exp-composer-textarea {
+  display: block;
+  width: 100%;
   min-height: calc(28px * 2);
+  /* 彻底清除系统样式 */
+  background: transparent;
+  background-color: transparent;
+  color-scheme: light;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  box-shadow: none;
+  -webkit-box-shadow: none;
+  border: none;
+  outline: none;
+  resize: none;
+  overflow: hidden;
+  /* 精确对齐 .exp-entry-text：必须显式声明，iOS 不继承 */
+  font-family: 'LXGW WenKai', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 13px;
   line-height: 28px;
   color: #3c2e1c;
-  outline: none;
+  /* 浏览器默认给 textarea 加 2px 左内边距，清零以对齐文字起点 */
+  padding: 0;
+  margin: 0;
   caret-color: #7a6248;
-  word-break: break-word;
-  white-space: pre-wrap;
 }
-/* placeholder via data attribute */
-.exp-composer-content:empty::before {
-  content: attr(data-placeholder);
-  color: #c0b5a5;
-  pointer-events: none;
-}
+.exp-composer-textarea::placeholder { color: #c0b5a5; }
+.exp-composer-textarea:disabled      { opacity: .6; }
 
 .exp-composer-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  line-height: 28px;
+  padding-top: 6px;
   gap: 8px;
 }
 .exp-composer-photos {
@@ -413,12 +416,12 @@
   flex-shrink: 0;
   transition: border-color .12s, color .12s, background .12s;
 }
-.exp-composer-save:hover {
+.exp-composer-save:not(.muted):hover {
   border-color: #7a6248;
   color: #5a4a30;
   background: rgba(122,98,72,.08);
 }
-.exp-composer-save:disabled {
+.exp-composer-save.muted {
   opacity: .3;
   cursor: default;
 }
