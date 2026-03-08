@@ -12,6 +12,7 @@ import ZoneNewModal     from './components/ZoneNewModal.jsx';
 import Wardrobe         from './features/wardrobe/index.jsx';
 import Finance         from './features/finance/index.jsx';
 import { ZONE_TYPES } from './config.js';
+import Finance          from './features/finance/index.jsx';   // 如果还没有
 import ExplorationModal from './features/exploration/index.jsx';
 
 export default function App() {

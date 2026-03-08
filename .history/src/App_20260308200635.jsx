@@ -191,19 +191,12 @@ async function handleSaveNewZone(name, emoji, type = ZONE_TYPES.ITEMS) {
     showToast('已删除 ✓');
   }
 
-  async function handleSaveNewZone(name, emoji, type = ZONE_TYPES.ITEMS) {
-    if (!name) { showToast('请输入领域名称'); return; }
-    if (!pendingPlaceRef.current) return;
-    const newZone = {
-      id: 'zone_' + Date.now(), name, emoji,
-      type,
-      gridX: pendingPlaceRef.current.x,
-      gridY: pendingPlaceRef.current.y,
-    };
-    await DB.saveZoneConfig([...zones, newZone]);
-    addRipple(newZone.id);
-    setOpenModal(null);
-  }
+  const newZone = {
+  id: 'zone_' + Date.now(), name, emoji,
+  type,                  // ← 新增
+  gridX: pendingPlaceRef.current.x,
+  gridY: pendingPlaceRef.current.y,
+};
 
   // ── Category CRUD ─────────────────────────────────────────
   function handleSwitchCat(catId) {

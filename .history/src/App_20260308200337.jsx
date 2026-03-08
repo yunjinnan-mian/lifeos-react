@@ -12,6 +12,7 @@ import ZoneNewModal     from './components/ZoneNewModal.jsx';
 import Wardrobe         from './features/wardrobe/index.jsx';
 import Finance         from './features/finance/index.jsx';
 import { ZONE_TYPES } from './config.js';
+import Finance          from './features/finance/index.jsx';   // 如果还没有
 import ExplorationModal from './features/exploration/index.jsx';
 
 export default function App() {
@@ -191,19 +192,12 @@ async function handleSaveNewZone(name, emoji, type = ZONE_TYPES.ITEMS) {
     showToast('已删除 ✓');
   }
 
-  async function handleSaveNewZone(name, emoji, type = ZONE_TYPES.ITEMS) {
-    if (!name) { showToast('请输入领域名称'); return; }
-    if (!pendingPlaceRef.current) return;
-    const newZone = {
-      id: 'zone_' + Date.now(), name, emoji,
-      type,
-      gridX: pendingPlaceRef.current.x,
-      gridY: pendingPlaceRef.current.y,
-    };
-    await DB.saveZoneConfig([...zones, newZone]);
-    addRipple(newZone.id);
-    setOpenModal(null);
-  }
+  const newZone = {
+  id: 'zone_' + Date.now(), name, emoji,
+  type,                  // ← 新增
+  gridX: pendingPlaceRef.current.x,
+  gridY: pendingPlaceRef.current.y,
+};
 
   // ── Category CRUD ─────────────────────────────────────────
   function handleSwitchCat(catId) {

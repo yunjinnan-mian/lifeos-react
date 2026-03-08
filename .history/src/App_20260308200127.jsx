@@ -12,6 +12,7 @@ import ZoneNewModal     from './components/ZoneNewModal.jsx';
 import Wardrobe         from './features/wardrobe/index.jsx';
 import Finance         from './features/finance/index.jsx';
 import { ZONE_TYPES } from './config.js';
+import Finance          from './features/finance/index.jsx';   // 如果还没有
 import ExplorationModal from './features/exploration/index.jsx';
 
 export default function App() {
@@ -45,10 +46,6 @@ export default function App() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmMsg,  setConfirmMsg]  = useState('');
   const confirmResolveRef = useRef(null);
-
-  // zones 的镜像 ref，供 useCallback 内读取最新值而不产生 stale closure
-const _zones_ref = useRef([]);
-useEffect(() => { _zones_ref.current = zones; }, [zones]);
 
   // ── 照片处理 ──────────────────────────────────────────────
   const photoCameraRef  = useRef(null);
@@ -127,19 +124,13 @@ useEffect(() => { _zones_ref.current = zones; }, [zones]);
   }, []);
 
   // ── Map tap handlers ──────────────────────────────────────
-const handleTapZone = useCallback((zoneId) => {
-  const zone = _zones_ref.current.find(z => z.id === zoneId);
-  if (zone?.type === ZONE_TYPES.EXPLORATION) {
-    setActiveZoneId(zoneId);
-    setOpenModal('exploration');
-  } else {
+  const handleTapZone = useCallback((zoneId) => {
     setActiveZoneId(zoneId);
     setActiveTab('items');
     setActiveCatId('all');
     setShowRetired(false);
     setOpenModal('zoneDetail');
-  }
-}, []);
+  }, []);
 
   const handleTapEmpty = useCallback((gridPos) => {
     pendingPlaceRef.current = gridPos;
@@ -156,7 +147,7 @@ const handleTapZone = useCallback((zoneId) => {
   }, []);
 
   // ── Zone CRUD ─────────────────────────────────────────────
-async function handleSaveNewZone(name, emoji, type = ZONE_TYPES.ITEMS) {
+  async function handleSaveNewZone(name, emoji) {
     if (!name) { showToast('请输入领域名称'); return; }
     if (!pendingPlaceRef.current) return;
     const newZone = {
@@ -189,20 +180,6 @@ async function handleSaveNewZone(name, emoji, type = ZONE_TYPES.ITEMS) {
     await DB.saveZoneConfig(zones.filter(z => z.id !== activeZoneId));
     setOpenModal(null);
     showToast('已删除 ✓');
-  }
-
-  async function handleSaveNewZone(name, emoji, type = ZONE_TYPES.ITEMS) {
-    if (!name) { showToast('请输入领域名称'); return; }
-    if (!pendingPlaceRef.current) return;
-    const newZone = {
-      id: 'zone_' + Date.now(), name, emoji,
-      type,
-      gridX: pendingPlaceRef.current.x,
-      gridY: pendingPlaceRef.current.y,
-    };
-    await DB.saveZoneConfig([...zones, newZone]);
-    addRipple(newZone.id);
-    setOpenModal(null);
   }
 
   // ── Category CRUD ─────────────────────────────────────────
@@ -593,14 +570,8 @@ async function handleSaveNewZone(name, emoji, type = ZONE_TYPES.ITEMS) {
         msg={confirmMsg}
         onResolve={handleConfirmResolve}
       />
-      <ExplorationModal
-  isOpen={openModal === 'exploration'}
-  zone={zones.find(z => z.id === activeZoneId) ?? null}
-  onClose={() => setOpenModal(null)}
-/>
     </div>{/* /ui-root */}
     </>
-    
   );
 }
 
