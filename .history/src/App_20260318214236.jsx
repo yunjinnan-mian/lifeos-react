@@ -96,6 +96,23 @@ export default function App() {
     setAiStatusCallback(setAiStatus);
   }, []);
 
+  // ── Firebase listeners ────────────────────────────────────
+  useEffect(() => {
+    const unsubZones = onSnapshot(doc(db, 'config', 'itemMapZones'), snap => {
+      setSyncStatus('syncing');
+      const newZones = snap.exists() ? (snap.data().zones || []) : [];
+      setZones(newZones);
+      setSyncStatus('synced');
+    }, () => setSyncStatus('error'));
+
+    const q = query(collection(db, 'items'), where('domain', 'in', ['home', 'explore', 'supplies']));
+    const unsubItems = onSnapshot(q, snap => {
+      const newItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setItems(newItems);
+    }, () => { });
+
+    return () => { unsubZones(); unsubItems(); };
+  }, []);
 
   // ── Rebuild world grid whenever data changes ──────────────
   useEffect(() => {

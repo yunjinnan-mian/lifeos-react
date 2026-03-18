@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { DB } from './lib/firebase.js';
-import { useItemMapData } from './features/itemMap/hooks/useItemMapData.js';
+import { db, DB, collection, doc, onSnapshot, query, where } from './lib/firebase.js';
 import { buildWorldGrid, addRipple, applyZoomStep, getZoomValue } from './features/itemMap/engine/mapEngine.js';
 import { warmupBgModel, processPhoto, bgModelStatus, setAiStatusCallback } from './lib/photo.js';
 import MapCanvas from './features/itemMap/components/MapCanvas.jsx';
@@ -21,8 +20,10 @@ export default function App() {
   const [currentPage, setCurrentPage] = useState('map');
 
   // ── Firebase 数据 ─────────────────────────────────────────
-  const { zones, setZones, items, syncStatus } = useItemMapData();
+  const [zones, setZones] = useState([]);
+  const [items, setItems] = useState([]);
   const [itemsByZone, setItemsByZone] = useState(new Map());
+  const [syncStatus, setSyncStatus] = useState('syncing');
 
   // ── AI 状态 ───────────────────────────────────────────────
   const [aiStatus, setAiStatus] = useState('loading');
@@ -96,6 +97,23 @@ export default function App() {
     setAiStatusCallback(setAiStatus);
   }, []);
 
+  // ── Firebase listeners ────────────────────────────────────
+  useEffect(() => {
+    const unsubZones = onSnapshot(doc(db, 'config', 'itemMapZones'), snap => {
+      setSyncStatus('syncing');
+      const newZones = snap.exists() ? (snap.data().zones || []) : [];
+      setZones(newZones);
+      setSyncStatus('synced');
+    }, () => setSyncStatus('error'));
+
+    const q = query(collection(db, 'items'), where('domain', 'in', ['home', 'explore', 'supplies']));
+    const unsubItems = onSnapshot(q, snap => {
+      const newItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setItems(newItems);
+    }, () => { });
+
+    return () => { unsubZones(); unsubItems(); };
+  }, []);
 
   // ── Rebuild world grid whenever data changes ──────────────
   useEffect(() => {

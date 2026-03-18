@@ -1,13 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { DB } from './lib/firebase.js';
-import { useItemMapData } from './features/itemMap/hooks/useItemMapData.js';
+import { db, DB, collection, doc, onSnapshot, query, where } from './lib/firebase.js';
 import { buildWorldGrid, addRipple, applyZoomStep, getZoomValue } from './features/itemMap/engine/mapEngine.js';
 import { warmupBgModel, processPhoto, bgModelStatus, setAiStatusCallback } from './lib/photo.js';
 import MapCanvas from './features/itemMap/components/MapCanvas.jsx';
 import HUD from './features/itemMap/components/HUD.jsx';
 import Toast from './components/Toast.jsx';
 import ConfirmModal from './components/ConfirmModal.jsx';
-import NavButton from './components/NavButton.jsx';
 import StatsModal from './features/itemMap/components/StatsModal.jsx';
 import ZoneDetailModal from './features/itemMap/components/ZoneDetailModal.jsx';
 import ZoneNewModal from './features/itemMap/components/ZoneNewModal.jsx';
@@ -21,8 +19,10 @@ export default function App() {
   const [currentPage, setCurrentPage] = useState('map');
 
   // ── Firebase 数据 ─────────────────────────────────────────
-  const { zones, setZones, items, syncStatus } = useItemMapData();
+  const [zones, setZones] = useState([]);
+  const [items, setItems] = useState([]);
   const [itemsByZone, setItemsByZone] = useState(new Map());
+  const [syncStatus, setSyncStatus] = useState('syncing');
 
   // ── AI 状态 ───────────────────────────────────────────────
   const [aiStatus, setAiStatus] = useState('loading');
@@ -96,6 +96,23 @@ export default function App() {
     setAiStatusCallback(setAiStatus);
   }, []);
 
+  // ── Firebase listeners ────────────────────────────────────
+  useEffect(() => {
+    const unsubZones = onSnapshot(doc(db, 'config', 'itemMapZones'), snap => {
+      setSyncStatus('syncing');
+      const newZones = snap.exists() ? (snap.data().zones || []) : [];
+      setZones(newZones);
+      setSyncStatus('synced');
+    }, () => setSyncStatus('error'));
+
+    const q = query(collection(db, 'items'), where('domain', 'in', ['home', 'explore', 'supplies']));
+    const unsubItems = onSnapshot(q, snap => {
+      const newItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setItems(newItems);
+    }, () => { });
+
+    return () => { unsubZones(); unsubItems(); };
+  }, []);
 
   // ── Rebuild world grid whenever data changes ──────────────
   useEffect(() => {
@@ -133,12 +150,25 @@ export default function App() {
 
   // ── Zoom buttons ──────────────────────────────────────────
   const handleZoom = useCallback((dir) => {
-    const step = ZOOM_STEP;
+    const step = CONFIG_ZOOM_STEP;
     const z = applyZoomStep(dir === 'reset' ? 0 : dir === 'in' ? step : -step);
     setZoom(z);
   }, []);
 
   // ── Zone CRUD ─────────────────────────────────────────────
+  async function handleSaveNewZone(name, emoji, type = ZONE_TYPES.ITEMS) {
+    if (!name) { showToast('请输入领域名称'); return; }
+    if (!pendingPlaceRef.current) return;
+    const newZone = {
+      id: 'zone_' + Date.now(), name, emoji,
+      gridX: pendingPlaceRef.current.x,
+      gridY: pendingPlaceRef.current.y,
+    };
+    await DB.saveZoneConfig([...zones, newZone]);
+    addRipple(newZone.id);
+    setOpenModal(null);
+  }
+
   async function handleSaveZone(name, emoji) {
     if (!name) { showToast('请输入领域名称'); return; }
     if (!activeZoneId) return;
@@ -354,7 +384,35 @@ export default function App() {
     return (
       <div className="wrd-scope">
         <Wardrobe />
-        <NavButton onClick={() => setCurrentPage('map')} title="返回地图">🏝️</NavButton>
+        <button
+          onClick={() => setCurrentPage('map')}
+          style={{
+            position: 'fixed',
+            top: '12px',
+            right: '12px',
+            zIndex: 9999,
+            width: '40px',
+            height: '40px',
+            border: 'none',
+            background: 'none',
+            boxShadow: 'none',
+            cursor: 'pointer',
+            fontSize: '24px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'transform 0.1s, opacity 0.1s',
+            opacity: 0.85,
+            padding: 0,
+          }}
+          onMouseEnter={e => e.currentTarget.style.opacity = '1'}
+          onMouseLeave={e => e.currentTarget.style.opacity = '0.85'}
+          onMouseDown={e => e.currentTarget.style.transform = 'scale(0.88)'}
+          onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
+          title="返回地图"
+        >
+          🏝️
+        </button>
       </div>
     );
   }
@@ -364,7 +422,35 @@ export default function App() {
     return (
       <div className="fin-scope">
         <Finance />
-        <NavButton onClick={() => setCurrentPage('map')} title="返回地图">🏝️</NavButton>
+        <button
+          onClick={() => setCurrentPage('map')}
+          style={{
+            position: 'fixed',
+            top: '12px',
+            right: '12px',
+            zIndex: 9999,
+            width: '40px',
+            height: '40px',
+            border: 'none',
+            background: 'none',
+            boxShadow: 'none',
+            cursor: 'pointer',
+            fontSize: '24px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'transform 0.1s, opacity 0.1s',
+            opacity: 0.85,
+            padding: 0,
+          }}
+          onMouseEnter={e => e.currentTarget.style.opacity = '1'}
+          onMouseLeave={e => e.currentTarget.style.opacity = '0.85'}
+          onMouseDown={e => e.currentTarget.style.transform = 'scale(0.88)'}
+          onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
+          title="返回地图"
+        >
+          🏝️
+        </button>
       </div>
     );
   }
@@ -384,13 +470,67 @@ export default function App() {
       <div id="inv-tooltip" />
       <Toast msg={toastMsg} visible={toastVisible} />
 
-      {/* 衣柜入口 */}
-      <NavButton onClick={() => setCurrentPage('wardrobe')} title="衣柜">👗</NavButton>
+      {/* 衣柜入口：rpgui 像素风，右上角 */}
+      <button
+        onClick={() => setCurrentPage('wardrobe')}
+        style={{
+          position: 'fixed',
+          top: '12px',
+          right: '12px',
+          zIndex: 9999,
+          width: '40px',
+          height: '40px',
+          border: 'none',
+          background: 'none',
+          boxShadow: 'none',
+          cursor: 'pointer',
+          fontSize: '24px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          transition: 'transform 0.1s, opacity 0.1s',
+          opacity: 0.85,
+          padding: 0,
+        }}
+        onMouseEnter={e => e.currentTarget.style.opacity = '1'}
+        onMouseLeave={e => e.currentTarget.style.opacity = '0.85'}
+        onMouseDown={e => e.currentTarget.style.transform = 'scale(0.88)'}
+        onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
+        title="衣柜"
+      >
+        👗
+      </button>
 
-      {/* 记账入口 */}
-      <NavButton onClick={() => setCurrentPage('finance')} title="记账" top="60px">
+      {/* 记账入口：衣柜按钮正下方 */}
+      <button
+        onClick={() => setCurrentPage('finance')}
+        style={{
+          position: 'fixed',
+          top: '60px',
+          right: '12px',
+          zIndex: 9999,
+          width: '40px',
+          height: '40px',
+          border: 'none',
+          background: 'none',
+          boxShadow: 'none',
+          cursor: 'pointer',
+          fontSize: '24px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          transition: 'transform 0.1s, opacity 0.1s',
+          opacity: 0.85,
+          padding: 0,
+        }}
+        onMouseEnter={e => e.currentTarget.style.opacity = '1'}
+        onMouseLeave={e => e.currentTarget.style.opacity = '0.85'}
+        onMouseDown={e => e.currentTarget.style.transform = 'scale(0.88)'}
+        onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
+        title="记账"
+      >
         💰
-      </NavButton>
+      </button>
 
       <div className="rpgui-content" id="ui-root">
 
@@ -463,3 +603,6 @@ export default function App() {
 
   );
 }
+
+// 常量直接从 CONFIG 引用避免多余 import
+const CONFIG_ZOOM_STEP = 0.15;
