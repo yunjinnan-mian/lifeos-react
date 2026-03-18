@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // ExplorationModal — 手账纸张 · 行内记录 · 搜索 · 时间轴
 // ============================================================
 import { useState, useRef, useEffect } from 'react';
@@ -43,22 +43,24 @@ function parseSearchDate(q, year) {
   return `${year}-${String(m).padStart(2, '0')}-${String(d || '1').padStart(2, '0')}`;
 }
 
-/* 订阅某个探索岛的所有条目，isOpen/zoneId 变化时重新订阅 */
-function useExplorationEntries(isOpen, zoneId) {
-  const [entries, setEntries] = useState([]);
-  const [loading, setLoading] = useState(false);
-  useEffect(() => {
-    if (!isOpen || !zoneId) return;
-    setLoading(true);
-    setEntries([]);
-    const q = query(collection(db, 'explorationEntries'), where('islandId', '==', zoneId));
-    const unsub = onSnapshot(q, snap => {
-      setEntries(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-      setLoading(false);
-    }, err => { console.error('exp snapshot:', err); setLoading(false); });
-    return () => unsub();
-  }, [isOpen, zoneId]);
-  return { entries, loading };
+// ── 图片压缩（最长边 ≤ 1200px，WebP 0.82）────────────────
+async function compressPhoto(file) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const objUrl = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(objUrl);
+      let { width: w, height: h } = img;
+      const max = 1200;
+      if (Math.max(w, h) > max) { const r = max / Math.max(w, h); w = (w * r) | 0; h = (h * r) | 0; }
+      const cv = document.createElement('canvas');
+      cv.width = w; cv.height = h;
+      cv.getContext('2d').drawImage(img, 0, 0, w, h);
+      cv.toBlob(b => b ? resolve(b) : reject(new Error('toBlob failed')), 'image/webp', 0.82);
+    };
+    img.onerror = () => { URL.revokeObjectURL(objUrl); reject(new Error('img load failed')); };
+    img.src = objUrl;
+  });
 }
 
 // ============================================================
@@ -66,10 +68,10 @@ function useExplorationEntries(isOpen, zoneId) {
 // ============================================================
 export default function ExplorationModal({ isOpen, zone, onClose }) {
   const [activeCat, setActiveCat] = useState('all');
+  const [entries, setEntries] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTimelineDate, setActiveTimelineDate] = useState(null);
-
-  const { entries, loading } = useExplorationEntries(isOpen, zone?.id);
 
   const notebookRef = useRef(null);
   const dateSectionRefs = useRef(new Map()); // date → first card DOM el
@@ -77,12 +79,21 @@ export default function ExplorationModal({ isOpen, zone, onClose }) {
   const timelineDotRefs = useRef(new Map()); // date → dot button el
   const observerRef = useRef(null);
 
-  // ── 重置 UI 状态 ─────────────────────────────────────────
+  // ── Firebase 订阅 ────────────────────────────────────────
   useEffect(() => {
     if (!isOpen || !zone?.id) return;
+    setLoading(true);
+    setEntries([]);
     setActiveCat('all');
     setSearchQuery('');
     setActiveTimelineDate(null);
+
+    const q = query(collection(db, 'explorationEntries'), where('islandId', '==', zone.id));
+    const unsub = onSnapshot(q, snap => {
+      setEntries(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setLoading(false);
+    }, err => { console.error('exp snapshot:', err); setLoading(false); });
+    return () => unsub();
   }, [isOpen, zone?.id]);
 
   // ── 派生数据 ─────────────────────────────────────────────
@@ -161,7 +172,7 @@ export default function ExplorationModal({ isOpen, zone, onClose }) {
 
     for (let i = 0; i < data.photos.length; i++) {
       try {
-        const blob = await compressWebP(data.photos[i].file);
+        const blob = await compressPhoto(data.photos[i].file);
         const result = await DB.uploadExplorationPhoto(entryId, i, blob);
         uploadedPhotos.push(result);
       } catch (e) { console.error(`photo[${i}]:`, e); }

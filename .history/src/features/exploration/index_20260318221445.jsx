@@ -1,5 +1,5 @@
-﻿// ============================================================
-// ExplorationModal — 手账纸张 · 行内记录 · 搜索 · 时间轴
+// ============================================================
+// ExplorationModal �?手账纸张 · 行内记录 · 搜索 · 时间�?
 // ============================================================
 import { useState, useRef, useEffect } from 'react';
 import { db, DB, collection, query, where, onSnapshot } from '../../lib/firebase.js';
@@ -24,12 +24,12 @@ function deterministicRotation(seed, range = 3) {
 }
 
 // ── 搜索模式识别 ─────────────────────────────────────────
-// 数字/数字、N月N日、N月、单数字 → 日期跳转；其余 → 文本搜索
+// 数字/数字、N月N日、N月、单数字 �?日期跳转；其�?�?文本搜索
 function detectSearchMode(q) {
   const s = q.trim();
   if (!s) return null;
   if (/^\d{1,2}[\/\-·\.]\d{1,2}$/.test(s)) return 'date';
-  if (/^\d{1,2}月(\d{1,2}日?)?$/.test(s)) return 'date';
+  if (/^\d{1,2}�?\d{1,2}�?)?$/.test(s)) return 'date';
   return 'text';
 }
 
@@ -37,13 +37,13 @@ function parseSearchDate(q, year) {
   const s = q.trim();
   let m, d, match;
   if ((match = s.match(/^(\d{1,2})[\/\-·\.](\d{1,2})$/))) { [, m, d] = match; }
-  else if ((match = s.match(/^(\d{1,2})月(\d{1,2})日?$/))) { [, m, d] = match; }
-  else if ((match = s.match(/^(\d{1,2})月$/))) { m = match[1]; d = '1'; }
+  else if ((match = s.match(/^(\d{1,2})�?\d{1,2})�?$/))) { [, m, d] = match; }
+  else if ((match = s.match(/^(\d{1,2})�?/))) { m = match[1]; d = '1'; }
   if (!m) return null;
   return `${year}-${String(m).padStart(2, '0')}-${String(d || '1').padStart(2, '0')}`;
 }
 
-/* 订阅某个探索岛的所有条目，isOpen/zoneId 变化时重新订阅 */
+/* 订阅某个探索岛的所有条目，isOpen/zoneId 变化时重新订�?*/
 function useExplorationEntries(isOpen, zoneId) {
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -62,27 +62,34 @@ function useExplorationEntries(isOpen, zoneId) {
 }
 
 // ============================================================
-// 主组件
+// 主组�?
 // ============================================================
 export default function ExplorationModal({ isOpen, zone, onClose }) {
   const [activeCat, setActiveCat] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTimelineDate, setActiveTimelineDate] = useState(null);
 
-  const { entries, loading } = useExplorationEntries(isOpen, zone?.id);
-
   const notebookRef = useRef(null);
-  const dateSectionRefs = useRef(new Map()); // date → first card DOM el
+  const dateSectionRefs = useRef(new Map()); // date �?first card DOM el
   const timelineRef = useRef(null);
-  const timelineDotRefs = useRef(new Map()); // date → dot button el
+  const timelineDotRefs = useRef(new Map()); // date �?dot button el
   const observerRef = useRef(null);
 
-  // ── 重置 UI 状态 ─────────────────────────────────────────
+  // ── Firebase 订阅 ────────────────────────────────────────
   useEffect(() => {
     if (!isOpen || !zone?.id) return;
+    setLoading(true);
+    setEntries([]);
     setActiveCat('all');
     setSearchQuery('');
     setActiveTimelineDate(null);
+
+    const q = query(collection(db, 'explorationEntries'), where('islandId', '==', zone.id));
+    const unsub = onSnapshot(q, snap => {
+      setEntries(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setLoading(false);
+    }, err => { console.error('exp snapshot:', err); setLoading(false); });
+    return () => unsub();
   }, [isOpen, zone?.id]);
 
   // ── 派生数据 ─────────────────────────────────────────────
@@ -122,14 +129,14 @@ export default function ExplorationModal({ isOpen, zone, onClose }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allDates.join(',')]);
 
-  // ── 时间轴刻度自动居中 ───────────────────────────────────
+  // ── 时间轴刻度自动居�?───────────────────────────────────
   useEffect(() => {
     if (!activeTimelineDate) return;
     timelineDotRefs.current.get(activeTimelineDate)
       ?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
   }, [activeTimelineDate]);
 
-  // ── 搜索→日期跳转 ────────────────────────────────────────
+  // ── 搜索→日期跳�?────────────────────────────────────────
   useEffect(() => {
     if (searchMode !== 'date' || !searchQuery.trim()) return;
     const year = new Date().getFullYear().toString();
@@ -202,7 +209,7 @@ export default function ExplorationModal({ isOpen, zone, onClose }) {
               />
               {searchQuery && (
                 <span className="exp-search-mode-tag">
-                  {searchMode === 'date' ? '→日期' : '→搜索'}
+                  {searchMode === 'date' ? '→日�? : '→搜�?}
                 </span>
               )}
               {searchQuery && (
@@ -223,7 +230,7 @@ export default function ExplorationModal({ isOpen, zone, onClose }) {
             </div>
           )}
 
-          {/* ── 时间轴 ── */}
+          {/* ── 时间�?── */}
           {allDates.length > 0 && (
             <div className="exp-timeline-rail" ref={timelineRef}>
               <div className="exp-timeline-track">
@@ -248,23 +255,23 @@ export default function ExplorationModal({ isOpen, zone, onClose }) {
 
               {loading && (
                 <div className="exp-empty">
-                  <div className="exp-empty-icon">⏳</div>
-                  <div>加载中…</div>
+                  <div className="exp-empty-icon">�?/div>
+                  <div>加载中�?/div>
                 </div>
               )}
 
               {!loading && entries.length === 0 && (
                 <div className="exp-empty">
                   <div className="exp-empty-icon">🔭</div>
-                  <div>还没有记录</div>
-                  <div style={{ fontSize: '12px', opacity: .6 }}>在下方写下第一篇观察</div>
+                  <div>还没有记�?/div>
+                  <div style={{ fontSize: '12px', opacity: .6 }}>在下方写下第一篇观�?/div>
                 </div>
               )}
 
               {!loading && searchMode === 'text' && filtered.length === 0 && entries.length > 0 && (
                 <div className="exp-empty">
                   <div className="exp-empty-icon">🔍</div>
-                  <div>没有找到「{searchQuery}」</div>
+                  <div>没有找到「{searchQuery}�?/div>
                 </div>
               )}
 
@@ -310,10 +317,10 @@ function EntryCard({ entry, showDate, dateRef }) {
   const rot2 = deterministicRotation(entry.id + '_1');
   const [, m, d] = entry.date ? entry.date.split('-') : ['', '', ''];
   const textRef = useRef(null);
-  // 用 ref 追踪最新保存的文字，避免 onBlur 闭包捕获旧值
+  // �?ref 追踪最新保存的文字，避�?onBlur 闭包捕获旧�?
   const savedText = useRef(entry.text ?? '');
 
-  // 当 Firebase 外部更新时同步内容（非编辑状态下）
+  // �?Firebase 外部更新时同步内容（非编辑状态下�?
   useEffect(() => {
     const el = textRef.current;
     if (!el) return;
@@ -332,7 +339,7 @@ function EntryCard({ entry, showDate, dateRef }) {
     DB.patchExplorationEntry(entry.id, { text: current }).catch(e => console.error('patch text:', e));
   }
 
-  // 粘贴时剥离 HTML，只保留纯文本
+  // 粘贴时剥�?HTML，只保留纯文�?
   function handlePaste(e) {
     e.preventDefault();
     const text = e.clipboardData.getData('text/plain');
@@ -370,7 +377,7 @@ function EntryCard({ entry, showDate, dateRef }) {
 }
 
 // ============================================================
-// 行内编辑器
+// 行内编辑�?
 // ============================================================
 function InlineComposer({ zone, activeCat, onSave }) {
   const [photos, setPhotos] = useState([]);
@@ -431,7 +438,7 @@ function InlineComposer({ zone, activeCat, onSave }) {
         suppressContentEditableWarning
         spellCheck={false}
         onPaste={handlePaste}
-        data-placeholder="写下今天观察到的…"
+        data-placeholder="写下今天观察到的�?
       />
       <div className="exp-composer-toolbar">
         <div className="exp-composer-photos">
@@ -448,7 +455,7 @@ function InlineComposer({ zone, activeCat, onSave }) {
           )}
         </div>
         <button className="exp-composer-save" onClick={handleSave} disabled={saving}>
-          {saving ? '…' : '保存'}
+          {saving ? '�? : '保存'}
         </button>
       </div>
       <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileChange} />

@@ -430,28 +430,4 @@ function InlineComposer({ zone, activeCat, onSave }) {
         contentEditable={!saving}
         suppressContentEditableWarning
         spellCheck={false}
-        onPaste={handlePaste}
-        data-placeholder="写下今天观察到的…"
-      />
-      <div className="exp-composer-toolbar">
-        <div className="exp-composer-photos">
-          {photos.map((p, idx) => (
-            <div key={idx} className="exp-composer-photo-thumb">
-              <img src={p.previewUrl} alt="" />
-              {!saving && (
-                <button className="exp-composer-photo-remove" onClick={() => handleRemovePhoto(idx)}>×</button>
-              )}
-            </div>
-          ))}
-          {photos.length < 2 && !saving && (
-            <button className="exp-composer-attach" onClick={handleAddPhoto}>附图</button>
-          )}
-        </div>
-        <button className="exp-composer-save" onClick={handleSave} disabled={saving}>
-          {saving ? '…' : '保存'}
-        </button>
-      </div>
-      <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileChange} />
-    </div>
-  );
-}
+        onPaste={handlePaste

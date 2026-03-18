@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // ExplorationModal — 手账纸张 · 行内记录 · 搜索 · 时间轴
 // ============================================================
 import { useState, useRef, useEffect } from 'react';
@@ -69,20 +69,27 @@ export default function ExplorationModal({ isOpen, zone, onClose }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTimelineDate, setActiveTimelineDate] = useState(null);
 
-  const { entries, loading } = useExplorationEntries(isOpen, zone?.id);
-
   const notebookRef = useRef(null);
   const dateSectionRefs = useRef(new Map()); // date → first card DOM el
   const timelineRef = useRef(null);
   const timelineDotRefs = useRef(new Map()); // date → dot button el
   const observerRef = useRef(null);
 
-  // ── 重置 UI 状态 ─────────────────────────────────────────
+  // ── Firebase 订阅 ────────────────────────────────────────
   useEffect(() => {
     if (!isOpen || !zone?.id) return;
+    setLoading(true);
+    setEntries([]);
     setActiveCat('all');
     setSearchQuery('');
     setActiveTimelineDate(null);
+
+    const q = query(collection(db, 'explorationEntries'), where('islandId', '==', zone.id));
+    const unsub = onSnapshot(q, snap => {
+      setEntries(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setLoading(false);
+    }, err => { console.error('exp snapshot:', err); setLoading(false); });
+    return () => unsub();
   }, [isOpen, zone?.id]);
 
   // ── 派生数据 ─────────────────────────────────────────────
@@ -161,7 +168,7 @@ export default function ExplorationModal({ isOpen, zone, onClose }) {
 
     for (let i = 0; i < data.photos.length; i++) {
       try {
-        const blob = await compressWebP(data.photos[i].file);
+        const blob = await compressPhoto(data.photos[i].file);
         const result = await DB.uploadExplorationPhoto(entryId, i, blob);
         uploadedPhotos.push(result);
       } catch (e) { console.error(`photo[${i}]:`, e); }
