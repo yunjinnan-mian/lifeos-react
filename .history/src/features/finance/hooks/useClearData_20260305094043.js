@@ -4,7 +4,7 @@
 // ============================================================
 
 import { useCallback } from 'react';
-import { db } from '../../../lib/firebase';
+import { db } from '../../../firebase';
 import {
     collection, getDocs, doc, deleteDoc, writeBatch,
 } from 'firebase/firestore';
@@ -12,7 +12,7 @@ import {
 export function useClearData({ showToast }) {
     return useCallback(async () => {
         if (!window.confirm('确定清空所有数据？此操作将删除云端所有记录！')) return;
-        if (!window.confirm('再次确认：真的要清空吗？')) return;
+        if (!window.confirm('再次确认：真的要清空吗？'))                      return;
 
         showToast('正在清空云端数据...');
         try {

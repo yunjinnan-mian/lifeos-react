@@ -5,13 +5,13 @@
 import { useState, useEffect } from 'react';
 import { useFinance } from '../index';
 import { getCatMap, getExpenseOpts, getIncomeOpts, getDomainForCat } from '../utils/catMap';
-import { db } from '../../../lib/firebase';
+import { db } from '../../../firebase';
 import { doc, setDoc } from 'firebase/firestore';
 
 export default function EditModal({ open, tx, onClose }) {
     const { data, setData, saveData, showToast } = useFinance();
 
-    const [form, setForm] = useState({ date: '', desc: '', cat2: '' });
+    const [form, setForm] = useState({ date:'', desc:'', cat2:'' });
 
     useEffect(() => {
         if (tx) setForm({ date: tx.date || '', desc: tx.desc || '', cat2: tx.cat2 || '' });
@@ -28,11 +28,11 @@ export default function EditModal({ open, tx, onClose }) {
                 const catMap = getCatMap(prev.cats);
                 return {
                     ...t,
-                    date: form.date,
-                    desc: form.desc,
-                    cat2: form.cat2,
-                    cat1: catMap[form.cat2] || '其他',
-                    domain: getDomainForCat(prev.cats, form.cat2),
+                    date:      form.date,
+                    desc:      form.desc,
+                    cat2:      form.cat2,
+                    cat1:      catMap[form.cat2] || '其他',
+                    domain:    getDomainForCat(prev.cats, form.cat2),
                     updatedAt: new Date().toISOString(),
                 };
             });
@@ -44,11 +44,11 @@ export default function EditModal({ open, tx, onClose }) {
             const catMap = getCatMap(data.cats);
             await setDoc(doc(db, 'transactions', String(tx.id)), {
                 ...tx,
-                date: form.date,
-                desc: form.desc,
-                cat2: form.cat2,
-                cat1: catMap[form.cat2] || '其他',
-                domain: getDomainForCat(data.cats, form.cat2),
+                date:      form.date,
+                desc:      form.desc,
+                cat2:      form.cat2,
+                cat1:      catMap[form.cat2] || '其他',
+                domain:    getDomainForCat(data.cats, form.cat2),
                 updatedAt: new Date().toISOString(),
             }, { merge: true });
         } catch (e) {
@@ -62,8 +62,8 @@ export default function EditModal({ open, tx, onClose }) {
 
     return (
         <div className="modal-overlay open" onClick={e => e.target === e.currentTarget && onClose()}>
-            <div className="modal" style={{ width: 400 }}>
-                <h3 style={{ marginTop: 0, borderBottom: '1px solid #eee', paddingBottom: 10 }}>修改记录</h3>
+            <div className="modal" style={{ width:400 }}>
+                <h3 style={{ marginTop:0, borderBottom:'1px solid #eee', paddingBottom:10 }}>修改记录</h3>
 
                 <div className="edit-row">
                     <span className="edit-label">日期</span>
@@ -86,12 +86,12 @@ export default function EditModal({ open, tx, onClose }) {
                     <span className="edit-label">金额</span>
                     <input
                         type="number" className="form-control" value={tx.amount} disabled
-                        style={{ background: '#f5f5f5', cursor: 'not-allowed' }}
+                        style={{ background:'#f5f5f5', cursor:'not-allowed' }}
                         title="如需修改金额，请删除后重新入账"
                     />
                 </div>
 
-                <div style={{ textAlign: 'right', marginTop: 20, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                <div style={{ textAlign:'right', marginTop:20, display:'flex', gap:8, justifyContent:'flex-end' }}>
                     <button className="btn btn-outline" onClick={onClose}>取消</button>
                     <button className="btn btn-primary" onClick={handleSave}>保存修改</button>
                 </div>

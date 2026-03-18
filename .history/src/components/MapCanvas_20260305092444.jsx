@@ -5,14 +5,14 @@ import {
   isZoneTooClose, gridToZonePos, applyZoomStep,
   getZoomValue,
 } from '../engine/mapEngine.js';
-import { CONFIG } from '../lib/config.js';
+import { CONFIG } from '../config.js';
 
 export default function MapCanvas({ onTapZone, onTapEmpty, onZoomChange, openModalCount }) {
-  const canvasRef = useRef(null);
-  const rippleRef = useRef(null);
-  const rafRef = useRef(null);
-  const dragRef = useRef({ active: false, moved: false, lastX: 0, lastY: 0, startX: 0, startY: 0, startTime: 0 });
-  const pinchRef = useRef({ active: false, startDist: 0, startZoom: 1, midX: 0, midY: 0 });
+  const canvasRef  = useRef(null);
+  const rippleRef  = useRef(null);
+  const rafRef     = useRef(null);
+  const dragRef    = useRef({ active: false, moved: false, lastX: 0, lastY: 0, startX: 0, startY: 0, startTime: 0 });
+  const pinchRef   = useRef({ active: false, startDist: 0, startZoom: 1, midX: 0, midY: 0 });
 
   // ── Init engine + render loop ──────────────────────────────
   useEffect(() => {
@@ -33,7 +33,7 @@ export default function MapCanvas({ onTapZone, onTapEmpty, onZoomChange, openMod
       cancelAnimationFrame(rafRef.current);
       window.removeEventListener('resize', handleResize);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // openModalCount 变化时不重新初始化，loop 闭包会自动读取
@@ -99,7 +99,7 @@ export default function MapCanvas({ onTapZone, onTapEmpty, onZoomChange, openMod
       const p = pinchRef.current;
       if (p.active && e.touches.length === 2) {
         const dist = getTouchDist(e.touches);
-        const mid = getTouchMid(e.touches);
+        const mid  = getTouchMid(e.touches);
         movePan(mid.x - p.midX, mid.y - p.midY);
         const newZoom = zoomAround(mid.x, mid.y, p.startZoom * (dist / p.startDist));
         onZoomChange(newZoom);
@@ -115,9 +115,9 @@ export default function MapCanvas({ onTapZone, onTapEmpty, onZoomChange, openMod
         pointerUp(t.clientX, t.clientY);
       }
     };
-    const onMouseDown = e => pointerDown(e.clientX, e.clientY);
-    const onMouseMove = e => pointerMove(e.clientX, e.clientY);
-    const onMouseUp = e => pointerUp(e.clientX, e.clientY);
+    const onMouseDown  = e => pointerDown(e.clientX, e.clientY);
+    const onMouseMove  = e => pointerMove(e.clientX, e.clientY);
+    const onMouseUp    = e => pointerUp(e.clientX, e.clientY);
     const onWheel = e => {
       e.preventDefault();
       const delta = e.deltaY > 0 ? -CONFIG.ZOOM_WHEEL : CONFIG.ZOOM_WHEEL;
@@ -126,23 +126,23 @@ export default function MapCanvas({ onTapZone, onTapEmpty, onZoomChange, openMod
     };
 
     cvs.addEventListener('touchstart', onTouchStart, { passive: false });
-    cvs.addEventListener('touchmove', onTouchMove, { passive: false });
-    cvs.addEventListener('touchend', onTouchEnd);
-    cvs.addEventListener('mousedown', onMouseDown);
-    cvs.addEventListener('mousemove', onMouseMove);
-    cvs.addEventListener('mouseup', onMouseUp);
-    cvs.addEventListener('wheel', onWheel, { passive: false });
+    cvs.addEventListener('touchmove',  onTouchMove,  { passive: false });
+    cvs.addEventListener('touchend',   onTouchEnd);
+    cvs.addEventListener('mousedown',  onMouseDown);
+    cvs.addEventListener('mousemove',  onMouseMove);
+    cvs.addEventListener('mouseup',    onMouseUp);
+    cvs.addEventListener('wheel',      onWheel, { passive: false });
 
     return () => {
       cvs.removeEventListener('touchstart', onTouchStart);
-      cvs.removeEventListener('touchmove', onTouchMove);
-      cvs.removeEventListener('touchend', onTouchEnd);
-      cvs.removeEventListener('mousedown', onMouseDown);
-      cvs.removeEventListener('mousemove', onMouseMove);
-      cvs.removeEventListener('mouseup', onMouseUp);
-      cvs.removeEventListener('wheel', onWheel);
+      cvs.removeEventListener('touchmove',  onTouchMove);
+      cvs.removeEventListener('touchend',   onTouchEnd);
+      cvs.removeEventListener('mousedown',  onMouseDown);
+      cvs.removeEventListener('mousemove',  onMouseMove);
+      cvs.removeEventListener('mouseup',    onMouseUp);
+      cvs.removeEventListener('wheel',      onWheel);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onTapZone, onTapEmpty, onZoomChange]);
 
   // ── Tooltip ────────────────────────────────────────────────
@@ -161,7 +161,7 @@ export default function MapCanvas({ onTapZone, onTapEmpty, onZoomChange, openMod
     const onMove = e => {
       if (!visible) return;
       tip.style.left = Math.min(e.clientX + 14, window.innerWidth - 200) + 'px';
-      tip.style.top = Math.max(e.clientY - 60, 8) + 'px';
+      tip.style.top  = Math.max(e.clientY - 60, 8) + 'px';
     };
     const onOut = e => {
       if (e.target.closest('.inv-slot[data-tip]')) {
@@ -171,17 +171,17 @@ export default function MapCanvas({ onTapZone, onTapEmpty, onZoomChange, openMod
     };
     document.addEventListener('mouseover', onOver);
     document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseout', onOut);
+    document.addEventListener('mouseout',  onOut);
     return () => {
       document.removeEventListener('mouseover', onOver);
       document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseout', onOut);
+      document.removeEventListener('mouseout',  onOut);
     };
   }, []);
 
   return (
     <>
-      <canvas id="mapCanvas" ref={canvasRef} />
+      <canvas id="mapCanvas"    ref={canvasRef} />
       <canvas id="rippleCanvas" ref={rippleRef} />
     </>
   );
