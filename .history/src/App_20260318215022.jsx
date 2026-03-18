@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { DB } from './lib/firebase.js';
 import { useItemMapData } from './features/itemMap/hooks/useItemMapData.js';
 import { buildWorldGrid, addRipple, applyZoomStep, getZoomValue } from './features/itemMap/engine/mapEngine.js';
-import { warmupBgModel, processPhoto, bgModelStatus, setAiStatusCallback } from './lib/photo.js';
+import { warmupBgModel, processPhoto, setAiStatusCallback } from './lib/photo.js';
 import MapCanvas from './features/itemMap/components/MapCanvas.jsx';
 import HUD from './features/itemMap/components/HUD.jsx';
 import Toast from './components/Toast.jsx';

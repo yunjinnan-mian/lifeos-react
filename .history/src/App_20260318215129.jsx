@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { DB } from './lib/firebase.js';
 import { useItemMapData } from './features/itemMap/hooks/useItemMapData.js';
 import { buildWorldGrid, addRipple, applyZoomStep, getZoomValue } from './features/itemMap/engine/mapEngine.js';
-import { warmupBgModel, processPhoto, bgModelStatus, setAiStatusCallback } from './lib/photo.js';
+import { warmupBgModel, processPhoto, setAiStatusCallback } from './lib/photo.js';
 import MapCanvas from './features/itemMap/components/MapCanvas.jsx';
 import HUD from './features/itemMap/components/HUD.jsx';
 import Toast from './components/Toast.jsx';
@@ -234,14 +234,14 @@ export default function App() {
   }
 
   function handleRetake(itemId) {
-    if (bgModelStatus !== 'ready') { showToast('⏳ AI 模型准备中，请稍候…'); return; }
+    if (aiStatus !== 'ready') { showToast('⏳ AI 模型准备中，请稍候…'); return; }
     editingItemIdRef.current = itemId;
     photoStateRef.current.action = 'replace';
     (useCamera ? photoCameraRef.current : photoGalleryRef.current)?.click();
   }
 
   function handleAddSlot() {
-    if (bgModelStatus !== 'ready') { showToast('⏳ AI 模型准备中，请稍候…'); return; }
+    if (aiStatus !== 'ready') { showToast('⏳ AI 模型准备中，请稍候…'); return; }
     photoStateRef.current.action = 'add';
     editingItemIdRef.current = null;
     revokePhotoUrl();

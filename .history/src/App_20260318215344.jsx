@@ -234,14 +234,14 @@ export default function App() {
   }
 
   function handleRetake(itemId) {
-    if (bgModelStatus !== 'ready') { showToast('⏳ AI 模型准备中，请稍候…'); return; }
+    if (aiStatus !== 'ready') { showToast('⏳ AI 模型准备中，请稍候…'); return; }
     editingItemIdRef.current = itemId;
     photoStateRef.current.action = 'replace';
     (useCamera ? photoCameraRef.current : photoGalleryRef.current)?.click();
   }
 
   function handleAddSlot() {
-    if (bgModelStatus !== 'ready') { showToast('⏳ AI 模型准备中，请稍候…'); return; }
+    if (aiStatus !== 'ready') { showToast('⏳ AI 模型准备中，请稍候…'); return; }
     photoStateRef.current.action = 'add';
     editingItemIdRef.current = null;
     revokePhotoUrl();

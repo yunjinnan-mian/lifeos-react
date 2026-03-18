@@ -1,0 +1,5 @@
+{
+  "browser-preview.startUrl": "http://localhost:5173",
+  "workbench.preferredDarkColorTheme": "Default Dark+",
+  "vite.browserType": "chrome"
+}

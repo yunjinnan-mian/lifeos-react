@@ -96,6 +96,23 @@ export default function App() {
     setAiStatusCallback(setAiStatus);
   }, []);
 
+  useEffect(() => {
+    const unsubZones = onSnapshot(doc(db, 'config', 'itemMapZones'), snap => {
+      setSyncStatus('syncing');
+      const newZones = snap.exists() ? (snap.data().zones || []) : [];
+      setZones(newZones);
+      setSyncStatus('synced');
+    }, () => setSyncStatus('error'));
+
+    const q = query(collection(db, 'items'), where('domain', 'in', ['home', 'explore', 'supplies']));
+    const unsubItems = onSnapshot(q, snap => {
+      const newItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setItems(newItems);
+    }, () => { });
+
+    return () => { unsubZones(); unsubItems(); };
+  }, []);
+
   // ── Rebuild world grid whenever data changes ──────────────
   useEffect(() => {
     const ibz = buildWorldGrid(zones, items);
@@ -305,14 +322,6 @@ export default function App() {
 
     try {
       const remoteUrl = await DB.uploadPhoto(path, currentBlob);
-      // 上传期间用户可能已删除该条目，校验文档仍存在再写入
-      const snap = await DB.getItem(id);
-      if (!snap.exists()) {
-        await DB.deletePhoto(path).catch(() => {});
-        localPreviewCache.current.delete(id);
-        revokePhotoUrl();
-        return;
-      }
       await DB.patchItem(id, { photoUrl: remoteUrl });
       localPreviewCache.current.delete(id);
       revokePhotoUrl();
