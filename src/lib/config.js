@@ -56,3 +56,25 @@ export const firebaseConfig = {
     messagingSenderId: '440342290540',
     appId: '1:440342290540:web:894148c0d604d2eaa33849',
 };
+
+// ── 植物岛常量 ─────────────────────────────────────────────────────────────
+// 所有植物岛数值通过此对象引用，禁止在业务逻辑中硬编码。
+export const PLANT_CONFIG = {
+    // 矩阵看板
+    MATRIX_DEFAULT_DAYS:      15,   // 默认展示的历史天数
+
+    // 批量打卡防重节流
+    BATCH_ACTION_THROTTLE_MS: 500,  // 同一卡片连续点击的最短间隔（ms）
+
+    // 抠图 API 降级阈值
+    CUTOUT_API_TIMEOUT_MS:    3000, // 超时后自动降级使用原图
+
+    // 虚拟滚动缓冲区
+    VIRTUAL_SCROLL_BUFFER:    5,    // 视口外上下各保留的卡片数量
+
+    // 图片压缩（对齐 Firebase 宪法 compressWebP 参数）
+    IMAGE_MAX_WIDTH:          800,  // 最长边压缩目标（px）
+    IMAGE_QUALITY_WEBP:       0.75, // WebP 压缩质量
+    IMAGE_QUALITY_JPEG:       0.70, // JPEG 降级压缩质量
+    IMAGE_PRE_MAX:            2048, // iOS OOM 防护预缩阈值（px）
+};

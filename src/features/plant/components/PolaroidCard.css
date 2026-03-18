@@ -1,0 +1,227 @@
+/* ── 尺寸变量（通过 .polaroid--small 覆盖） ──────────────────────────── */
+.polaroid-root {
+  --card-w:     160px;
+  --photo-pad:  8px;    /* 照片四周留白（拍立得纸边）*/
+  --bottom-h:   44px;   /* 底部白边高度（拍立得的"标签区"）*/
+  --aura-size:  15px;
+  --flip-speed: 0.42s;
+}
+
+.polaroid-root.polaroid--small {
+  --card-w:    120px;
+  --photo-pad: 6px;
+  --bottom-h:  34px;
+  --aura-size: 12px;
+}
+
+/* ── 根容器：持有倾斜 + perspective ────────────────────────────────────── */
+/* position: relative 供光环绝对定位；inline-block 供瀑布流列布局 */
+.polaroid-root {
+  position: relative;
+  display: inline-block;
+  width: var(--card-w);
+  transform: rotate(var(--tilt, 0deg));
+  /* perspective 在此元素上，作用于子元素的 3D 变换 */
+  perspective: 700px;
+  /* 保证旋转后的卡片角落不被父容器裁切（masonry 默认 overflow:visible，无需额外处理）*/
+  transform-origin: center center;
+  cursor: default;
+  user-select: none;
+}
+
+/* ── 翻转器：3D 变换的执行者 ──────────────────────────────────────────── */
+.polaroid-flipper {
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform var(--flip-speed) cubic-bezier(0.4, 0, 0.2, 1);
+  width: var(--card-w);
+}
+
+.polaroid-flipper.is-flipped {
+  transform: rotateY(180deg);
+}
+
+/* ── 正面 / 背面公共样式 ───────────────────────────────────────────────── */
+.polaroid-face {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  /* 拍立得纸张永远是白色，不随系统深色模式反转 */
+  background: #fff;
+  /* 左、右、上各留相同的纸边，下方由 .polaroid-bottom 撑开 */
+  padding: var(--photo-pad) var(--photo-pad) 0;
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.10),
+    0 4px 10px rgba(0, 0, 0, 0.07);
+}
+
+/* 背面旋转 180° 静置，等待父元素翻过来后正对用户 */
+.polaroid-back {
+  position: absolute;
+  inset: 0;
+  transform: rotateY(180deg);
+  padding: var(--photo-pad);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── 正面：照片区 ────────────────────────────────────────────────────── */
+.polaroid-photo {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  background: #e8e8e5; /* 无图时的占位底色 */
+  display: block;
+}
+
+.polaroid-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  /* 拖拽图片会打断批量打卡点击，禁用 */
+  -webkit-user-drag: none;
+  user-drag: none;
+  pointer-events: none;
+}
+
+.polaroid-photo-placeholder {
+  width: 100%;
+  height: 100%;
+  background: #e8e8e5;
+}
+
+/* ── 正面 + 背面共用：底部操作区 ─────────────────────────────────────── */
+.polaroid-bottom {
+  height: var(--bottom-h);
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 6px;
+}
+
+/* ── 翻转角按钮 ──────────────────────────────────────────────────────── */
+/* 使用 mousedown+preventDefault 阻止 textarea 失焦（见规格文档 §3.1 事件顺序） */
+.polaroid-flip-btn {
+  background: none;
+  border: none;
+  padding: 4px 6px;
+  margin: 0;
+  cursor: pointer;
+  font-size: 16px;
+  color: #aaa;
+  line-height: 1;
+  border-radius: 4px;
+  transition: color 0.15s, background 0.15s;
+  /* 阻止 3D 翻转期间触发 click */
+  pointer-events: auto;
+}
+
+.polaroid-flip-btn:hover {
+  color: #555;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+/* 批量模式下翻转角视觉上也应置灰（isBatchMode 由 JS 控制 disabled，CSS 对齐） */
+.polaroid-flip-btn:disabled {
+  color: #ccc;
+  cursor: not-allowed;
+  background: none;
+}
+
+/* ── 背面：内容区（textarea + 时间线链接）────────────────────────────── */
+.polaroid-back-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.polaroid-textarea {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  width: 100%;
+  padding: 4px 2px 2px;
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #333;
+  /* 允许垂直滚动以防内容过多 */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.polaroid-textarea::placeholder {
+  color: #bbb;
+}
+
+/* 时间线入口：背面底部，次要色不抢镜 */
+.polaroid-timeline-link {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: #999;
+  cursor: pointer;
+  text-decoration: none;
+  transition: color 0.15s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
+}
+
+.polaroid-timeline-link:hover {
+  color: #555;
+  text-decoration: underline;
+}
+
+/* ── 光环 Emoji ───────────────────────────────────────────────────────── */
+/* 绝对定位，错落分布于相框四周，随卡片一起倾斜 */
+.polaroid-aura {
+  position: absolute;
+  font-size: var(--aura-size);
+  line-height: 1;
+  pointer-events: none;
+  user-select: none;
+  /* 轻微动画增加生命感，不影响布局 */
+  animation: polaroid-aura-float 3s ease-in-out infinite;
+}
+
+/* 各光环错开动画相位，看起来各自独立浮动 */
+.polaroid-aura:nth-child(2)  { animation-delay: -0.4s; }
+.polaroid-aura:nth-child(3)  { animation-delay: -0.8s; }
+.polaroid-aura:nth-child(4)  { animation-delay: -1.2s; }
+.polaroid-aura:nth-child(5)  { animation-delay: -1.6s; }
+.polaroid-aura:nth-child(6)  { animation-delay: -2.0s; }
+.polaroid-aura:nth-child(7)  { animation-delay: -2.4s; }
+.polaroid-aura:nth-child(8)  { animation-delay: -2.8s; }
+
+@keyframes polaroid-aura-float {
+  0%, 100% { transform: translateY(0px);   }
+  50%       { transform: translateY(-2px); }
+}
+
+/* 减少动效偏好时：停止浮动 */
+@media (prefers-reduced-motion: reduce) {
+  .polaroid-aura { animation: none; }
+  .polaroid-flipper { transition: none; }
+}
+
+/* ── 批量打卡时：卡片整体表现为可点击 ────────────────────────────────── */
+.polaroid-root.is-batch-target {
+  cursor: pointer;
+}
+
+/* 点击震动反馈（通过 JS 短暂添加此 class）*/
+@keyframes polaroid-tap {
+  0%   { transform: rotate(var(--tilt)) scale(1.00); }
+  40%  { transform: rotate(var(--tilt)) scale(0.95); }
+  100% { transform: rotate(var(--tilt)) scale(1.00); }
+}
+
+.polaroid-root.is-tapping {
+  animation: polaroid-tap 0.15s ease-out forwards;
+}
