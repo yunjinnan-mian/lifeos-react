@@ -1,0 +1,403 @@
+@font-face {
+  font-family: 'Zpix';
+  src: url('/zpix.woff2') format('woff2');
+}
+
+/* ═══════════════════════════════════════════════════
+   CSS CUSTOM PROPERTIES — 主题色板
+   ═══════════════════════════════════════════════════ */
+:root {
+  --c-gold:          #FFE878;
+  --c-gold-dim:      #E8B840;
+  --c-gold-muted:    #D4A868;
+  --c-text-warm:     #FFF5DC;
+  --c-text-brown:    #C49050;
+  --c-text-dim:      #A07840;
+
+  --c-wood-dark:     #5C2E08;
+  --c-wood-mid:      #6B3810;
+  --c-wood-slot:     #9C6020;
+  --c-wood-slot-e:   #A86828;
+
+  --c-border-gold:   rgba(200,160,30,.35);
+  --c-border-gold-s: rgba(200,160,30,.25);
+  --c-slot-border-t: #7A4810;
+  --c-slot-border-b: #D4A050;
+
+  --c-shadow:        rgba(0,0,0,.5);
+  --c-shadow-light:  rgba(0,0,0,.4);
+
+  --c-hover-gold:    #FFD700;
+  --c-stat-green:    #78d038;
+  --c-stat-blue:     #60b0e0;
+  --c-sync-ok:       #52b048;
+  --c-sync-warn:     #d0a040;
+  --c-sync-err:      #c05050;
+
+  --c-tab-default:   #C49050;
+  --c-tab-hover:     #F0C860;
+  --c-tab-border:    #E8A820;
+
+  --c-tooltip-border-t: #A06030;
+  --c-tooltip-border-b: #3D1E06;
+
+  --c-toast-border-t: #c8a020;
+  --c-toast-border-b: #5a3808;
+
+  --c-manage-label:   #8a6828;
+  --c-manage-icon:    #a07830;
+  --c-retire-border:  #7a5010;
+  --c-retire-checked: #c8a020;
+  --c-manage-note:    #e8c870;
+  --c-manage-btn:     #A07840;
+  --c-manage-btn-hover: #f0d060;
+
+  --c-text-faint:    #7a5a18;
+  --c-confirm-msg:   #f0d890;
+  --c-danger-hover:  #ff8888;
+}
+
+/* ═══════════════════════════════════════════════════
+   BASE RESETS
+   ═══════════════════════════════════════════════════ */
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{overflow:hidden;background:#0a0806;font-family:'Zpix','VT323',monospace}
+@keyframes blink{50%{opacity:0}}
+@keyframes rpgFadeIn{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:scale(1)}}
+@keyframes rpgFadeOnly{from{opacity:0}to{opacity:1}}
+
+#mapCanvas{
+  position:fixed;top:0;left:0;right:0;bottom:0;
+  cursor:crosshair!important;
+  image-rendering:pixelated;
+  touch-action:none;
+  z-index:0;
+}
+#rippleCanvas{
+  position:fixed;top:0;left:0;
+  pointer-events:none;z-index:10;
+  image-rendering:pixelated;
+}
+
+#ui-root{
+  position:fixed;inset:0;
+  pointer-events:none;
+  z-index:50;
+}
+#ui-root > *{ pointer-events:auto }
+
+/* ═══════════════════════════════════════════════════
+   HUD
+   ═══════════════════════════════════════════════════ */
+#hud{
+  position:fixed;top:14px;left:10px;
+  z-index:100;width:150px;
+  pointer-events:auto;
+  zoom:0.6;
+}
+#hud .rpgui-container{padding:10px 12px 10px}
+
+.hud-title{
+  font-size:13px;letter-spacing:3px;color:var(--c-text-warm);
+  border-bottom:1px solid rgba(255,245,220,.25);
+  padding-bottom:5px;margin-bottom:10px;
+  white-space:nowrap;
+  text-shadow:1px 1px 0 var(--c-shadow-light);
+}
+
+.hud-stat{
+  display:flex;align-items:center;gap:6px;
+  margin-bottom:8px;
+}
+.hud-stat-emoji{ font-size:22px;line-height:1;flex-shrink:0 }
+.hud-stat-val{
+  font-size:32px;color:var(--c-gold);line-height:1;
+  letter-spacing:1px;
+  text-shadow:2px 2px 0 var(--c-shadow-light);
+}
+.hud-stat-label{
+  font-size:11px;color:var(--c-gold-muted);letter-spacing:1px;
+  margin-top:2px;
+}
+
+.hud-sync{display:flex;align-items:center;gap:5px;margin:6px 0 4px}
+.sync-dot{width:7px;height:7px;border-radius:50%;display:inline-block;flex-shrink:0}
+.sync-dot.synced {background:var(--c-sync-ok);box-shadow:0 0 5px var(--c-sync-ok)}
+.sync-dot.syncing{background:var(--c-sync-warn);animation:blink .5s step-end infinite}
+.sync-dot.error  {background:var(--c-sync-err);box-shadow:0 0 5px var(--c-sync-err)}
+.sync-label{font-size:11px;color:var(--c-gold-muted);letter-spacing:1px}
+
+#hud .rpgui-button{width:100%;margin-top:6px}
+#hud .rpgui-button p{font-size:14px;margin:0;letter-spacing:2px}
+
+.hud-zoom-row{
+  display:flex;gap:4px;margin-top:6px;
+}
+.hud-zoom-btn{
+  flex:1;
+  background:rgba(0,0,0,.25);
+  border-top:2px solid rgba(200,160,30,.5);
+  border-left:2px solid rgba(200,160,30,.5);
+  border-bottom:2px solid rgba(60,30,5,.8);
+  border-right:2px solid rgba(60,30,5,.8);
+  color:var(--c-gold);font-size:18px;line-height:1;
+  padding:4px 0;cursor:pointer;
+  font-family:inherit;
+  transition:filter .08s;
+  letter-spacing:0;
+}
+.hud-zoom-btn:hover  { filter:brightness(1.3) }
+.hud-zoom-btn:active { filter:brightness(.75) }
+.hud-zoom-val{
+  font-size:11px;color:var(--c-gold-muted);letter-spacing:1px;
+  text-align:center;margin-top:2px;
+}
+
+/* ═══════════════════════════════════════════════════
+   MODAL OVERLAY + BOX
+   ═══════════════════════════════════════════════════ */
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.35);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  box-sizing: border-box;
+}
+.modal-overlay.open {
+  display: flex;
+}
+
+.zd-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 440px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  max-height: 85vh;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.8), 0 2px 8px rgba(0,0,0,0.5);
+}
+
+.modal-overlay > .rpgui-container.modal-box {
+  position: relative !important;
+  left: auto !important; top: auto !important;
+  right: auto !important; bottom: auto !important;
+  transform: none !important;
+  width: 100%;
+  max-width: 440px;
+  margin: 0 auto;
+}
+
+.modal-overlay .rpgui-container.modal-box {
+  position: relative !important;
+  left: auto !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  transform: none !important;
+  margin: 0 !important;
+  max-height: 85vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  width: 100%;
+}
+
+.modal-box {
+  width: 100%; max-width: 500px;
+  overflow: visible;
+  padding: 14px 14px 28px;
+  animation: rpgFadeIn .18s ease-out;
+}
+.zd-wrapper .modal-box {
+  flex: 1;
+  min-height: 0;
+  max-height: none !important;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden !important;  /* visible 会让子节点拿到无限高，inv-scroll 无法触发滚动 */
+  display: flex;
+  flex-direction: column;
+  animation: rpgFadeOnly .18s ease-out;
+}
+.modal-box::-webkit-scrollbar { display: none }
+
+#zoneModal .rpgui-container.modal-box,
+#statsModal .rpgui-container.modal-box,
+#confirmModal .rpgui-container.modal-box {
+  border-radius: 14px !important;
+  overflow: hidden !important;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.8) !important;
+}
+
+.sdv-divider{
+  border:none;
+  border-top:1px solid var(--c-border-gold);
+  margin:12px 0;
+}
+.form-group{margin-bottom:14px}
+
+.rpgui-input{width:100%!important;font-size:14px!important}
+
+.btn-row {
+  display: flex;
+  gap: 16px;
+  margin-top: 26px;
+}
+.btn-row .rpgui-button {
+  flex: 1;
+  height: 48px;
+  padding: 0 !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-row .rpgui-button p {
+  margin: 0 !important;
+  line-height: 1 !important;
+  transform: translateY(-2px);
+}
+
+/* ═══════════════════════════════════════════════════
+   INVENTORY GRID
+   ═══════════════════════════════════════════════════ */
+.inv-scroll{
+  max-height:calc(100vh - 200px);
+  overflow-y:auto;
+  overflow-x:hidden;
+  scrollbar-width:thin;
+  scrollbar-color:rgba(160,120,20,.5) rgba(0,0,0,.2);
+}
+.inv-scroll::-webkit-scrollbar{width:3px}
+.inv-scroll::-webkit-scrollbar-track{background:rgba(0,0,0,.2)}
+.inv-scroll::-webkit-scrollbar-thumb{background:rgba(160,120,20,.55);border-radius:2px}
+
+.inv-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:3px;
+}
+
+.inv-slot-base{
+  position:relative;
+  aspect-ratio:1 / 1;
+  width:100%;
+  min-height:0;
+  border-top:3px solid var(--c-slot-border-t);
+  border-left:3px solid var(--c-slot-border-t);
+  border-bottom:3px solid var(--c-slot-border-b);
+  border-right:3px solid var(--c-slot-border-b);
+  cursor:pointer;
+  transition:filter .08s, outline .08s;
+}
+.inv-slot-base:hover{
+  outline:3px solid var(--c-hover-gold);
+  outline-offset:-3px;
+  z-index:2;
+}
+.inv-slot-base:active{ filter:brightness(.85) }
+
+.inv-slot{
+  background:var(--c-wood-slot);
+  box-shadow:inset 1px 1px 4px rgba(0,0,0,.25);
+  overflow:hidden;
+  display:block;
+}
+.inv-slot:hover{ filter:brightness(1.1) }
+
+.inv-slot img{
+  position:absolute;inset:0;width:100%;height:100%;
+  object-fit:cover;
+  display:block;
+  transform:translateZ(0);
+}
+.inv-slot-label{
+  position:relative;z-index:2;width:100%;
+  font-size:11px;color:var(--c-text-warm);
+  background:rgba(60,30,5,.82);
+  border-top:1px solid rgba(80,40,8,.6);
+  padding:1px 3px;
+  overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+  line-height:1.35;
+  text-shadow:1px 1px 0 var(--c-shadow);
+}
+.inv-slot-empty-icon{
+  position:absolute;inset:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:24px;opacity:.18;pointer-events:none;
+}
+
+#inv-tooltip{
+  position:fixed;z-index:9999;display:none;
+  max-width:185px;min-width:80px;
+  white-space:pre-wrap;word-break:break-all;
+  font-size:14px;color:var(--c-text-warm);line-height:1.45;
+  background:var(--c-wood-mid);
+  border-top:2px solid var(--c-tooltip-border-t);
+  border-left:2px solid var(--c-tooltip-border-t);
+  border-bottom:2px solid var(--c-tooltip-border-b);
+  border-right:2px solid var(--c-tooltip-border-b);
+  box-shadow:4px 4px 0 var(--c-shadow);
+  padding:5px 9px 4px;
+  pointer-events:none;text-align:left;
+  text-shadow:1px 1px 0 var(--c-shadow-light);
+}
+
+.inv-slot-empty{
+  background:var(--c-wood-slot-e);
+  box-shadow:inset 1px 1px 4px rgba(0,0,0,.15);
+}
+.inv-slot-empty:hover{ filter:brightness(1.08) }
+
+.inv-empty{
+  grid-column:1/-1;text-align:center;padding:26px 0;
+  font-size:18px;color:var(--c-text-faint);letter-spacing:1px;
+}
+
+/* ═══════════════════════════════════════════════════
+   STATS
+   ═══════════════════════════════════════════════════ */
+.stat-card{
+  margin-bottom:12px;padding:12px 14px;
+  background:rgba(5,3,0,.5);
+  border:1px solid var(--c-border-gold);
+}
+.stat-card-title{
+  font-size:19px;color:var(--c-gold-dim);
+  letter-spacing:2px;margin-bottom:10px;
+  display:flex;align-items:center;gap:6px;
+}
+.stat-card-title::before{
+  content:'▶';font-size:11px;color:var(--c-retire-border);
+}
+.stat-big{font-size:64px;line-height:1}
+.stat-sub{font-size:14px;letter-spacing:1px;margin-top:4px}
+.stat-mini-pair{display:flex;gap:6px;margin-top:10px}
+.stat-mini{
+  flex:1;text-align:center;padding:8px 6px;
+  background:rgba(5,3,0,.5);
+  border:1px solid rgba(200,160,30,.22);
+}
+.stat-mini-val{font-size:30px}
+.stat-mini.green .stat-mini-val{color:var(--c-stat-green)}
+.stat-mini.blue  .stat-mini-val{color:var(--c-stat-blue)}
+.stat-mini-label{font-size:12px;letter-spacing:1px;margin-top:2px}
+.stat-zone-row{
+  display:flex;align-items:center;gap:8px;
+  padding:6px 0;
+}
+.richness-row + .stat-zone-row{border-top:1px solid rgba(200,160,30,.18)}
+.stat-zone-name{flex:1;font-size:16px}
+.stat-bar-bg{
+  flex:2;height:7px;
+  background:rgba(0,0,0,.5);
+  border:1px solid rgba(200,160,30,.18);
+  overflow:hidden;
+}
+.stat-bar{height:100%;background:linear
