@@ -15,6 +15,7 @@ import Wardrobe from './features/wardrobe/index.jsx';
 import Finance from './features/finance/index.jsx';
 import { ZONE_TYPES, ZOOM_STEP } from './lib/config.js';
 import ExplorationModal from './features/exploration/index.jsx';
+import PlantModal from './features/plant/PlantModal.jsx';
 
 export default function App() {
   // ── Page routing ──────────────────────────────────────────
@@ -114,6 +115,9 @@ export default function App() {
     if (zone?.type === ZONE_TYPES.EXPLORATION) {
       setActiveZoneId(zoneId);
       setOpenModal('exploration');
+    } else if (zone?.type === ZONE_TYPES.PLANT) {
+      setActiveZoneId(zoneId);
+      setOpenModal('plant');
     } else {
       setActiveZoneId(zoneId);
       setActiveTab('items');
@@ -464,6 +468,11 @@ export default function App() {
           isOpen={openModal === 'exploration'}
           zone={zones.find(z => z.id === activeZoneId) ?? null}
           onClose={() => setOpenModal(null)}
+        />
+        <PlantModal
+          isOpen={openModal === 'plant'}
+          onClose={() => setOpenModal(null)}
+          showToast={showToast}
         />
       </div>{/* /ui-root */}
     </>

@@ -2,8 +2,9 @@ import { useRef, useState } from 'react';
 import { ZONE_TYPES } from '../../../lib/config.js';
 
 const TYPE_OPTIONS = [
-  { value: ZONE_TYPES.ITEMS, emoji: '📦', label: '物品岛', desc: '储存与管理物品' },
+  { value: ZONE_TYPES.ITEMS,       emoji: '📦', label: '物品岛', desc: '储存与管理物品' },
   { value: ZONE_TYPES.EXPLORATION, emoji: '🔭', label: '探索岛', desc: '记录观察与日志' },
+  { value: ZONE_TYPES.PLANT,       emoji: '🌿', label: '植物岛', desc: '养护与记录植物' },
 ];
 
 export default function ZoneNewModal({ isOpen, onClose, onSave }) {
@@ -79,7 +80,9 @@ export default function ZoneNewModal({ isOpen, onClose, onSave }) {
             placeholder={
               zoneType === ZONE_TYPES.EXPLORATION
                 ? '例：水培 / 香薰 / 阅读'
-                : '例：画画 / 徒步 / 清洁用品'
+                : zoneType === ZONE_TYPES.PLANT
+                  ? '例：草莓区 / 阳台花园'
+                  : '例：画画 / 徒步 / 清洁用品'
             }
           />
         </div>

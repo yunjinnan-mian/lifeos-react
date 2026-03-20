@@ -18,14 +18,16 @@ export const T = { DEEP: 0, SHALLOW: 1, SAND: 2, GRASS: 3, DGRASS: 4, FOREST: 5 
 
 // ── 岛屿类型 ─────────────────────────────────────────────────────
 // packed tile byte 的高 nibble 编码岛屿类型，低 nibble 编码地形 tile type
-// 支持最多 16 种岛屿类型 × 16 种 tile type，当前使用 2 种，最大 packed 值 0x15 = 21（Uint8Array 安全）
+// 支持最多 16 种岛屿类型 × 16 种 tile type，当前使用 3 种，最大 packed 值 0x25 = 37（Uint8Array 安全）
 export const ZONE_TYPES = {
-    ITEMS: 'items',
+    ITEMS:       'items',
     EXPLORATION: 'exploration',
+    PLANT:       'plant',
 };
 export const ZONE_CATEGORY_BITS = {
-    [ZONE_TYPES.ITEMS]: 0x00,
+    [ZONE_TYPES.ITEMS]:       0x00,
     [ZONE_TYPES.EXPLORATION]: 0x10,
+    [ZONE_TYPES.PLANT]:       0x20,
 };
 
 export const BASE_COLOR = {
@@ -46,6 +48,16 @@ export const EXPLORE_BASE_COLOR = {
     [3]: '#7aaa6a',  // GRASS   → 鼠尾草绿
     [4]: '#4a8a5a',  // DGRASS  → 深鼠尾草
     [5]: '#235a42',  // FOREST  → 茶绿
+};
+
+// 植物岛调色板：粉桃沙滩 + 嫩绿草地 + 深草森林，与物品岛（纯绿）和探索岛（鼠尾草）区分
+export const PLANT_BASE_COLOR = {
+    [0]: '#1a3f8c',  // DEEP    （共享）
+    [1]: '#4aa8d8',  // SHALLOW （共享）
+    [2]: '#f5cfa0',  // SAND    → 粉桃色
+    [3]: '#8ecf6a',  // GRASS   → 嫩草绿
+    [4]: '#5aaa4a',  // DGRASS  → 深草绿
+    [5]: '#2a7a2a',  // FOREST  → 深森绿
 };
 
 export const firebaseConfig = {
