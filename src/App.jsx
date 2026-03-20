@@ -469,12 +469,14 @@ export default function App() {
           zone={zones.find(z => z.id === activeZoneId) ?? null}
           onClose={() => setOpenModal(null)}
         />
-        <PlantModal
-          isOpen={openModal === 'plant'}
-          onClose={() => setOpenModal(null)}
-          showToast={showToast}
-        />
       </div>{/* /ui-root */}
+
+      {/* PlantModal 在 rpgui-content 外，不继承游戏风格样式 */}
+      <PlantModal
+        isOpen={openModal === 'plant'}
+        onClose={() => setOpenModal(null)}
+        showToast={showToast}
+      />
     </>
 
   );
