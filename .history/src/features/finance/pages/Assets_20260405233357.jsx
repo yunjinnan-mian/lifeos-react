@@ -251,7 +251,7 @@ export default function Assets() {
         commitEdit(null);
     }, [commitEdit]);
 
-    // ── 原生 SVG 折线图 (必须有 2 条及以上数据才显示) ──
+    // ── 原生 SVG 折线图 ───────────────────────────
     const chartRender = useMemo(() => {
         if (rows.length < 2) return null; 
         
@@ -281,54 +281,15 @@ export default function Assets() {
     return (
         <div style={{ paddingBottom: 40, width: '100%' }}>
             
-            {/* 注入组件专属 CSS：高级统一控制条 */}
+            {/* 注入极简滚动条与响应式 CSS */}
             <style>{`
                 .assets-table-scroll::-webkit-scrollbar { height: 6px; }
                 .assets-table-scroll::-webkit-scrollbar-track { background: transparent; }
                 .assets-table-scroll::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 10px; }
                 .assets-table-scroll::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.25); }
                 
-                /* iOS 风格聚合控制条 */
-                .glass-toolbar {
-                    display: inline-flex;
-                    align-items: center;
-                    background: #f1f5f9;
-                    border: 1px solid #e2e8f0;
-                    border-radius: 10px;
-                    padding: 4px;
-                }
-                .glass-btn {
-                    background: transparent;
-                    border: none;
-                    border-radius: 6px;
-                    padding: 6px 12px;
-                    font-size: 13px;
-                    font-weight: 600;
-                    color: #475569;
-                    cursor: pointer;
-                    display: flex;
-                    align-items: center;
-                    gap: 4px;
-                    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-                    white-space: nowrap; /* 绝对禁止换行 */
-                }
-                .glass-btn:active { transform: scale(0.95); }
-                .glass-btn:hover { background: rgba(0,0,0,0.04); color: #0f172a; }
-                .glass-btn.active-mode { background: #fff; color: #0284c7; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-                
-                .glass-divider { width: 1px; height: 16px; background: #cbd5e1; margin: 0 4px; }
-                
-                .glass-input {
-                    background: #fff;
-                    border: 1px solid #3b82f6;
-                    border-radius: 6px;
-                    padding: 5px 10px;
-                    font-size: 13px;
-                    width: 90px;
-                    outline: none;
-                    box-shadow: 0 0 0 2px rgba(59,130,246,0.1);
-                    text-align: center;
-                }
+                /* 核心移动端适配：强制所有操作按钮不换行 */
+                .action-btn { white-space: nowrap !important; }
             `}</style>
 
             {error && (
@@ -337,45 +298,74 @@ export default function Assets() {
                 </div>
             )}
 
-            {/* 🚀 重构顶栏：Flex 自动折行 + 聚合控制条 */}
+            {/* 🚀 重构后的响应式顶栏区 */}
             <div style={{ 
                 display: 'flex', 
-                flexWrap: 'wrap', 
+                flexWrap: 'wrap', // 允许在屏幕太窄时换行
                 alignItems: 'center', 
                 justifyContent: 'space-between',
                 gap: '12px',
-                marginBottom: chartRender ? 12 : 20 
+                marginBottom: chartRender ? 10 : 20 
             }}>
+                {/* 标题（左侧/上侧） */}
                 <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, whiteSpace: 'nowrap' }}>💰 资产快照表</h2>
                 
-                {/* 聚合控制条 (iOS Segmented Control 风格) */}
-                <div className="glass-toolbar">
-                    <button className="glass-btn" onClick={handleRecordToday}>
+                {/* 按钮组（右侧/下侧）合并在一个容器内自动折行排列 */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px' }}>
+                    
+                    <div style={{ fontSize:12, color:'#888', display: 'none', '@media(minWidth: 768px)': { display: 'block' } }}>
+                        💡 点击单元格修改 · ← → 切换 · Enter 保存
+                    </div>
+
+                    <button
+                        className="action-btn"
+                        onClick={handleRecordToday}
+                        style={{
+                            background: '#fff', border: '1px solid #cbd5e1', borderRadius: 6,
+                            padding: '4px 12px', cursor: 'pointer', fontWeight: 600, fontSize: 13, color: '#334155',
+                            display: 'flex', alignItems: 'center', gap: 4, boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                            transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.borderColor = '#94a3b8'; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
+                    >
                         <span style={{ fontSize: 14 }}>📅</span> 记录今日
                     </button>
 
-                    <div className="glass-divider" />
-
-                    <button 
-                        className={`glass-btn ${isEditMode ? 'active-mode' : ''}`} 
+                    <button
+                        className="action-btn"
                         onClick={() => setIsEditMode(p => !p)}
+                        style={{
+                            background: isEditMode ? '#e0f2fe' : '#fff',
+                            border: isEditMode ? '1px solid #7dd3fc' : '1px solid #cbd5e1', 
+                            borderRadius: 6, padding: '4px 10px',
+                            cursor: 'pointer', color: isEditMode ? '#0284c7' : '#64748b',
+                            fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 4,
+                            fontSize: 13, transition: 'all 0.2s'
+                        }}
                     >
-                        <span style={{ fontSize: 14 }}>⚙️</span> {isEditMode ? '完成' : '编辑'}
+                        ⚙️ {isEditMode ? '完成' : '编辑结构'}
                     </button>
-
-                    <div className="glass-divider" />
-
+                    
                     {showAddAcc ? (
                         <input
-                            className="glass-input"
-                            autoFocus placeholder="回车确认" value={newAccName}
+                            autoFocus placeholder="输入回车" value={newAccName}
                             onChange={e => setNewAccName(e.target.value)} onBlur={handleAddAccount}
                             onKeyDown={e => { if (e.key === 'Enter') handleAddAccount(); if (e.key === 'Escape') setShowAddAcc(false); }}
+                            style={{ 
+                                padding:'3px 8px', border:'1px solid #3b82f6', borderRadius: 6, 
+                                outline:'none', fontSize:13, width: 90, textAlign: 'center' // 手机上稍微改窄一点点
+                            }}
                         />
                     ) : (
-                        <button className="glass-btn" onClick={() => setShowAddAcc(true)}>
-                            ➕ 账户
-                        </button>
+                        <button 
+                            className="action-btn"
+                            onClick={() => setShowAddAcc(true)}
+                            style={{ 
+                                padding:'4px 10px', background:'#fff', border:'1px solid #cbd5e1', 
+                                borderRadius: 6, color:'#334155', cursor:'pointer', fontSize: 13, fontWeight: 500
+                            }}
+                        >+ 增加账户</button>
                     )}
                 </div>
             </div>
@@ -544,7 +534,7 @@ const TH_STYLE = {
     color: '#334155',
     fontWeight: 'bold',
     textAlign: 'center',
-    whiteSpace: 'nowrap'
+    whiteSpace: 'nowrap' // 防止表头文字换行
 };
 
 const TD_STYLE = {
