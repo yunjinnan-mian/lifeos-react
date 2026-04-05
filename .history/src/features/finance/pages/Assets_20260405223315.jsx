@@ -36,8 +36,7 @@ async function removeSnapshot(id) {
 }
 
 // ── 格式化 ────────────────────────────────────────────────
-// 【修改点】：取消 Math.round 取整，开启保留两位小数的标准财务格式
-const fmt = (n) => n == null ? '—' : Number(n).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmt     = (n) => n == null ? '—' : Math.round(n).toLocaleString('zh-CN');
 const fmtDiff = (n) => n == null ? '—' : (n >= 0 ? '+' : '') + fmt(n);
 function fmtDate(d) {
     if (!d) return '';
@@ -54,15 +53,20 @@ export default function Assets() {
     const [loaded,    setLoaded]    = useState(false);
     const [error,     setError]     = useState('');
 
+    // 行内编辑：{snapId, accId} | null
     const [editCell, setEditCell] = useState(null);
     const [editVal,  setEditVal]  = useState('');
     const inputRef      = useRef(null);
     const navigatingRef = useRef(false);
 
+    // 行内添加账户
     const [showAddAcc, setShowAddAcc] = useState(false);
     const [newAccName, setNewAccName] = useState('');
+
+    // 行内添加快照
     const [pendingDate, setPendingDate] = useState('');
 
+    // ── 初始加载 ──────────────────────────────────────────
     useEffect(() => {
         Promise.all([fetchAccounts(), fetchSnapshots()])
             .then(([accs, snaps]) => { setAccounts(accs); setSnapshots(snaps); setLoaded(true); })
@@ -76,6 +80,7 @@ export default function Assets() {
         }
     }, [editCell]);
 
+    // ── 派生数据 ──────────────────────────────────────────
     const sorted = useMemo(
         () => [...snapshots].sort((a, b) => a.date.localeCompare(b.date)),
         [snapshots]
@@ -106,6 +111,7 @@ export default function Assets() {
     const grandTotal = accounts.reduce((s, a) => s + (latestSnap?.balances?.[a.id] ?? 0), 0);
     const displayRows = useMemo(() => [...rows].reverse(), [rows]);
 
+    // ── 账户操作 ──────────────────────────────────────────
     const handleAddAccount = useCallback(async () => {
         const name = newAccName.trim();
         if (!name) {
@@ -129,6 +135,7 @@ export default function Assets() {
         catch { setError('账户删除失败'); }
     }, [accounts]);
 
+    // ── 快照操作 ──────────────────────────────────────────
     const handleAddSnapshot = useCallback(async (dateOverride) => {
         const date = dateOverride || pendingDate.trim();
         if (!date) return;
@@ -147,6 +154,7 @@ export default function Assets() {
         catch { setError('快照删除失败'); }
     }, []);
 
+    // ── 单元格编辑 ────────────────────────────────────────
     const startEdit = useCallback((snapId, accId, currentVal) => {
         setEditCell({ snapId, accId });
         setEditVal(currentVal != null && currentVal !== 0 ? String(currentVal) : '');
@@ -155,15 +163,27 @@ export default function Assets() {
     const commitEdit = useCallback(async (navToAccId = null) => {
         if (!editCell) return;
         const { snapId, accId } = editCell;
+        
+        // 解析输入的数字
         const num = parseFloat(editVal.replace(/,/g, ''));
         const val = isNaN(num) ? 0 : num;
 
+        // 【修复】直接从现有列表中抓取要更新的快照，然后构建出新的快照对象
         const targetSnap = snapshots.find(s => s.id === snapId);
         if (!targetSnap) return;
 
-        const updatedSnap = { ...targetSnap, balances: { ...targetSnap.balances, [accId]: val } };
+        const updatedSnap = {
+            ...targetSnap,
+            balances: {
+                ...targetSnap.balances,
+                [accId]: val
+            }
+        };
+
+        // 更新 React 本地状态 UI
         setSnapshots(prev => prev.map(s => s.id === snapId ? updatedSnap : s));
 
+        // 导航到下一个单元格逻辑
         if (navToAccId !== null) {
             const nextVal = updatedSnap.balances[navToAccId];
             setEditCell({ snapId, accId: navToAccId });
@@ -172,7 +192,9 @@ export default function Assets() {
             setEditCell(null);
         }
 
+        // 【修复】将直接构建好的对象提交到 Firebase
         persistSnapshot(updatedSnap).catch(() => setError('保存至数据库失败，请刷新重试'));
+        
     }, [editCell, editVal, snapshots]);
 
     const handleCellKey = useCallback((e) => {
@@ -196,6 +218,7 @@ export default function Assets() {
         commitEdit(null);
     }, [commitEdit]);
 
+    // ════════════════════════════════════════════════════════
     if (!loaded) return <div style={{ textAlign:'center', marginTop:50, color:'#999' }}>加载中…</div>;
 
     return (
@@ -206,40 +229,10 @@ export default function Assets() {
                 </div>
             )}
 
-            <div style={{ display:'flex', alignItems:'center', marginBottom:16 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:16 }}>
                 <h2 style={{ margin:0, fontSize:18, fontWeight:700 }}>💰 资产快照表</h2>
-                
-                <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 16 }}>
-                    <div style={{ fontSize:12, color:'#888' }}>
-                        💡 提示：点击单元格直接修改 · ← → 方向键切换 · Enter 保存
-                    </div>
-                    
-                    <div>
-                        {showAddAcc ? (
-                            <input
-                                autoFocus
-                                placeholder="输入名称并回车"
-                                value={newAccName}
-                                onChange={e => setNewAccName(e.target.value)}
-                                onBlur={handleAddAccount}
-                                onKeyDown={e => { if (e.key === 'Enter') handleAddAccount(); if (e.key === 'Escape') setShowAddAcc(false); }}
-                                style={{ 
-                                    padding:'5px 10px', border:'1px solid #3b82f6', borderRadius: 6, 
-                                    outline:'none', fontSize:13, width: 140, boxShadow: '0 0 0 2px rgba(59,130,246,0.2)',
-                                    textAlign: 'center'
-                                }}
-                            />
-                        ) : (
-                            <button 
-                                onClick={() => setShowAddAcc(true)}
-                                style={{ 
-                                    padding:'5px 12px', background:'#fff', border:'1px solid #cbd5e1', 
-                                    borderRadius: 6, color:'#334155', cursor:'pointer', fontSize: 13,
-                                    fontWeight: 500, boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
-                                }}
-                            >+ 增加账户</button>
-                        )}
-                    </div>
+                <div style={{ fontSize:12, color:'#888', marginLeft:'auto' }}>
+                    💡 提示：点击单元格直接修改 · ← → 方向键切换 · Enter 保存
                 </div>
             </div>
 
@@ -248,36 +241,48 @@ export default function Assets() {
                 borderCollapse: 'collapse', 
                 background: '#fff', 
                 fontSize: 13,
-                boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-                tableLayout: 'auto' 
+                boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
             }}>
                 <thead>
                     <tr>
-                        <th style={{ ...TH_STYLE, color:'#10b981', minWidth: 90 }}>Σ 总合计</th>
-                        <th style={{...TH_STYLE, width: 110 }}>日期</th>
-                        
+                        <th style={TH_STYLE}>日期</th>
                         {accounts.map(acc => (
-                            <th key={acc.id} style={{ ...TH_STYLE, minWidth: 110 }}>
+                            <th key={acc.id} style={TH_STYLE}>
                                 <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:4 }}>
                                     {acc.name}
                                     <button 
                                         onClick={() => handleDeleteAccount(acc.id)}
                                         style={{ background:'none', border:'none', color:'#ccc', cursor:'pointer' }}
-                                        title="删除账户"
+                                        title="删除列"
                                     >×</button>
                                 </div>
                             </th>
                         ))}
-                        
-                        <th style={{ ...TH_STYLE, minWidth: 100 }}>资产变动</th>
+                        <th style={{ ...TH_STYLE, background: '#f8fafc', width: 120 }}>
+                            {showAddAcc ? (
+                                <input
+                                    autoFocus
+                                    placeholder="输入回车"
+                                    value={newAccName}
+                                    onChange={e => setNewAccName(e.target.value)}
+                                    onBlur={handleAddAccount}
+                                    onKeyDown={e => { if (e.key === 'Enter') handleAddAccount(); if (e.key === 'Escape') setShowAddAcc(false); }}
+                                    style={{ width:'100%', padding:'2px', fontSize:12, textAlign:'center' }}
+                                />
+                            ) : (
+                                <button 
+                                    onClick={() => setShowAddAcc(true)}
+                                    style={{ background:'none', border:'none', color:'#3b82f6', cursor:'pointer', width:'100%', fontWeight:'bold' }}
+                                >+ 增加账户</button>
+                            )}
+                        </th>
+                        <th style={{ ...TH_STYLE, color:'#10b981' }}>Σ 总合计</th>
+                        <th style={TH_STYLE}>资产变动</th>
                     </tr>
 
                     {latestSnap && (
                         <tr style={{ background:'#f0fdf4', borderBottom: '2px solid #bbf7d0' }}>
-                            <td style={{ ...TD_STYLE, fontWeight:'bold', color:'#166534', fontSize:14 }}>
-                                {fmt(grandTotal)}
-                            </td>
-                            <td style={{ ...TD_STYLE, fontWeight:'bold', color:'#166534' }}>
+                            <td style={{ ...TD_STYLE, textAlign:'center', fontWeight:'bold', color:'#166534' }}>
                                 当前最新
                             </td>
                             {accounts.map(acc => (
@@ -285,6 +290,10 @@ export default function Assets() {
                                     {fmt(latestSnap.balances?.[acc.id] ?? 0)}
                                 </td>
                             ))}
+                            <td style={TD_STYLE}></td>
+                            <td style={{ ...TD_STYLE, fontWeight:'bold', color:'#166534', fontSize:14 }}>
+                                {fmt(grandTotal)}
+                            </td>
                             <td style={TD_STYLE}></td>
                         </tr>
                     )}
@@ -294,11 +303,7 @@ export default function Assets() {
                     {displayRows.map(row => (
                         <tr key={row.id} style={{ transition:'background 0.1s' }} onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'} onMouseLeave={e => e.currentTarget.style.background = ''}>
                             
-                            <td style={{ ...TD_STYLE, fontWeight:'bold', background:'#fafafa' }}>
-                                {fmt(row.total)}
-                            </td>
-
-                            <td style={{ ...TD_STYLE, whiteSpace:'nowrap', color:'#475569' }}>
+                            <td style={{ ...TD_STYLE, textAlign:'center', whiteSpace:'nowrap', color:'#475569' }}>
                                 <button 
                                     onClick={() => handleDeleteSnapshot(row.id)}
                                     style={{ background:'none', border:'none', color:'#cbd5e1', cursor:'pointer', marginRight:4 }}
@@ -316,15 +321,14 @@ export default function Assets() {
                                         onClick={() => { if (!isEditing) startEdit(row.id, acc.id, val); }}
                                         style={{ 
                                             ...TD_STYLE, 
-                                            cursor:'text',
-                                            position: 'relative' 
+                                            cursor:'text', 
+                                            background: isEditing ? '#fff' : 'transparent',
+                                            // 【修复】编辑时去掉内边距，并用内部阴影模拟聚焦
+                                            padding: isEditing ? 0 : TD_STYLE.padding,
+                                            boxShadow: isEditing ? 'inset 0 0 0 2px #3b82f6' : 'none'
                                         }}
                                     >
-                                        <div style={{ opacity: isEditing ? 0 : 1, color: val ? '#0f172a' : '#cbd5e1' }}>
-                                            {val ? fmt(val) : '—'}
-                                        </div>
-
-                                        {isEditing && (
+                                        {isEditing ? (
                                             <input
                                                 ref={inputRef}
                                                 value={editVal}
@@ -332,37 +336,43 @@ export default function Assets() {
                                                 onBlur={handleCellBlur}
                                                 onKeyDown={handleCellKey}
                                                 style={{ 
-                                                    position: 'absolute',
-                                                    top: 0, left: 0,
-                                                    width: '100%', height: '100%',
+                                                    // 【修复】输入框透明且铺满，融入单元格
+                                                    width:'100%', 
+                                                    height:'100%',
                                                     boxSizing: 'border-box',
-                                                    padding: '8px 10px',
-                                                    margin: 0,
-                                                    textAlign: 'center', // 【修改点】输入时强制居中
-                                                    border: '2px solid #3b82f6', 
-                                                    outline: 'none', 
-                                                    background: '#fff',
+                                                    textAlign:'right', 
+                                                    border:'none', 
+                                                    outline:'none', 
+                                                    background:'transparent',
+                                                    padding: TD_STYLE.padding, // 把原本的 padding 移给 input
                                                     fontSize: 13,
-                                                    color: '#0f172a',
-                                                    zIndex: 10,
-                                                    fontFamily: 'inherit'
+                                                    color: '#0f172a'
                                                 }}
                                             />
+                                        ) : (
+                                            <span style={{ color: val ? '#0f172a' : '#cbd5e1' }}>
+                                                {val ? fmt(val) : '—'}
+                                            </span>
                                         )}
                                     </td>
                                 );
                             })}
                             
-                            <td style={{ ...TD_STYLE }}>
+                            <td style={{ ...TD_STYLE, background:'#f8fafc' }}></td>
+
+                            <td style={{ ...TD_STYLE, fontWeight:'bold', background:'#fafafa' }}>
+                                {fmt(row.total)}
+                            </td>
+
+                            <td style={{ ...TD_STYLE, textAlign:'center' }}>
                                 {row.actualDiff != null ? (
                                     <div>
-                                        {/* 【修改点】：去掉之前 Math.round(row.actualDiff) */}
                                         <div style={{ fontWeight:'bold', color: row.actualDiff >= 0 ? '#10b981' : '#ef4444' }}>
-                                            {fmtDiff(row.actualDiff)}
+                                            {fmtDiff(Math.round(row.actualDiff))}
                                         </div>
                                         {row.txNet != null && (
                                             <div style={{ fontSize:11, color:'#94a3b8' }}>
-                                                账单 {fmtDiff(row.txNet)}
+                                                账单 {fmtDiff(Math.round(row.txNet))}
                                             </div>
                                         )}
                                     </div>
@@ -374,9 +384,7 @@ export default function Assets() {
                     ))}
 
                     <tr>
-                        <td style={{ ...TD_STYLE, color: '#cbd5e1' }}>—</td>
-                        
-                        <td style={{ ...TD_STYLE, padding: '6px' }}>
+                        <td style={{ ...TD_STYLE, textAlign:'center', padding: '6px' }}>
                             <input
                                 type="date"
                                 value={pendingDate}
@@ -384,11 +392,11 @@ export default function Assets() {
                                     setPendingDate(e.target.value);
                                     if(e.target.value) handleAddSnapshot(e.target.value); 
                                 }}
-                                style={{ border:'1px solid #cbd5e1', borderRadius:4, padding:'4px', fontSize:12, width:'110px', textAlign: 'center' }}
+                                style={{ border:'1px solid #cbd5e1', borderRadius:4, padding:'4px', fontSize:12, width:'110px' }}
+                                title="选择日期自动新增一行"
                             />
                         </td>
-                        
-                        <td colSpan={accounts.length + 1} style={{ ...TD_STYLE, color:'#94a3b8', textAlign:'left', paddingLeft: 16 }}>
+                        <td colSpan={accounts.length + 3} style={{ ...TD_STYLE, color:'#94a3b8', textAlign:'left', paddingLeft: 16 }}>
                             ← 选择日期新建快照行
                         </td>
                     </tr>
@@ -407,13 +415,13 @@ const TH_STYLE = {
     background: '#f1f5f9',
     color: '#334155',
     fontWeight: 'bold',
-    textAlign: 'center', // 标题栏居中
+    textAlign: 'center',
     whiteSpace: 'nowrap'
 };
 
 const TD_STYLE = {
     border: `1px solid ${BORDER_COLOR}`,
     padding: '8px 10px',
-    textAlign: 'center', // 【修改点】数字、单元格全部居中
+    textAlign: 'right', 
     verticalAlign: 'middle',
 };

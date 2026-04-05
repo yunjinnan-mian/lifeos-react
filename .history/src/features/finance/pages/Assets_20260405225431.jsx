@@ -36,8 +36,7 @@ async function removeSnapshot(id) {
 }
 
 // ── 格式化 ────────────────────────────────────────────────
-// 【修改点】：取消 Math.round 取整，开启保留两位小数的标准财务格式
-const fmt = (n) => n == null ? '—' : Number(n).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmt     = (n) => n == null ? '—' : Math.round(n).toLocaleString('zh-CN');
 const fmtDiff = (n) => n == null ? '—' : (n >= 0 ? '+' : '') + fmt(n);
 function fmtDate(d) {
     if (!d) return '';
@@ -206,6 +205,7 @@ export default function Assets() {
                 </div>
             )}
 
+            {/* 顶栏控制区：把“新增账户”放在提示文字右侧 */}
             <div style={{ display:'flex', alignItems:'center', marginBottom:16 }}>
                 <h2 style={{ margin:0, fontSize:18, fontWeight:700 }}>💰 资产快照表</h2>
                 
@@ -225,8 +225,7 @@ export default function Assets() {
                                 onKeyDown={e => { if (e.key === 'Enter') handleAddAccount(); if (e.key === 'Escape') setShowAddAcc(false); }}
                                 style={{ 
                                     padding:'5px 10px', border:'1px solid #3b82f6', borderRadius: 6, 
-                                    outline:'none', fontSize:13, width: 140, boxShadow: '0 0 0 2px rgba(59,130,246,0.2)',
-                                    textAlign: 'center'
+                                    outline:'none', fontSize:13, width: 140, boxShadow: '0 0 0 2px rgba(59,130,246,0.2)'
                                 }}
                             />
                         ) : (
@@ -253,6 +252,7 @@ export default function Assets() {
             }}>
                 <thead>
                     <tr>
+                        {/* 顺序调整：Σ 总合计 -> 日期 -> 账户 -> 资产变动 */}
                         <th style={{ ...TH_STYLE, color:'#10b981', minWidth: 90 }}>Σ 总合计</th>
                         <th style={{...TH_STYLE, width: 110 }}>日期</th>
                         
@@ -272,12 +272,13 @@ export default function Assets() {
                         <th style={{ ...TH_STYLE, minWidth: 100 }}>资产变动</th>
                     </tr>
 
+                    {/* 最新一行（置顶汇总） */}
                     {latestSnap && (
                         <tr style={{ background:'#f0fdf4', borderBottom: '2px solid #bbf7d0' }}>
                             <td style={{ ...TD_STYLE, fontWeight:'bold', color:'#166534', fontSize:14 }}>
                                 {fmt(grandTotal)}
                             </td>
-                            <td style={{ ...TD_STYLE, fontWeight:'bold', color:'#166534' }}>
+                            <td style={{ ...TD_STYLE, textAlign:'center', fontWeight:'bold', color:'#166534' }}>
                                 当前最新
                             </td>
                             {accounts.map(acc => (
@@ -294,11 +295,13 @@ export default function Assets() {
                     {displayRows.map(row => (
                         <tr key={row.id} style={{ transition:'background 0.1s' }} onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'} onMouseLeave={e => e.currentTarget.style.background = ''}>
                             
+                            {/* Σ 总合计 */}
                             <td style={{ ...TD_STYLE, fontWeight:'bold', background:'#fafafa' }}>
                                 {fmt(row.total)}
                             </td>
 
-                            <td style={{ ...TD_STYLE, whiteSpace:'nowrap', color:'#475569' }}>
+                            {/* 日期 */}
+                            <td style={{ ...TD_STYLE, textAlign:'center', whiteSpace:'nowrap', color:'#475569' }}>
                                 <button 
                                     onClick={() => handleDeleteSnapshot(row.id)}
                                     style={{ background:'none', border:'none', color:'#cbd5e1', cursor:'pointer', marginRight:4 }}
@@ -307,6 +310,7 @@ export default function Assets() {
                                 {fmtDate(row.date)}
                             </td>
 
+                            {/* 各个账户的金额单元格 */}
                             {accounts.map(acc => {
                                 const isEditing = editCell?.snapId === row.id && editCell?.accId === acc.id;
                                 const val = row.balances?.[acc.id];
@@ -317,7 +321,7 @@ export default function Assets() {
                                         style={{ 
                                             ...TD_STYLE, 
                                             cursor:'text',
-                                            position: 'relative' 
+                                            position: 'relative' // 绝对定位容器
                                         }}
                                     >
                                         <div style={{ opacity: isEditing ? 0 : 1, color: val ? '#0f172a' : '#cbd5e1' }}>
@@ -338,7 +342,7 @@ export default function Assets() {
                                                     boxSizing: 'border-box',
                                                     padding: '8px 10px',
                                                     margin: 0,
-                                                    textAlign: 'center', // 【修改点】输入时强制居中
+                                                    textAlign: 'right', 
                                                     border: '2px solid #3b82f6', 
                                                     outline: 'none', 
                                                     background: '#fff',
@@ -353,16 +357,16 @@ export default function Assets() {
                                 );
                             })}
                             
-                            <td style={{ ...TD_STYLE }}>
+                            {/* 资产变动（差额与账单） */}
+                            <td style={{ ...TD_STYLE, textAlign:'center' }}>
                                 {row.actualDiff != null ? (
                                     <div>
-                                        {/* 【修改点】：去掉之前 Math.round(row.actualDiff) */}
                                         <div style={{ fontWeight:'bold', color: row.actualDiff >= 0 ? '#10b981' : '#ef4444' }}>
-                                            {fmtDiff(row.actualDiff)}
+                                            {fmtDiff(Math.round(row.actualDiff))}
                                         </div>
                                         {row.txNet != null && (
                                             <div style={{ fontSize:11, color:'#94a3b8' }}>
-                                                账单 {fmtDiff(row.txNet)}
+                                                账单 {fmtDiff(Math.round(row.txNet))}
                                             </div>
                                         )}
                                     </div>
@@ -373,10 +377,11 @@ export default function Assets() {
                         </tr>
                     ))}
 
+                    {/* 底部新增一行（快照） */}
                     <tr>
-                        <td style={{ ...TD_STYLE, color: '#cbd5e1' }}>—</td>
+                        <td style={{ ...TD_STYLE, textAlign:'center', color: '#cbd5e1' }}>—</td>
                         
-                        <td style={{ ...TD_STYLE, padding: '6px' }}>
+                        <td style={{ ...TD_STYLE, textAlign:'center', padding: '6px' }}>
                             <input
                                 type="date"
                                 value={pendingDate}
@@ -384,7 +389,7 @@ export default function Assets() {
                                     setPendingDate(e.target.value);
                                     if(e.target.value) handleAddSnapshot(e.target.value); 
                                 }}
-                                style={{ border:'1px solid #cbd5e1', borderRadius:4, padding:'4px', fontSize:12, width:'110px', textAlign: 'center' }}
+                                style={{ border:'1px solid #cbd5e1', borderRadius:4, padding:'4px', fontSize:12, width:'110px' }}
                             />
                         </td>
                         
@@ -407,13 +412,13 @@ const TH_STYLE = {
     background: '#f1f5f9',
     color: '#334155',
     fontWeight: 'bold',
-    textAlign: 'center', // 标题栏居中
+    textAlign: 'center',
     whiteSpace: 'nowrap'
 };
 
 const TD_STYLE = {
     border: `1px solid ${BORDER_COLOR}`,
     padding: '8px 10px',
-    textAlign: 'center', // 【修改点】数字、单元格全部居中
+    textAlign: 'right', 
     verticalAlign: 'middle',
 };
