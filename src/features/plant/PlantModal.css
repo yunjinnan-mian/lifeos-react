@@ -1,0 +1,115 @@
+/* ── 遮罩 ─────────────────────────────────────────────────────────────── */
+.plant-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.40);
+  z-index: 60;
+  animation: plant-modal-fade-in 0.2s ease;
+}
+
+@keyframes plant-modal-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── 抽屉主体 ─────────────────────────────────────────────────────────── */
+/* 94dvh：比 ExplorationModal 更高，给瀑布流足够纵深。
+   dvh 单位在移动端正确排除地址栏，避免内容被裁切。
+   border-radius 只在顶部两角，底部贴屏幕边缘。
+
+   CSS 变量在此统一定义：PlantModal 及其子组件（PlantPage、PolaroidCard 等）
+   全部通过继承取值，不依赖外部主题系统。                                */
+.plant-modal-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 94dvh;
+  background: #fff;
+  border-radius: 20px 20px 0 0;
+  z-index: 61;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: plant-modal-slide-up 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+
+  /* ── 颜色变量（仅在此作用域生效，不污染全局）── */
+  --color-background-primary:   #ffffff;
+  --color-background-secondary: #f5f5f3;
+  --color-background-tertiary:  #ececea;
+  --color-background-info:      #e8f0fe;
+  --color-border-tertiary:      rgba(0, 0, 0, 0.08);
+  --color-border-secondary:     rgba(0, 0, 0, 0.14);
+  --color-border-primary:       rgba(0, 0, 0, 0.24);
+  --color-border-info:          #93b4f5;
+  --color-text-primary:         #1a1a1a;
+  --color-text-secondary:       #666666;
+  --color-text-tertiary:        #999999;
+  --color-text-danger:          #d93025;
+  --color-text-info:            #1a56db;
+}
+
+@keyframes plant-modal-slide-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+/* ── 顶部栏 ───────────────────────────────────────────────────────────── */
+.plant-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px 8px;
+  flex-shrink: 0;
+  border-bottom: 0.5px solid var(--color-border-tertiary);
+  position: relative;
+}
+
+.plant-modal-handle {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-border-secondary);
+}
+
+.plant-modal-title {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  /* handle 占据顶部 22px，标题从下方开始 */
+  margin-top: 14px;
+}
+
+.plant-modal-close {
+  margin-top: 14px;
+  background: none;
+  border: none;
+  font-size: 16px;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+  line-height: 1;
+  transition: color 0.15s, background 0.15s;
+}
+
+.plant-modal-close:hover {
+  color: var(--color-text-secondary);
+  background: var(--color-background-secondary);
+}
+
+/* ── 内容区 ───────────────────────────────────────────────────────────── */
+/* flex: 1 + overflow-y: auto：PlantPage 在此区域内滚动，弹窗高度固定。
+   -webkit-overflow-scrolling: touch 确保 iOS 惯性滚动。              */
+.plant-modal-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  /* PlantPage 里的 position: fixed FAB 相对 viewport 定位，
+     这里不设 transform 避免创建新的 stacking context 干扰 FAB 位置 */
+}

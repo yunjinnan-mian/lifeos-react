@@ -15,6 +15,7 @@ import Wardrobe from './features/wardrobe/index.jsx';
 import Finance from './features/finance/index.jsx';
 import { ZONE_TYPES, ZOOM_STEP } from './lib/config.js';
 import ExplorationModal from './features/exploration/index.jsx';
+import PlantModal from './features/plant/PlantModal.jsx';
 
 export default function App() {
   // ── Page routing ──────────────────────────────────────────
@@ -114,6 +115,9 @@ export default function App() {
     if (zone?.type === ZONE_TYPES.EXPLORATION) {
       setActiveZoneId(zoneId);
       setOpenModal('exploration');
+    } else if (zone?.type === ZONE_TYPES.PLANT) {
+      setActiveZoneId(zoneId);
+      setOpenModal('plant');
     } else {
       setActiveZoneId(zoneId);
       setActiveTab('items');
@@ -466,6 +470,13 @@ export default function App() {
           onClose={() => setOpenModal(null)}
         />
       </div>{/* /ui-root */}
+
+      {/* PlantModal 在 rpgui-content 外，不继承游戏风格样式 */}
+      <PlantModal
+        isOpen={openModal === 'plant'}
+        onClose={() => setOpenModal(null)}
+        showToast={showToast}
+      />
     </>
 
   );
