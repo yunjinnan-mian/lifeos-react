@@ -4,7 +4,6 @@
 // ============================================================
 
 import { useState, useCallback } from 'react';
-import * as XLSX from 'xlsx';
 
 // ── 查找账户 id ────────────────────────────────────────────
 function findAccId(acc, txt) {
@@ -178,22 +177,14 @@ export function useWxParser() {
             if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
                 const reader = new FileReader();
                 reader.readAsArrayBuffer(file);
-reader.onload = (ev) => {
-    try {
-        console.log('[1] window.XLSX:', typeof window.XLSX);
-        const workbook = XLSX.read(ev.target.result, { type: 'array' });
-        console.log('[2] sheets:', workbook.SheetNames);
-        const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', raw: false });
-        console.log('[3] rows:', rows.length, '| row17:', rows[17]);
-        const result = parseRawData(rows, 'excel', acc, txs, rules, []);
-        console.log('[4] result:', result);
-        resolve(result);
-    } catch (e) {
-        console.error('[CATCH]', e);
-        resolve({ error: 'Excel 文件读取失败' });
-    }
-};
+                reader.onload = (ev) => {
+                    try {
+                        const workbook = window.XLSX.read(ev.target.result, { type: 'array' });
+                        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const rows = window.XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', raw: false });
+                        resolve(parseRawData(rows, 'excel', acc, txs, rules, []));
+                    } catch { resolve({ error: 'Excel 文件读取失败' }); }
+                };
                 return;
             }
 

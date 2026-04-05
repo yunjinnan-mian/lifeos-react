@@ -56,15 +56,11 @@ export default function Dashboard({ onJumpToCategory }) {
     }, [data.txs.length]); // eslint-disable-line
 
     // ── 图表 hook ─────────────────────────────────────────
-    const { mainChartRef, assetChartRef, renderMainChart, renderAssetChart } = useCharts();
+    const { mainChartRef, renderMainChart } = useCharts();
 
     useEffect(() => {
         renderMainChart(data, activeYear);
     }, [data.txs, activeYear, renderMainChart]);
-
-    useEffect(() => {
-        renderAssetChart(data);
-    }, [data.history, renderAssetChart]);
 
     // ── TimePills 数据 ────────────────────────────────────
     const years  = useMemo(() => getYears(data.txs), [data.txs]);
@@ -198,27 +194,15 @@ export default function Dashboard({ onJumpToCategory }) {
 
             {/* 图表 + 排行榜 */}
             <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr', gap:24, marginBottom:24 }}>
-                {/* 左侧：两张图表 */}
-                <div style={{ display:'flex', flexDirection:'column', gap:24 }}>
-                    <div className="card" style={{ marginBottom:0 }}>
-                        <div className="card-header">
-                            <div className="title">月度支出趋势</div>
-                        </div>
-                        <div style={{ height:300 }}>
-                            <canvas ref={mainChartRef} />
-                        </div>
+                <div className="card" style={{ marginBottom:0 }}>
+                    <div className="card-header">
+                        <div className="title">月度支出趋势</div>
                     </div>
-                    <div className="card" style={{ marginBottom:0 }}>
-                        <div className="card-header">
-                            <div className="title">净资产走势</div>
-                        </div>
-                        <div style={{ height:300 }}>
-                            <canvas ref={assetChartRef} />
-                        </div>
+                    <div style={{ height:300 }}>
+                        <canvas ref={mainChartRef} />
                     </div>
                 </div>
 
-                {/* 右侧：排行榜 */}
                 <div className="card" style={{ marginBottom:0, display:'flex', flexDirection:'column' }}>
                     <div className="card-header">
                         <div className="title">消费排行榜 (Top)</div>

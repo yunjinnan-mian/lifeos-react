@@ -4,7 +4,6 @@
 // ============================================================
 
 import { useState, useCallback } from 'react';
-import * as XLSX from 'xlsx';
 
 // ── 查找账户 id ────────────────────────────────────────────
 function findAccId(acc, txt) {
@@ -181,10 +180,10 @@ export function useWxParser() {
 reader.onload = (ev) => {
     try {
         console.log('[1] window.XLSX:', typeof window.XLSX);
-        const workbook = XLSX.read(ev.target.result, { type: 'array' });
+        const workbook = window.XLSX.read(ev.target.result, { type: 'array' });
         console.log('[2] sheets:', workbook.SheetNames);
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', raw: false });
+        const rows = window.XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', raw: false });
         console.log('[3] rows:', rows.length, '| row17:', rows[17]);
         const result = parseRawData(rows, 'excel', acc, txs, rules, []);
         console.log('[4] result:', result);

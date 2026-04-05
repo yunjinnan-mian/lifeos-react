@@ -6,17 +6,17 @@ import { useState, useContext } from 'react';
 import { FinanceContext } from '../index';
 
 const NAV_ITEMS = [
+    { id: 'notes',     icon: 'ri-sticky-note-line',  label: '备忘录' },
     { id: 'dashboard', icon: 'ri-dashboard-line',    label: '总览透视' },
     { id: 'journal',   icon: 'ri-file-add-line',     label: '记账工作台',  section: '核心功能' },
     { id: 'details',   icon: 'ri-file-list-3-line',  label: '账单明细',   section: '数据管理' },
-    { id: 'assets',    icon: 'ri-safe-2-line',        label: '资产盘点' },
 ];
 
 const PAGE_TITLES = {
+    notes:     '备忘录',
     dashboard: '总览透视',
     journal:   '记账工作台',
     details:   '账单明细',
-    assets:    '资产盘点',
 };
 
 export default function Sidebar({ activePage, onNav, onOpenReceipt, onOpenCatModal, onOpenExportModal, onClearData }) {

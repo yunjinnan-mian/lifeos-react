@@ -17,7 +17,7 @@ import Toast     from './components/Toast';
 import Dashboard from './pages/Dashboard';
 import Journal   from './pages/Journal';
 import Details   from './pages/Details';
-import Assets    from './pages/Assets';
+import Notes     from './pages/Notes';
 
 // ── Panels / Modals ──────────────────────────────────────
 import QuickPanel          from './panels/QuickPanel';
@@ -100,6 +100,7 @@ export default function FinancePage() {
 
                 {/* ── 主内容区 ────────────────────────── */}
                 <div className="main">
+                    {activePage === 'notes'     && <Notes />}
                     {activePage === 'dashboard' && (
                         <Dashboard onJumpToCategory={handleJumpToCategory} />
                     )}
@@ -107,7 +108,6 @@ export default function FinancePage() {
                         <Journal onOpenSub={handleOpenSub} />
                     )}
                     {activePage === 'details' && <Details />}
-                    {activePage === 'assets'  && <Assets />}
                 </div>
 
                 {/* ── 浮动快速记账 ────────────────────── */}
