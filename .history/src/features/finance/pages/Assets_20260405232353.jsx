@@ -69,9 +69,6 @@ export default function Assets() {
     const [showAddAcc, setShowAddAcc] = useState(false);
     const [newAccName, setNewAccName] = useState('');
 
-    // 图表悬浮状态
-    const [hoverChartIdx, setHoverChartIdx] = useState(null);
-
     // 滚动阴影状态
     const tableContainerRef = useRef(null);
     const [showLeftShadow, setShowLeftShadow] = useState(false);
@@ -105,12 +102,12 @@ export default function Assets() {
         return () => window.removeEventListener('resize', checkShadows);
     }, [snapshots, accounts, checkShadows]);
 
-    const handleScroll = () => checkShadows();
+    const handleScroll = (e) => checkShadows();
 
     // ── 派生数据 ──────────────────────────────────────────
-    // rows: 升序排列（从旧到新），用于图表渲染和基础计算
+    const sorted = useMemo(() => [...snapshots].sort((a, b) => a.date.localeCompare(b.date)), [snapshots]);
+
     const rows = useMemo(() => {
-        const sorted = [...snapshots].sort((a, b) => a.date.localeCompare(b.date));
         return sorted.map((snap, idx) => {
             const total = accounts.reduce((s, a) => s + (snap.balances?.[a.id] ?? 0), 0);
             let actualDiff = null;
@@ -129,9 +126,10 @@ export default function Assets() {
             }
             return { ...snap, total, actualDiff, txNet };
         });
-    }, [snapshots, accounts, financeData.txs]);
+    }, [sorted, accounts, financeData.txs]);
 
-    // displayRows: 倒序排列（最新在最上面），用于表格显示
+    const latestSnap = sorted[sorted.length - 1];
+    const grandTotal = accounts.reduce((s, a) => s + (latestSnap?.balances?.[a.id] ?? 0), 0);
     const displayRows = useMemo(() => [...rows].reverse(), [rows]);
 
     // ── 账户操作 ──────────────────────────────────────────
@@ -162,27 +160,38 @@ export default function Assets() {
         try { await persistAccounts(newAccounts); } catch { setError('排序保存失败'); }
     }, [accounts]);
 
-    // ── 快照操作 (记录今日) ──────────────────────────
+    // ── 快照操作 (核心连招：记录今日) ──────────────────────────
     const handleRecordToday = useCallback(async () => {
-        if (accounts.length === 0) { setError('请先添加至少一个账户！'); return; }
-        setIsEditMode(false);
+        if (accounts.length === 0) {
+            setError('请先添加至少一个账户才能记录！');
+            return;
+        }
+        
+        setIsEditMode(false); // 强制退出结构编辑模式
         const today = getTodayDate();
         let targetSnapId = null;
 
+        // 判断今天是否已经记录过了
         const existingSnap = snapshots.find(s => s.date === today);
+        
         if (existingSnap) {
             targetSnapId = existingSnap.id;
         } else {
+            // 新建一天的快照
             targetSnapId = `snap_${Date.now()}`;
             const newSnap = { id: targetSnapId, date: today, balances: {} };
             setSnapshots(prev => [...prev, newSnap]);
             try { await persistSnapshot(newSnap); } catch { setError('快照保存失败'); }
         }
 
+        // 连招：无论新建还是已存在，直接聚焦第一个账户！
         const firstAccId = accounts[0].id;
         const currentVal = existingSnap ? existingSnap.balances[firstAccId] : 0;
+        
+        // 我们利用 React 批量更新机制，直接开启编辑状态，组件渲染后会自动 focus
         setEditCell({ snapId: targetSnapId, accId: firstAccId });
         setEditVal(currentVal != null && currentVal !== 0 ? String(currentVal) : '');
+        
     }, [accounts, snapshots]);
 
     const handleDeleteSnapshot = useCallback(async (snapId) => {
@@ -202,6 +211,7 @@ export default function Assets() {
         setSnapshots(prev => prev.map(s => s.id === snapId ? updated : s));
         try { await persistSnapshot(updated); } catch { setError('保存失败'); }
     }, [snapshots]);
+
 
     // ── 单元格编辑 ────────────────────────────────────────
     const startEdit = useCallback((snapId, accId, currentVal) => {
@@ -253,35 +263,6 @@ export default function Assets() {
         commitEdit(null);
     }, [commitEdit]);
 
-    // ── 原生 SVG 折线图生成逻辑 ───────────────────────────
-    const chartRender = useMemo(() => {
-        if (rows.length < 2) return null; // 数据少于2条不画图
-        
-        const chartWidth = 1000;
-        const chartHeight = 80;
-        const totals = rows.map(r => r.total);
-        const minTotal = Math.min(...totals);
-        const maxTotal = Math.max(...totals);
-        // 上下留出 10% 的呼吸空间
-        const pad = (maxTotal - minTotal) * 0.1 || maxTotal * 0.1 || 1; 
-        const yMin = minTotal - pad;
-        const yMax = maxTotal + pad;
-        const yRange = yMax - yMin;
-
-        // 计算 SVG 点坐标
-        const points = rows.map((r, i) => {
-            const x = (i / (rows.length - 1)) * chartWidth;
-            const y = chartHeight - ((r.total - yMin) / yRange) * chartHeight;
-            return `${x},${y}`;
-        }).join(' ');
-
-        // 填充用的闭合路径
-        const fillPoints = `0,${chartHeight} ${points} ${chartWidth},${chartHeight}`;
-
-        return { chartWidth, chartHeight, points, fillPoints };
-    }, [rows]);
-
-
     if (!loaded) return <div style={{ textAlign:'center', marginTop:50, color:'#999' }}>加载中…</div>;
 
     return (
@@ -302,39 +283,38 @@ export default function Assets() {
             )}
 
             {/* 顶栏操作区 */}
-            <div style={{ display:'flex', alignItems:'center', marginBottom: chartRender ? 10 : 20 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div style={{ display:'flex', alignItems:'center', marginBottom:16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     <h2 style={{ margin:0, fontSize:18, fontWeight:700 }}>💰 资产快照表</h2>
-                    {/* 优雅的幽灵按钮 */}
+                    {/* 新增连招按钮！ */}
                     <button
                         onClick={handleRecordToday}
                         style={{
-                            background: '#fff', border: '1px solid #cbd5e1', borderRadius: 6,
-                            padding: '4px 12px', cursor: 'pointer', fontWeight: 600, fontSize: 13, color: '#334155',
-                            display: 'flex', alignItems: 'center', gap: 4, boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
-                            transition: 'all 0.2s'
+                            background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 6,
+                            padding: '6px 14px', cursor: 'pointer', fontWeight: 600, fontSize: 13,
+                            boxShadow: '0 2px 4px rgba(59,130,246,0.3)', display: 'flex', alignItems: 'center', gap: 6,
+                            transition: 'background 0.2s'
                         }}
-                        onMouseEnter={e => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.borderColor = '#94a3b8'; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
+                        onMouseEnter={e => e.currentTarget.style.background = '#2563eb'}
+                        onMouseLeave={e => e.currentTarget.style.background = '#3b82f6'}
                     >
-                        <span style={{ fontSize: 14 }}>📅</span> 记录今日
+                        ⚡ 记录今日快照
                     </button>
                 </div>
                 
                 <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 16 }}>
                     <div style={{ fontSize:12, color:'#888', display: 'none', '@media(minWidth: 768px)': { display: 'block' } }}>
-                        💡 点击单元格修改 · ← → 切换 · Enter 保存
+                        💡 提示：点击单元格修改 · ← → 切换 · Enter 保存
                     </div>
 
                     <button
                         onClick={() => setIsEditMode(p => !p)}
                         style={{
-                            background: isEditMode ? '#e0f2fe' : '#fff',
-                            border: isEditMode ? '1px solid #7dd3fc' : '1px solid #cbd5e1', 
-                            borderRadius: 6, padding: '4px 10px',
+                            background: isEditMode ? '#e0f2fe' : '#f1f5f9',
+                            border: 'none', borderRadius: 6, padding: '6px 10px',
                             cursor: 'pointer', color: isEditMode ? '#0284c7' : '#64748b',
                             fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 4,
-                            fontSize: 13, transition: 'all 0.2s'
+                            fontSize: 13, boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
                         }}
                     >
                         ⚙️ {isEditMode ? '完成编辑' : '编辑结构'}
@@ -347,7 +327,7 @@ export default function Assets() {
                                 onChange={e => setNewAccName(e.target.value)} onBlur={handleAddAccount}
                                 onKeyDown={e => { if (e.key === 'Enter') handleAddAccount(); if (e.key === 'Escape') setShowAddAcc(false); }}
                                 style={{ 
-                                    padding:'4px 10px', border:'1px solid #3b82f6', borderRadius: 6, 
+                                    padding:'5px 10px', border:'1px solid #3b82f6', borderRadius: 6, 
                                     outline:'none', fontSize:13, width: 140, textAlign: 'center'
                                 }}
                             />
@@ -355,7 +335,7 @@ export default function Assets() {
                             <button 
                                 onClick={() => setShowAddAcc(true)}
                                 style={{ 
-                                    padding:'4px 12px', background:'#fff', border:'1px solid #cbd5e1', 
+                                    padding:'5px 12px', background:'#fff', border:'1px solid #cbd5e1', 
                                     borderRadius: 6, color:'#334155', cursor:'pointer', fontSize: 13, fontWeight: 500
                                 }}
                             >+ 增加账户</button>
@@ -364,64 +344,28 @@ export default function Assets() {
                 </div>
             </div>
 
-            {/* 极简折线图区 (原生 SVG) */}
-            {chartRender && (
-                <div style={{ position: 'relative', height: 60, marginBottom: 12, borderRadius: 8, overflow: 'hidden' }}>
-                    <svg viewBox={`0 0 ${chartRender.chartWidth} ${chartRender.chartHeight}`} preserveAspectRatio="none" style={{ width: '100%', height: '100%', display: 'block' }}>
-                        <defs>
-                            <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor="#10b981" stopOpacity="0.25"/>
-                                <stop offset="100%" stopColor="#10b981" stopOpacity="0"/>
-                            </linearGradient>
-                        </defs>
-                        <polygon points={chartRender.fillPoints} fill="url(#chartGradient)" />
-                        <polyline 
-                            points={chartRender.points} 
-                            fill="none" stroke="#10b981" strokeWidth="2" 
-                            vectorEffect="non-scaling-stroke" strokeLinecap="round" strokeLinejoin="round" 
-                        />
-                    </svg>
-
-                    {/* 悬浮热区层：切片覆盖整个宽度，实现完美 Hover */}
-                    <div style={{ position: 'absolute', inset: 0, display: 'flex' }}>
-                        {rows.map((r, i) => (
-                            <div 
-                                key={r.id} 
-                                style={{ flex: 1, position: 'relative', cursor: 'crosshair' }}
-                                onMouseEnter={() => setHoverChartIdx(i)}
-                                onMouseLeave={() => setHoverChartIdx(null)}
-                            >
-                                {hoverChartIdx === i && (
-                                    <>
-                                        <div style={{ position: 'absolute', left: '50%', top: 0, bottom: 0, width: 1, borderLeft: '1px dashed rgba(16, 185, 129, 0.5)', pointerEvents: 'none' }} />
-                                        <div style={{
-                                            position: 'absolute', bottom: '60%', left: '50%', transform: 'translateX(-50%)',
-                                            background: '#1e293b', color: '#fff', padding: '4px 8px', borderRadius: 4,
-                                            fontSize: 11, whiteSpace: 'nowrap', pointerEvents: 'none', zIndex: 10,
-                                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                                        }}>
-                                            {fmtDate(r.date)} : {fmt(r.total)}
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-
             {/* 表格视图：带悬浮呼吸阴影的包裹器 */}
             <div style={{ position: 'relative', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', borderRadius: 4, overflow: 'hidden' }}>
                 
-                {/* 边缘呼吸阴影 */}
-                <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: 12, background: 'linear-gradient(to right, rgba(0,0,0,0.06), transparent)', opacity: showLeftShadow ? 1 : 0, transition: 'opacity 0.3s', pointerEvents: 'none', zIndex: 20 }} />
-                <div style={{ position: 'absolute', top: 0, bottom: 0, right: 0, width: 12, background: 'linear-gradient(to left, rgba(0,0,0,0.06), transparent)', opacity: showRightShadow ? 1 : 0, transition: 'opacity 0.3s', pointerEvents: 'none', zIndex: 20 }} />
+                {/* 左边缘阴影 */}
+                <div style={{
+                    position: 'absolute', top: 0, bottom: 0, left: 0, width: 12,
+                    background: 'linear-gradient(to right, rgba(0,0,0,0.06), transparent)',
+                    opacity: showLeftShadow ? 1 : 0, transition: 'opacity 0.3s', pointerEvents: 'none', zIndex: 20
+                }} />
+
+                {/* 右边缘阴影 */}
+                <div style={{
+                    position: 'absolute', top: 0, bottom: 0, right: 0, width: 12,
+                    background: 'linear-gradient(to left, rgba(0,0,0,0.06), transparent)',
+                    opacity: showRightShadow ? 1 : 0, transition: 'opacity 0.3s', pointerEvents: 'none', zIndex: 20
+                }} />
 
                 <div 
                     className="assets-table-scroll"
                     ref={tableContainerRef}
                     onScroll={handleScroll}
-                    style={{ width: '100%', overflowX: 'auto', paddingBottom: 2 }}
+                    style={{ width: '100%', overflowX: 'auto', paddingBottom: 2 }} // paddingBottom 留给滚动条空间
                 >
                     <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff', fontSize: 13, tableLayout: 'auto' }}>
                         <thead>
@@ -432,101 +376,89 @@ export default function Assets() {
                                 {accounts.map((acc, idx) => (
                                     <th key={acc.id} style={{ ...TH_STYLE, minWidth: 110 }}>
                                         <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:2 }}>
-                                            {isEditMode && idx > 0 && <button onClick={() => handleMoveAccount(idx, -1)} style={ICON_BTN}>◀</button>}
+                                            {isEditMode && idx > 0 && <button onClick={() => handleMoveAccount(idx, -1)} style={ICON_BTN} title="向左移动">◀</button>}
                                             <span style={{ margin: '0 4px' }}>{acc.name}</span>
-                                            {isEditMode && <button onClick={() => handleDeleteAccount(acc.id)} style={{...ICON_BTN, color: '#ef4444'}}>×</button>}
-                                            {isEditMode && idx < accounts.length - 1 && <button onClick={() => handleMoveAccount(idx, 1)} style={ICON_BTN}>▶</button>}
+                                            {isEditMode && <button onClick={() => handleDeleteAccount(acc.id)} style={{...ICON_BTN, color: '#ef4444'}} title="删除账户">×</button>}
+                                            {isEditMode && idx < accounts.length - 1 && <button onClick={() => handleMoveAccount(idx, 1)} style={ICON_BTN} title="向右移动">▶</button>}
                                         </div>
                                     </th>
                                 ))}
                                 <th style={{ ...TH_STYLE, minWidth: 100 }}>资产变动</th>
                             </tr>
+
+                            {latestSnap && (
+                                <tr style={{ background:'#f0fdf4', borderBottom: '2px solid #bbf7d0' }}>
+                                    <td style={{ ...TD_STYLE, fontWeight:'bold', color:'#166534', fontSize:14 }}>{fmt(grandTotal)}</td>
+                                    <td style={{ ...TD_STYLE, fontWeight:'bold', color:'#166534' }}>当前最新</td>
+                                    {accounts.map(acc => (
+                                        <td key={acc.id} style={{ ...TD_STYLE, color:'#166534', fontWeight:'bold' }}>{fmt(latestSnap.balances?.[acc.id] ?? 0)}</td>
+                                    ))}
+                                    <td style={TD_STYLE}></td>
+                                </tr>
+                            )}
                         </thead>
 
                         <tbody>
-                            {displayRows.map((row, idx) => {
-                                // 逻辑：displayRows 是倒序的，所以 idx === 0 就是真实的“当前最新行”
-                                const isLatestRow = idx === 0 && !isEditMode;
-                                
-                                // 根据是否是最新行，动态计算样式
-                                const rowBg = isLatestRow ? '#f0fdf4' : '#fff';
-                                const rowBorder = isLatestRow ? '2px solid #bbf7d0' : '1px solid #f1f5f9';
-                                const textColor = isLatestRow ? '#166534' : '#475569';
-                                const fw = isLatestRow ? 'bold' : 'normal';
+                            {displayRows.map(row => (
+                                <tr key={row.id} style={{ transition:'background 0.1s' }} onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'} onMouseLeave={e => e.currentTarget.style.background = ''}>
+                                    
+                                    <td style={{ ...TD_STYLE, fontWeight:'bold', background:'#fafafa' }}>{fmt(row.total)}</td>
 
-                                return (
-                                    <tr 
-                                        key={row.id} 
-                                        style={{ background: rowBg, borderBottom: rowBorder, transition:'background 0.1s' }} 
-                                        onMouseEnter={e => { if(!isLatestRow) e.currentTarget.style.background = '#f8fafc'; }} 
-                                        onMouseLeave={e => { if(!isLatestRow) e.currentTarget.style.background = '#fff'; }}
-                                    >
-                                        
-                                        <td style={{ ...TD_STYLE, fontWeight:'bold', background: isLatestRow ? 'transparent' : '#fafafa', color: isLatestRow ? '#166534' : '#0f172a' }}>
-                                            {fmt(row.total)}
-                                        </td>
+                                    <td style={{ ...TD_STYLE, whiteSpace:'nowrap', color:'#475569' }}>
+                                        {isEditMode ? (
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                                                <button onClick={() => handleDeleteSnapshot(row.id)} style={{...ICON_BTN, color: '#ef4444', fontSize: 16}} title="删除快照行">×</button>
+                                                <input 
+                                                    type="date" value={row.date} 
+                                                    onChange={(e) => handleChangeSnapshotDate(row.id, e.target.value)}
+                                                    style={{ border: '1px solid #cbd5e1', borderRadius: 4, padding: '2px 4px', fontSize: 12, outline: 'none' }}
+                                                />
+                                            </div>
+                                        ) : fmtDate(row.date)}
+                                    </td>
 
-                                        <td style={{ ...TD_STYLE, whiteSpace:'nowrap', color: textColor, fontWeight: fw }}>
-                                            {isEditMode ? (
-                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                                                    <button onClick={() => handleDeleteSnapshot(row.id)} style={{...ICON_BTN, color: '#ef4444', fontSize: 16}} title="删除快照行">×</button>
-                                                    <input 
-                                                        type="date" value={row.date} 
-                                                        onChange={(e) => handleChangeSnapshotDate(row.id, e.target.value)}
-                                                        style={{ border: '1px solid #cbd5e1', borderRadius: 4, padding: '2px 4px', fontSize: 12, outline: 'none' }}
+                                    {accounts.map(acc => {
+                                        const isEditing = editCell?.snapId === row.id && editCell?.accId === acc.id;
+                                        const val = row.balances?.[acc.id];
+                                        return (
+                                            <td 
+                                                key={acc.id} 
+                                                onClick={() => { if (!isEditing && !isEditMode) startEdit(row.id, acc.id, val); }}
+                                                style={{ ...TD_STYLE, cursor: isEditMode ? 'not-allowed' : 'text', position: 'relative' }}
+                                            >
+                                                <div style={{ opacity: isEditing ? 0 : (isEditMode ? 0.5 : 1), color: val ? '#0f172a' : '#cbd5e1' }}>
+                                                    {val ? fmt(val) : '—'}
+                                                </div>
+
+                                                {isEditing && !isEditMode && (
+                                                    <input
+                                                        ref={inputRef}
+                                                        value={editVal}
+                                                        onChange={e => setEditVal(e.target.value)}
+                                                        onBlur={handleCellBlur}
+                                                        onKeyDown={handleCellKey}
+                                                        style={{ 
+                                                            position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
+                                                            boxSizing: 'border-box', padding: '8px 10px', margin: 0, textAlign: 'center',
+                                                            border: '2px solid #3b82f6', outline: 'none', background: '#fff',
+                                                            fontSize: 13, color: '#0f172a', zIndex: 10, fontFamily: 'inherit'
+                                                        }}
                                                     />
-                                                </div>
-                                            ) : fmtDate(row.date)}
-                                        </td>
-
-                                        {accounts.map(acc => {
-                                            const isEditing = editCell?.snapId === row.id && editCell?.accId === acc.id;
-                                            const val = row.balances?.[acc.id];
-                                            return (
-                                                <td 
-                                                    key={acc.id} 
-                                                    onClick={() => { if (!isEditing && !isEditMode) startEdit(row.id, acc.id, val); }}
-                                                    style={{ ...TD_STYLE, cursor: isEditMode ? 'not-allowed' : 'text', position: 'relative' }}
-                                                >
-                                                    <div style={{ 
-                                                        opacity: isEditing ? 0 : (isEditMode ? 0.5 : 1), 
-                                                        color: val ? textColor : '#cbd5e1',
-                                                        fontWeight: fw
-                                                    }}>
-                                                        {val ? fmt(val) : '—'}
-                                                    </div>
-
-                                                    {isEditing && !isEditMode && (
-                                                        <input
-                                                            ref={inputRef}
-                                                            value={editVal}
-                                                            onChange={e => setEditVal(e.target.value)}
-                                                            onBlur={handleCellBlur}
-                                                            onKeyDown={handleCellKey}
-                                                            style={{ 
-                                                                position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
-                                                                boxSizing: 'border-box', padding: '8px 10px', margin: 0, textAlign: 'center',
-                                                                border: '2px solid #3b82f6', outline: 'none', background: '#fff',
-                                                                fontSize: 13, color: '#0f172a', zIndex: 10, fontFamily: 'inherit',
-                                                                fontWeight: 'bold'
-                                                            }}
-                                                        />
-                                                    )}
-                                                </td>
-                                            );
-                                        })}
-                                        
-                                        <td style={{ ...TD_STYLE }}>
-                                            {row.actualDiff != null ? (
-                                                <div style={{ opacity: isEditMode ? 0.5 : 1 }}>
-                                                    <div style={{ fontWeight:'bold', color: row.actualDiff >= 0 ? '#10b981' : '#ef4444' }}>{fmtDiff(row.actualDiff)}</div>
-                                                    {row.txNet != null && <div style={{ fontSize:11, color:'#94a3b8' }}>账单 {fmtDiff(row.txNet)}</div>}
-                                                </div>
-                                            ) : <span style={{ color:'#e2e8f0' }}>—</span>}
-                                        </td>
-                                    </tr>
-                                );
-                            })}
+                                                )}
+                                            </td>
+                                        );
+                                    })}
+                                    
+                                    <td style={{ ...TD_STYLE }}>
+                                        {row.actualDiff != null ? (
+                                            <div style={{ opacity: isEditMode ? 0.5 : 1 }}>
+                                                <div style={{ fontWeight:'bold', color: row.actualDiff >= 0 ? '#10b981' : '#ef4444' }}>{fmtDiff(row.actualDiff)}</div>
+                                                {row.txNet != null && <div style={{ fontSize:11, color:'#94a3b8' }}>账单 {fmtDiff(row.txNet)}</div>}
+                                            </div>
+                                        ) : <span style={{ color:'#e2e8f0' }}>—</span>}
+                                    </td>
+                                </tr>
+                            ))}
                         </tbody>
                     </table>
                 </div>
