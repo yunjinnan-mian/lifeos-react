@@ -7,7 +7,6 @@ import { FinanceContext } from '../index';
 
 const NAV_ITEMS = [
     { id: 'notes',     icon: 'ri-sticky-note-line',  label: '备忘录' },
-    { id: 'assets',    icon: 'ri-bank-line',          label: '资产快照' },
     { id: 'dashboard', icon: 'ri-dashboard-line',    label: '总览透视' },
     { id: 'journal',   icon: 'ri-file-add-line',     label: '记账工作台',  section: '核心功能' },
     { id: 'details',   icon: 'ri-file-list-3-line',  label: '账单明细',   section: '数据管理' },
@@ -15,7 +14,6 @@ const NAV_ITEMS = [
 
 const PAGE_TITLES = {
     notes:     '备忘录',
-    assets:    '资产快照',
     dashboard: '总览透视',
     journal:   '记账工作台',
     details:   '账单明细',

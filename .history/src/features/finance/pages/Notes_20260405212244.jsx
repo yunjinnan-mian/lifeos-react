@@ -93,7 +93,7 @@ export default function Notes() {
                         flex: 1,
                         width: '100%',
                         resize: 'none',
-                        border: 'none',
+                        border: '1px solid rgba(0,0,0,0.1)',
                         borderRadius: 8,
                         padding: '16px 18px',
                         fontSize: 14,

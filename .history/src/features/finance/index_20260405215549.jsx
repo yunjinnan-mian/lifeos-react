@@ -102,7 +102,6 @@ export default function FinancePage() {
                 {/* ── 主内容区 ────────────────────────── */}
                 <div className="main">
                     {activePage === 'notes'     && <Notes />}
-                    {activePage === 'assets'    && <Assets />}
                     {activePage === 'dashboard' && (
                         <Dashboard onJumpToCategory={handleJumpToCategory} />
                     )}

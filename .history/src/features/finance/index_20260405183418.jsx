@@ -18,7 +18,6 @@ import Dashboard from './pages/Dashboard';
 import Journal   from './pages/Journal';
 import Details   from './pages/Details';
 import Notes     from './pages/Notes';
-import Assets     from './pages/Assets';
 
 // ── Panels / Modals ──────────────────────────────────────
 import QuickPanel          from './panels/QuickPanel';
@@ -102,7 +101,6 @@ export default function FinancePage() {
                 {/* ── 主内容区 ────────────────────────── */}
                 <div className="main">
                     {activePage === 'notes'     && <Notes />}
-                    {activePage === 'assets'    && <Assets />}
                     {activePage === 'dashboard' && (
                         <Dashboard onJumpToCategory={handleJumpToCategory} />
                     )}
