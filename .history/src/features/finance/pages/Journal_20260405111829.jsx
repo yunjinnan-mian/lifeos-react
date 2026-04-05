@@ -268,13 +268,6 @@ const handleAiApply = useCallback((billId, catId) => {
                                     🤖 规则
                                 </button>
                                 <button
-    className="btn btn-outline btn-sm"
-    style={{ color:'#5F27CD', borderColor:'#5F27CD' }}
-    onClick={() => setAiModalOpen(true)}
->
-    🧠 AI
-</button>
-                                <button
                                     className={`btn btn-sm ${summary.readyCount > 0 ? 'btn-primary' : 'btn-outline'}`}
                                     disabled={importing || summary.readyCount === 0}
                                     onClick={handleImport}
@@ -331,13 +324,6 @@ const handleAiApply = useCallback((billId, catId) => {
                 onClose={() => setRuleModalOpen(false)}
                 onRuleSaved={handleRuleSaved}
             />
-            <AiClassifyModal
-    open={aiModalOpen}
-    onClose={() => setAiModalOpen(false)}
-    bills={parsedBills}
-    cats={data.cats}
-    onApply={handleAiApply}
-/>
         </>
     );
 }

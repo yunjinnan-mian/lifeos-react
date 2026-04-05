@@ -331,13 +331,6 @@ const handleAiApply = useCallback((billId, catId) => {
                 onClose={() => setRuleModalOpen(false)}
                 onRuleSaved={handleRuleSaved}
             />
-            <AiClassifyModal
-    open={aiModalOpen}
-    onClose={() => setAiModalOpen(false)}
-    bills={parsedBills}
-    cats={data.cats}
-    onApply={handleAiApply}
-/>
         </>
     );
 }

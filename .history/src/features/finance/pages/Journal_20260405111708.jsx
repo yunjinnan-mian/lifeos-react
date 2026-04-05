@@ -16,8 +16,6 @@ export default function Journal() {
     const fileInputRef = useRef(null);
     const [ruleModalOpen, setRuleModalOpen] = useState(false);
     const [importing, setImporting] = useState(false);
-    const [aiModalOpen, setAiModalOpen] = useState(false);
-
 
     const {
         parsedBills, setParsedBills,
@@ -94,12 +92,6 @@ export default function Journal() {
         }));
         if (hit > 0) showToast(`规则已保存，当前批次自动命中 ${hit} 笔`);
     }, [setParsedBills, showToast]);
-
-    // ── AI 分类结果应用 ───────────────────────────────────
-const handleAiApply = useCallback((billId, catId) => {
-    const idx = parsedBills.findIndex(b => b.id === billId);
-    if (idx !== -1) updateRow(idx, { cat: catId });
-}, [parsedBills, updateRow]);
 
     // ── 确认入账 ─────────────────────────────────────────
     const handleImport = useCallback(async () => {
@@ -268,13 +260,6 @@ const handleAiApply = useCallback((billId, catId) => {
                                     🤖 规则
                                 </button>
                                 <button
-    className="btn btn-outline btn-sm"
-    style={{ color:'#5F27CD', borderColor:'#5F27CD' }}
-    onClick={() => setAiModalOpen(true)}
->
-    🧠 AI
-</button>
-                                <button
                                     className={`btn btn-sm ${summary.readyCount > 0 ? 'btn-primary' : 'btn-outline'}`}
                                     disabled={importing || summary.readyCount === 0}
                                     onClick={handleImport}
@@ -331,13 +316,6 @@ const handleAiApply = useCallback((billId, catId) => {
                 onClose={() => setRuleModalOpen(false)}
                 onRuleSaved={handleRuleSaved}
             />
-            <AiClassifyModal
-    open={aiModalOpen}
-    onClose={() => setAiModalOpen(false)}
-    bills={parsedBills}
-    cats={data.cats}
-    onApply={handleAiApply}
-/>
         </>
     );
 }
