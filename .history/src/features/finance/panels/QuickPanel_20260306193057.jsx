@@ -3,7 +3,7 @@
 // FAB 按钮 + 底部抽屉 + 分类格子 + 浮动伤害数字
 // ============================================================
 
-import { useState, useCallback, useRef, useEffect, memo } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useFinance } from '../index';
 import { getCatMap } from '../utils/catMap';
 
@@ -22,7 +22,7 @@ function spawnFloatingDmg(amt, type, fabEl) {
 }
 
 // ════════════════════════════════════════════════════════════
-function QuickPanel() {
+export default function QuickPanel() {
     const { data, addTx, updateData, saveData, showToast } = useFinance();
     const fabRef    = useRef(null);
     const amtRef    = useRef(null);
@@ -194,5 +194,3 @@ function QuickPanel() {
         </>
     );
 }
-
-export default memo(QuickPanel);

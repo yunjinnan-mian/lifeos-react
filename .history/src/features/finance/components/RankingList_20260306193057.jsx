@@ -2,10 +2,9 @@
 // Finance Pro — RankingList 消费排行榜
 // ============================================================
 
-import { memo } from 'react';
 import { getCatName, getColorMap } from '../utils/catMap';
 
-function RankingList({ data, activeMonth, onJumpToCategory }) {
+export default function RankingList({ data, activeMonth, onJumpToCategory }) {
     // 统计当月各 cat2 支出
     const catMap = {};
     let totalExp = 0;
@@ -61,5 +60,3 @@ function RankingList({ data, activeMonth, onJumpToCategory }) {
         </div>
     );
 }
-
-export default memo(RankingList);

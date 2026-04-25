@@ -3,9 +3,9 @@
 // 保留原版 DOM 拼接逻辑，用 useEffect 在 ref 容器中挂载
 // ============================================================
 
-import { useRef, useEffect, useState, useCallback, memo } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 
-function Heatmap({ data, activeYear }) {
+export default function Heatmap({ data, activeYear }) {
     const containerRef = useRef(null);
     const [tooltip, setTooltip] = useState({ visible: false, html: '', x: 0, y: 0 });
 
@@ -165,5 +165,3 @@ function Heatmap({ data, activeYear }) {
         </>
     );
 }
-
-export default memo(Heatmap);

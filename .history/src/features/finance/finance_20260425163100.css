@@ -69,19 +69,15 @@
     display: flex;
     flex-direction: column;
     padding: 20px 12px;
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     flex-shrink: 0;
     z-index: 10;
     position: relative;
     box-shadow: 3px 0 12px rgba(0,0,0,0.25);
-    /* width 动画：让 flex 布局联动展开 main 内容区 */
-    transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     will-change: width;
-    /* contain 让浏览器只重绘 sidebar 内部，不回流外部 */
     contain: layout style;
 }
-.finance-root .sidebar.collapsed{
-    width: var(--sidebar-w-collapsed);
-}
+.finance-root .sidebar.collapsed{ width: var(--sidebar-w-collapsed); }
 
 .finance-root .logo{
     font-weight: 800;
@@ -765,130 +761,6 @@
 .finance-root #quick-overlay{ position: fixed; inset: 0; z-index: 498; background: rgba(0,0,0,0); pointer-events: none; transition: background 0.3s; }
 .finance-root #quick-overlay.open{ background: rgba(0,0,0,0.4); pointer-events: all; }
 
-/* ── Virtual Table (取代原生 <table> 配合虚拟滚动) ────────── */
-.finance-root .virt-table-card{
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    padding: 24px;
-}
-.finance-root .virt-table-container{
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    flex: 1;
-    min-height: 0;
-}
-.finance-root .virt-thead{
-    display: grid;
-    grid-template-columns: 110px 60px 70px 110px 1fr 110px 60px;
-    gap: 0;
-    border-bottom: 2px solid #C4A882;
-    padding: 0 0 8px 0;
-    flex-shrink: 0;
-}
-.finance-root .virt-th{
-    font-family: var(--font-pixel);
-    font-size: 11px;
-    color: var(--text-sub);
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    padding: 4px 8px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-.finance-root .virt-th-date{
-    cursor: pointer;
-    user-select: none;
-}
-.finance-root .virt-th-date i{ margin-left: 2px; }
-.finance-root .virt-tbody{
-    flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
-    position: relative;
-    min-height: 0;
-}
-.finance-root .virt-scroll-space{
-    position: relative;
-    width: 100%;
-}
-.finance-root .virt-row{
-    position: absolute;
-    left: 0;
-    right: 0;
-    display: grid;
-    grid-template-columns: 110px 60px 70px 110px 1fr 110px 60px;
-    gap: 0;
-    align-items: center;
-    border-bottom: 1px solid #DDD0BC;
-    will-change: transform;
-}
-.finance-root .virt-row:hover{
-    background: rgba(245,214,138,0.12);
-}
-.finance-root .virt-td{
-    padding: 4px 8px;
-    font-size: 13px;
-    color: var(--text-main);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    line-height: 1.4;
-}
-.finance-root .virt-td-amount{
-    font-weight: bold;
-}
-.finance-root .virt-td-actions{
-    display: flex;
-    gap: 4px;
-    align-items: center;
-    justify-content: flex-end;
-    padding: 4px 4px;
-}
-.finance-root .virt-empty{
-    text-align: center;
-    color: #aaa;
-    padding: 30px;
-    font-size: 14px;
-}
-/* 手机端虚拟表格重排 */
-@media (max-width: 768px) {
-    .finance-root .virt-thead{ display: none; }
-    .finance-root .virt-row{
-        display: flex;
-        flex-direction: column;
-        position: absolute;
-        left: 4px;
-        right: 4px;
-        background: #fff;
-        border: 1px solid #EDF2F7;
-        border-radius: 12px;
-        padding: 12px;
-        margin-bottom: 10px;
-        box-shadow: 0 2px 8px rgba(100,60,20,0.10), 0 1px 0 rgba(255,255,255,0.6) inset;
-        gap: 6px;
-    }
-    .finance-root .virt-td{
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 4px 0;
-        border-bottom: 1px solid #f7f7f7;
-        white-space: normal;
-        overflow: visible;
-    }
-    .finance-root .virt-td:last-child{ border-bottom: none; }
-    .finance-root .virt-td::before{
-        content: attr(data-label);
-        font-weight: 700;
-        color: var(--text-sub);
-        font-size: 11px;
-    }
-    .finance-root .virt-td-actions{ justify-content: flex-end; }
-}
-
 /* ── Mobile Topbar ───────────────────────────────────────── */
 .finance-root .mobile-topbar{
     display: none;
@@ -905,13 +777,6 @@
 
 .finance-root #sidebar-overlay{ display: none; position: fixed; inset: 0; z-index: 45; background: rgba(20,10,2,0.6); backdrop-filter: blur(2px); }
 .finance-root #sidebar-overlay.active{ display: block; }
-
-/* ── Canvas 图表（原生绘制，填满父容器）───────────────── */
-.finance-root .card canvas{
-    width: 100% !important;
-    height: 100% !important;
-    display: block;
-}
 
 /* ── Responsive ──────────────────────────────────────────── */
 @media (max-width: 768px) {

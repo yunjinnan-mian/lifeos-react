@@ -73,14 +73,15 @@
     z-index: 10;
     position: relative;
     box-shadow: 3px 0 12px rgba(0,0,0,0.25);
-    /* width 动画：让 flex 布局联动展开 main 内容区 */
-    transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    will-change: width;
-    /* contain 让浏览器只重绘 sidebar 内部，不回流外部 */
     contain: layout style;
+    /* 桌面端：用 translateX 滑动，GPU 加速 */
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform;
 }
 .finance-root .sidebar.collapsed{
-    width: var(--sidebar-w-collapsed);
+    transform: translateX(calc(68px - var(--sidebar-w)));
+    /* 宽度保留保证子元素布局不变，仅通过平移隐藏 */
+    width: var(--sidebar-w);
 }
 
 .finance-root .logo{
@@ -905,13 +906,6 @@
 
 .finance-root #sidebar-overlay{ display: none; position: fixed; inset: 0; z-index: 45; background: rgba(20,10,2,0.6); backdrop-filter: blur(2px); }
 .finance-root #sidebar-overlay.active{ display: block; }
-
-/* ── Canvas 图表（原生绘制，填满父容器）───────────────── */
-.finance-root .card canvas{
-    width: 100% !important;
-    height: 100% !important;
-    display: block;
-}
 
 /* ── Responsive ──────────────────────────────────────────── */
 @media (max-width: 768px) {

@@ -4,7 +4,7 @@
 // 供 FinanceContext 使用，不直接在组件中调用（只在 index.jsx 调用一次）
 // ============================================================
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useRef, useMemo } from 'react';
 import { db } from '../../../lib/firebase';
 import {
     collection, doc,
@@ -88,7 +88,7 @@ function sanitizeForFirestore(obj) {
 }
 
 // ════════════════════════════════════════════════════════════
-export function useFinanceData(showToast) {
+export function useFinanceData() {
     const [data, setData] = useState(() => ({
         ...INITIAL_DATA,
         cats: DEFAULT_CATS.map(c => ({ ...c })),
@@ -96,6 +96,17 @@ export function useFinanceData(showToast) {
         tpls: INITIAL_DATA.tpls.map(t => ({ ...t })),
     }));
     const [loading, setLoading] = useState(false);
+    const [toast, setToast] = useState({ visible: false, msg: '', type: 'success' });
+    const toastTimerRef = useRef(null);
+
+    // ── Toast ──────────────────────────────────────────────
+    const showToast = useCallback((msg, type = 'success') => {
+        setToast({ visible: true, msg, type });
+        if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+        toastTimerRef.current = setTimeout(() => {
+            setToast(t => ({ ...t, visible: false }));
+        }, 3000);
+    }, []);
 
     // ── Firebase: 加载 ────────────────────────────────────
     const loadFromFirebase = useCallback(async () => {
@@ -319,11 +330,13 @@ export function useFinanceData(showToast) {
         });
     }, []);
 
-    return useMemo(() => ({
+    return {
         data,
         setData,
         updateData,
         loading,
+        toast,
+        showToast,
         loadFromFirebase,
         saveData,
         addTx,
@@ -332,18 +345,5 @@ export function useFinanceData(showToast) {
         updateAcc,
         updateHistory,
         checkSubs,
-    }), [
-        data,
-        loading,
-        setData,
-        updateData,
-        loadFromFirebase,
-        saveData,
-        addTx,
-        addTxBatch,
-        delTx,
-        updateAcc,
-        updateHistory,
-        checkSubs,
-    ]);
+    };
 }

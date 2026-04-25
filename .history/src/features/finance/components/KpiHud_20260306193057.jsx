@@ -2,9 +2,7 @@
 // Finance Pro — KpiHud 游戏 HUD 数字卡片
 // ============================================================
 
-import { memo } from 'react';
-
-function KpiHud({ color, icon, eng, title, value, barPct = 0, status, style }) {
+export default function KpiHud({ color, icon, eng, title, value, barPct = 0, status, style }) {
     const pct = Math.min(100, Math.max(0, barPct));
     return (
         <div className="kpi-hud" style={{ '--hc': color, ...style }}>
@@ -20,5 +18,3 @@ function KpiHud({ color, icon, eng, title, value, barPct = 0, status, style }) {
         </div>
     );
 }
-
-export default memo(KpiHud);

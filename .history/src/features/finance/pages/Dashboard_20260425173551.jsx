@@ -184,31 +184,31 @@ export default function Dashboard({ onJumpToCategory }) {
                 </div>
             </div>
 
-            {/* 消费排行榜 + 月度透视 */}
-            <div style={{ display:'flex', gap:24, marginBottom:24 }}>
-                <div className="card" style={{ marginBottom:0, flex:'0 0 340px' }}>
-                    <div className="card-header">
-                        <div className="title">消费排行榜 (Top)</div>
-                    </div>
-                    <RankingList
-                        data={data}
-                        activeMonth={activeMonth}
-                        onJumpToCategory={onJumpToCategory}
-                    />
+            {/* 消费排行榜 */}
+            <div className="card" style={{ marginBottom:24 }}>
+                <div className="card-header">
+                    <div className="title">消费排行榜 (Top)</div>
                 </div>
-                <div className="card" style={{ marginBottom:0, flex:1, minWidth:0 }}>
-                    <div
-                        className="card-header"
-                        style={{ cursor:'pointer' }}
-                        onClick={() => setMatrixOpen(v => !v)}
-                    >
-                        <div className="title">
-                            月度透视 (The Matrix)
-                            <i className={matrixOpen ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'} />
-                        </div>
+                <RankingList
+                    data={data}
+                    activeMonth={activeMonth}
+                    onJumpToCategory={onJumpToCategory}
+                />
+            </div>
+
+            {/* 月度透视矩阵 */}
+            <div className="card">
+                <div
+                    className="card-header"
+                    style={{ cursor:'pointer' }}
+                    onClick={() => setMatrixOpen(v => !v)}
+                >
+                    <div className="title">
+                        月度透视 (The Matrix)
+                        <i className={matrixOpen ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'} />
                     </div>
-                    {matrixOpen && <MatrixTable data={data} activeYear={activeYear} />}
                 </div>
+                {matrixOpen && <MatrixTable data={data} activeYear={activeYear} />}
             </div>
         </div>
     );

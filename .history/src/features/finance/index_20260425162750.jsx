@@ -1,20 +1,17 @@
 // ============================================================
-// Finance Pro — 入口文件
+// Finance Pro — 入口文件  ✅ 全部迁移完成 (Batch 1–4)
 // ============================================================
 
-import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, memo } from 'react';
 import './finance.css';
 
 // ── Hooks ─────────────────────────────────────────────────
 import { useFinanceData }  from './hooks/useFinanceData';
 import { useClearData }    from './hooks/useClearData';
 
-// ── Toast - 独立 Context ─────────────────────────────────
-import { ToastProvider, useToast } from './components/ToastProvider';
-import Toast     from './components/Toast';
-
 // ── Layout ───────────────────────────────────────────────
 import Sidebar   from './components/Sidebar';
+import Toast     from './components/Toast';
 
 // ── Pages ────────────────────────────────────────────────
 import Dashboard from './pages/Dashboard';
@@ -29,7 +26,7 @@ import ExportModal         from './panels/ExportModal';
 import SubscriptionModal   from './panels/SubscriptionModal';
 
 // ════════════════════════════════════════════════════════════
-// Context (仅数据，不含 toast)
+// Context
 // ════════════════════════════════════════════════════════════
 export const FinanceContext = createContext(null);
 
@@ -40,10 +37,9 @@ export function useFinance() {
 }
 
 // ════════════════════════════════════════════════════════════
-// 内部组件：在 ToastProvider 之内使用 useToast
+// 主页面
 // ════════════════════════════════════════════════════════════
-function FinanceApp() {
-    const { toast, showToast } = useToast();
+export default function FinancePage() {
     const [activePage, setActivePage] = useState('dashboard');
 
     // ── 侧边栏折叠状态 ────────────────────────────────────
@@ -67,9 +63,9 @@ function FinanceApp() {
     const closeExport = useCallback(() => setExportOpen(false), []);
     const closeSub    = useCallback(() => setSubModalOpen(false), []);
 
-    // ── 数据层（注入 showToast，不再在 hook 内管理 toast）───
-    const financeHook = useFinanceData(showToast);
-    const { data, loadFromFirebase, checkSubs } = financeHook;
+    // ── 数据层 ────────────────────────────────────────────
+    const financeHook = useFinanceData();
+    const { data, toast, showToast, loadFromFirebase, checkSubs } = financeHook;
 
     // ── 清空数据 ──────────────────────────────────────────
     const clearData = useClearData({ showToast });
@@ -97,12 +93,11 @@ function FinanceApp() {
 
     const contextValue = useMemo(() => ({
         ...financeHook,
-        showToast,
         activePage,
         setActivePage,
         openSubModal,
         openExportModal,
-    }), [financeHook, showToast, activePage, setActivePage, openSubModal, openExportModal]);
+    }), [financeHook, activePage, setActivePage, openSubModal, openExportModal]);
 
     return (
         <FinanceContext.Provider value={contextValue}>
@@ -148,16 +143,5 @@ function FinanceApp() {
                 <Toast visible={toast.visible} msg={toast.msg} type={toast.type} />
             </div>
         </FinanceContext.Provider>
-    );
-}
-
-// ════════════════════════════════════════════════════════════
-// 导出组件（包裹 ToastProvider）
-// ════════════════════════════════════════════════════════════
-export default function FinancePage() {
-    return (
-        <ToastProvider>
-            <FinanceApp />
-        </ToastProvider>
     );
 }

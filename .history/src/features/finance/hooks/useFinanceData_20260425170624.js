@@ -4,8 +4,8 @@
 // 供 FinanceContext 使用，不直接在组件中调用（只在 index.jsx 调用一次）
 // ============================================================
 
-import { useState, useCallback, useRef } from 'react';
-import { db } from '../../../firebase';
+import { useState, useCallback, useRef, useMemo } from 'react';
+import { db } from '../../../lib/firebase';
 import {
     collection, doc,
     getDoc, getDocs,
@@ -20,10 +20,10 @@ function migrateOldData(loadedData) {
     const d = { ...INITIAL_DATA, ...loadedData };
 
     if (!d.history) d.history = [];
-    if (!d.subs)    d.subs    = [];
-    if (!d.rules)   d.rules   = {};
+    if (!d.subs) d.subs = [];
+    if (!d.rules) d.rules = {};
     if (!d.cats || !d.cats.length) d.cats = DEFAULT_CATS.map(c => ({ ...c }));
-    if (!d.txs)     d.txs     = [];
+    if (!d.txs) d.txs = [];
 
     // ── 旧格式 cat 迁移（id 非 cat_ 开头 → 新 id）──────────
     const hasOldFormat = d.cats.some(c => !c.id.startsWith('cat_'));
@@ -33,14 +33,14 @@ function migrateOldData(loadedData) {
             const newId = c.id.startsWith('cat_') ? c.id : `cat_mig_${Date.now()}_${idx}`;
             idMap[c.id] = newId;
             return {
-                id:     newId,
-                name:   c.gameName || c.label || c.id,
-                icon:   c.icon   || '📌',
-                color:  c.color  || '#999',
-                group:  c.group  || '其他',
-                type:   c.type   || 'expense',
+                id: newId,
+                name: c.gameName || c.label || c.id,
+                icon: c.icon || '📌',
+                color: c.color || '#999',
+                group: c.group || '其他',
+                type: c.type || 'expense',
                 domain: c.domain || getDomainForCat(d.cats, c.id),
-                sort:   c.sort   || 0,
+                sort: c.sort || 0,
             };
         });
         // 同步修复流水里的 cat2
@@ -88,25 +88,14 @@ function sanitizeForFirestore(obj) {
 }
 
 // ════════════════════════════════════════════════════════════
-export function useFinanceData() {
+export function useFinanceData(showToast) {
     const [data, setData] = useState(() => ({
         ...INITIAL_DATA,
         cats: DEFAULT_CATS.map(c => ({ ...c })),
-        acc:  INITIAL_DATA.acc.map(a => ({ ...a })),
+        acc: INITIAL_DATA.acc.map(a => ({ ...a })),
         tpls: INITIAL_DATA.tpls.map(t => ({ ...t })),
     }));
     const [loading, setLoading] = useState(false);
-    const [toast, setToast] = useState({ visible: false, msg: '', type: 'success' });
-    const toastTimerRef = useRef(null);
-
-    // ── Toast ──────────────────────────────────────────────
-    const showToast = useCallback((msg, type = 'success') => {
-        setToast({ visible: true, msg, type });
-        if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-        toastTimerRef.current = setTimeout(() => {
-            setToast(t => ({ ...t, visible: false }));
-        }, 3000);
-    }, []);
 
     // ── Firebase: 加载 ────────────────────────────────────
     const loadFromFirebase = useCallback(async () => {
@@ -118,12 +107,12 @@ export function useFinanceData() {
 
             if (configSnap.exists()) {
                 const cfg = configSnap.data();
-                if (cfg.acc     && cfg.acc.length)  loadedData.acc     = cfg.acc;
-                if (cfg.tpls    && cfg.tpls.length) loadedData.tpls    = cfg.tpls;
-                if (cfg.rules)                       loadedData.rules   = cfg.rules;
-                if (cfg.subs)                        loadedData.subs    = cfg.subs;
-                if (cfg.history)                     loadedData.history = cfg.history;
-                if (cfg.cats    && cfg.cats.length)  loadedData.cats    = cfg.cats;
+                if (cfg.acc && cfg.acc.length) loadedData.acc = cfg.acc;
+                if (cfg.tpls && cfg.tpls.length) loadedData.tpls = cfg.tpls;
+                if (cfg.rules) loadedData.rules = cfg.rules;
+                if (cfg.subs) loadedData.subs = cfg.subs;
+                if (cfg.history) loadedData.history = cfg.history;
+                if (cfg.cats && cfg.cats.length) loadedData.cats = cfg.cats;
             }
 
             // 2. 加载交易记录
@@ -147,12 +136,12 @@ export function useFinanceData() {
     // ── Firebase: 保存配置 ────────────────────────────────
     const saveConfigToFirebase = useCallback(async (currentData) => {
         await setDoc(doc(db, 'config', 'finance_config'), {
-            acc:       currentData.acc,
-            tpls:      currentData.tpls,
-            rules:     currentData.rules,
-            subs:      currentData.subs,
-            history:   currentData.history,
-            cats:      currentData.cats,
+            acc: currentData.acc,
+            tpls: currentData.tpls,
+            rules: currentData.rules,
+            subs: currentData.subs,
+            history: currentData.history,
+            cats: currentData.cats,
             updatedAt: new Date().toISOString(),
         });
     }, []);
@@ -169,8 +158,8 @@ export function useFinanceData() {
         const txId = String(tx.id);
         const rawObj = {
             ...tx,
-            id:        txId,
-            domain:    getDomainForCat(cats, tx.cat2),
+            id: txId,
+            domain: getDomainForCat(cats, tx.cat2),
             createdAt: tx.createdAt || new Date().toISOString(),
             updatedAt: new Date().toISOString(),
         };
@@ -227,8 +216,8 @@ export function useFinanceData() {
             const txId = String(tx.id);
             txObjs.push({
                 ...tx,
-                id:        txId,
-                domain:    getDomainForCat(currentCats, tx.cat2),
+                id: txId,
+                domain: getDomainForCat(currentCats, tx.cat2),
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
             });
@@ -330,13 +319,11 @@ export function useFinanceData() {
         });
     }, []);
 
-    return {
+    return useMemo(() => ({
         data,
         setData,
         updateData,
         loading,
-        toast,
-        showToast,
         loadFromFirebase,
         saveData,
         addTx,
@@ -345,5 +332,18 @@ export function useFinanceData() {
         updateAcc,
         updateHistory,
         checkSubs,
-    };
+    }), [
+        data,
+        loading,
+        setData,
+        updateData,
+        loadFromFirebase,
+        saveData,
+        addTx,
+        addTxBatch,
+        delTx,
+        updateAcc,
+        updateHistory,
+        checkSubs,
+    ]);
 }

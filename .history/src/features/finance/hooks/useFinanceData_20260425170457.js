@@ -4,7 +4,7 @@
 // 供 FinanceContext 使用，不直接在组件中调用（只在 index.jsx 调用一次）
 // ============================================================
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { db } from '../../../lib/firebase';
 import {
     collection, doc,
@@ -330,7 +330,7 @@ export function useFinanceData() {
         });
     }, []);
 
-    return {
+    return useMemo(() => ({
         data,
         setData,
         updateData,
@@ -345,5 +345,20 @@ export function useFinanceData() {
         updateAcc,
         updateHistory,
         checkSubs,
-    };
+    }), [
+        data,
+        loading,
+        toast,
+        setData,
+        updateData,
+        showToast,
+        loadFromFirebase,
+        saveData,
+        addTx,
+        addTxBatch,
+        delTx,
+        updateAcc,
+        updateHistory,
+        checkSubs,
+    ]);
 }

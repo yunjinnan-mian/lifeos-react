@@ -906,13 +906,6 @@
 .finance-root #sidebar-overlay{ display: none; position: fixed; inset: 0; z-index: 45; background: rgba(20,10,2,0.6); backdrop-filter: blur(2px); }
 .finance-root #sidebar-overlay.active{ display: block; }
 
-/* ── Canvas 图表（原生绘制，填满父容器）───────────────── */
-.finance-root .card canvas{
-    width: 100% !important;
-    height: 100% !important;
-    display: block;
-}
-
 /* ── Responsive ──────────────────────────────────────────── */
 @media (max-width: 768px) {
     .finance-root .mobile-topbar{ display: flex; }

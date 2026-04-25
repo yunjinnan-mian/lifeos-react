@@ -906,8 +906,8 @@
 .finance-root #sidebar-overlay{ display: none; position: fixed; inset: 0; z-index: 45; background: rgba(20,10,2,0.6); backdrop-filter: blur(2px); }
 .finance-root #sidebar-overlay.active{ display: block; }
 
-/* ── Canvas 图表（原生绘制，填满父容器）───────────────── */
-.finance-root .card canvas{
+/* ── Canvas 图表容器（月度支出趋势）──────────────────── */
+.finance-root .chart-canvas{
     width: 100% !important;
     height: 100% !important;
     display: block;

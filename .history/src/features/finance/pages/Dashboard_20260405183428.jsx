@@ -4,6 +4,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useFinance } from '../index';
+import { useCharts } from '../hooks/useCharts';
 import TimePills from '../components/TimePills';
 import KpiHud from '../components/KpiHud';
 import Heatmap from '../components/Heatmap';
@@ -53,6 +54,13 @@ export default function Dashboard({ onJumpToCategory }) {
             setActiveYear(newest.slice(0, 4));
         }
     }, [data.txs.length]); // eslint-disable-line
+
+    // ── 图表 hook ─────────────────────────────────────────
+    const { mainChartRef, renderMainChart } = useCharts();
+
+    useEffect(() => {
+        renderMainChart(data, activeYear);
+    }, [data.txs, activeYear, renderMainChart]);
 
     // ── TimePills 数据 ────────────────────────────────────
     const years  = useMemo(() => getYears(data.txs), [data.txs]);
@@ -184,9 +192,18 @@ export default function Dashboard({ onJumpToCategory }) {
                 </div>
             </div>
 
-            {/* 消费排行榜 + 月度透视 */}
-            <div style={{ display:'flex', gap:24, marginBottom:24 }}>
-                <div className="card" style={{ marginBottom:0, flex:'0 0 340px' }}>
+            {/* 图表 + 排行榜 */}
+            <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr', gap:24, marginBottom:24 }}>
+                <div className="card" style={{ marginBottom:0 }}>
+                    <div className="card-header">
+                        <div className="title">月度支出趋势</div>
+                    </div>
+                    <div style={{ height:300 }}>
+                        <canvas ref={mainChartRef} />
+                    </div>
+                </div>
+
+                <div className="card" style={{ marginBottom:0, display:'flex', flexDirection:'column' }}>
                     <div className="card-header">
                         <div className="title">消费排行榜 (Top)</div>
                     </div>
@@ -196,19 +213,21 @@ export default function Dashboard({ onJumpToCategory }) {
                         onJumpToCategory={onJumpToCategory}
                     />
                 </div>
-                <div className="card" style={{ marginBottom:0, flex:1, minWidth:0 }}>
-                    <div
-                        className="card-header"
-                        style={{ cursor:'pointer' }}
-                        onClick={() => setMatrixOpen(v => !v)}
-                    >
-                        <div className="title">
-                            月度透视 (The Matrix)
-                            <i className={matrixOpen ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'} />
-                        </div>
+            </div>
+
+            {/* 月度透视矩阵 */}
+            <div className="card">
+                <div
+                    className="card-header"
+                    style={{ cursor:'pointer' }}
+                    onClick={() => setMatrixOpen(v => !v)}
+                >
+                    <div className="title">
+                        月度透视 (The Matrix)
+                        <i className={matrixOpen ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'} />
                     </div>
-                    {matrixOpen && <MatrixTable data={data} activeYear={activeYear} />}
                 </div>
+                {matrixOpen && <MatrixTable data={data} activeYear={activeYear} />}
             </div>
         </div>
     );

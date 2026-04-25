@@ -2,8 +2,6 @@
 // Finance Pro — WordCloud 消费关键词词云
 // ============================================================
 
-import { memo } from 'react';
-
 const TAG_PALETTE = [
     { bg:'#FFF3D8', text:'#8B5A1A', border:'#D4A017' },
     { bg:'#E8F5E9', text:'#2E7D32', border:'#66BB6A' },
@@ -15,7 +13,7 @@ const TAG_PALETTE = [
     { bg:'#FCE4EC', text:'#880E4F', border:'#F06292' },
 ];
 
-function WordCloud({ data, activeYear }) {
+export default function WordCloud({ data, activeYear }) {
     // 统计词频（当年支出 desc 分词）
     const words = {};
     const year = activeYear || new Date().getFullYear().toString();
@@ -55,5 +53,3 @@ function WordCloud({ data, activeYear }) {
         </div>
     );
 }
-
-export default memo(WordCloud);

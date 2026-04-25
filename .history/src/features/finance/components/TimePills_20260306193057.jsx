@@ -2,9 +2,7 @@
 // Finance Pro — TimePills 时间胶囊导航条
 // ============================================================
 
-import { memo } from 'react';
-
-function TimePills({ years, months, activeYear, activeMonth, onSelectYear, onSelectMonth }) {
+export default function TimePills({ years, months, activeYear, activeMonth, onSelectYear, onSelectMonth }) {
     return (
         <div className="time-nav-wrap">
             {/* 年份条 */}
@@ -43,5 +41,3 @@ function TimePills({ years, months, activeYear, activeMonth, onSelectYear, onSel
         </div>
     );
 }
-
-export default memo(TimePills);
