@@ -609,6 +609,7 @@
     font-size: inherit;
     font-weight: inherit;
     line-height: inherit;
+    letter-spacing: inherit;
     color: inherit;
     width: 100%;
     min-width: 0;
@@ -617,30 +618,18 @@
     appearance: none;
     border-radius: 0;
     height: auto;
-    /* 彻底消除浏览器默认最小高度 */
-    min-height: 0;
-    /* 确保文字完全对齐基线 */
-    vertical-align: middle;
-    /* 防止 select 在某些浏览器中撑高 */
-    max-height: 100%;
 }
-/* 为 select 添加自定义下拉箭头 */
 .finance-root .edit-naked-select{
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238B7355'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 4px center;
     background-size: 8px 5px;
     padding-right: 16px;
-    /* 确保 select 文字垂直居中 */
-    text-align: left;
-    text-indent: 0;
 }
-/* 聚焦状态：用极淡背景色 + 下划线提示，而非 outline */
 .finance-root .edit-naked-input:focus,
 .finance-root .edit-naked-select:focus{
     outline: none;
-    background: rgba(91,149,72,0.06);
-    border-bottom: 1px solid rgba(91,149,72,0.35);
+    background: transparent;
 }
 /* 移除 number input 的 spinner */
 .finance-root .edit-naked-input[type="number"]::-webkit-inner-spin-button,
@@ -651,41 +640,31 @@
 .finance-root .edit-naked-input[type="number"]{
     -moz-appearance: textfield;
 }
-/* 移除 date input 的默认图标并保持高度一致 */
-.finance-root .edit-naked-input[type="date"]::-webkit-calendar-picker-indicator{
-    opacity: 0.4;
-    cursor: pointer;
-    padding: 0;
-    margin: 0;
-    position: absolute;
-    right: 0;
-    top: 0;
-    bottom: 0;
-    height: auto;
-    width: 20px;
+/* 隐藏日期输入框的日历图标，保持极简文本感 */
+.finance-root .edit-naked-input[type="date"]::-webkit-calendar-picker-indicator {
+    display: none;
+    -webkit-appearance: none;
 }
-.finance-root .edit-naked-input[type="date"]{
-    position: relative;
-    /* 为日历图标腾出空间，避免文字被遮挡 */
-    padding-right: 20px;
+.finance-root .edit-naked-input[type="date"]::-webkit-inner-spin-button {
+    display: none;
 }
 
 /* ── 统一表格行内编辑容器 ──────────────────────────────────
- * 无论编辑态还是普通态，td 内统一 padding，内容自然居中 */
+ * 无论编辑态还是普通态，td 内统一 padding，内容自然居中
+ * 显式设定 font-size / line-height 作为排版基准，
+ * 编辑态 input/select 通过 inherit 完全克隆此基准。 */
 .finance-root .td-edit-wrap{
-    padding: 11px 10px;
+    padding: 12px 10px;
     vertical-align: middle;
+    font-size: 14px;
+    line-height: 1.5;
 }
 .finance-root .td-edit-wrap-text{
     display: block;
-    line-height: 1.5;
+    line-height: inherit;
     padding: 0;
     margin: 0;
-    /* 与编辑态 input/select 完全一致 */
-    min-height: 0;
-    vertical-align: middle;
 }
-
 
 /* ── Quick Panel (FAB + 底部抽屉) ───────────────────────── */
 .finance-root #quick-fab{
