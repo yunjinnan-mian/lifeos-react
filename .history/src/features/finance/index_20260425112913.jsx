@@ -108,6 +108,10 @@ export default function FinancePage() {
                 <QuickPanel />
 
                 {/* ── 弹窗层 ──────────────────────────── */}
+                <ReceiptModal
+                    open={receiptOpen}
+                    onClose={() => setReceiptOpen(false)}
+                />
                 <ExportModal
                     open={exportOpen}
                     onClose={() => setExportOpen(false)}

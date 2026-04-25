@@ -76,6 +76,7 @@ export default function FinancePage() {
         activePage,
         setActivePage,
         openSubModal:    () => setSubModalOpen(true),
+        openReceiptModal:() => setReceiptOpen(true),
         openExportModal: () => setExportOpen(true),
     };
 
@@ -87,6 +88,7 @@ export default function FinancePage() {
                 <Sidebar
                     activePage={activePage}
                     onNav={setActivePage}
+                    onOpenReceipt={() => setReceiptOpen(true)}
                     onOpenExportModal={() => setExportOpen(true)}
                     onClearData={clearData}
                 />
@@ -108,6 +110,10 @@ export default function FinancePage() {
                 <QuickPanel />
 
                 {/* ── 弹窗层 ──────────────────────────── */}
+                <ReceiptModal
+                    open={receiptOpen}
+                    onClose={() => setReceiptOpen(false)}
+                />
                 <ExportModal
                     open={exportOpen}
                     onClose={() => setExportOpen(false)}

@@ -180,6 +180,7 @@ export default function Details() {
                                 <TxRow
                                     key={t.id}
                                     tx={t}
+                                    acc={data.acc}
                                     colorMap={colorMap}
                                     cats={data.cats}
                                     onEdit={() => setEditTx(t)}

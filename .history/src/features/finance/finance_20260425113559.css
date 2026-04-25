@@ -573,35 +573,6 @@
 .finance-root .q-chip{ padding: 4px 10px; border: 1px solid #E2E8F0; border-radius: 20px; font-size: 11px; color: #718096; cursor: pointer; transition: 0.2s; background: #fff; }
 .finance-root .q-chip:hover{ border-color: var(--primary); color: var(--primary); background: #EEF2FF; }
 
-/* ── 月度小票 ────────────────────────────────────────────── */
-.finance-root .receipt-overlay{
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0,0,0,0.6); z-index: 2000;
-    display: none; justify-content: center; align-items: center;
-    backdrop-filter: blur(4px);
-}
-.finance-root .receipt-overlay.open{ display: flex; }
-.finance-root .receipt-paper{
-    background: #fff; width: min(320px, 92vw); min-height: 500px; max-height: 90vh;
-    padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-    font-family: "Consolas", "Monaco", "Microsoft YaHei", sans-serif;
-    position: relative; overflow-y: auto;
-    border-top: 5px solid #000;
-    color: #000 !important; font-weight: 700;
-    filter: contrast(150%);
-    -webkit-font-smoothing: none;
-    -moz-osx-font-smoothing: unset;
-}
-.finance-root .receipt-header{ text-align: center; border-bottom: 2px dashed #000; padding-bottom: 15px; margin-bottom: 15px; }
-.finance-root .receipt-title{ font-weight: 900; font-size: 18px; margin-bottom: 5px; letter-spacing: 2px; }
-.finance-root .receipt-date{ font-size: 12px; margin-bottom: 2px; }
-.finance-root .receipt-section{ margin-bottom: 15px; border-bottom: 2px dashed #000; padding-bottom: 10px; }
-.finance-root .receipt-sec-title{ font-size: 12px; font-weight: 900; margin-bottom: 8px; display: block; text-transform: uppercase; }
-.finance-root .receipt-row{ display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 5px; }
-.finance-root .receipt-footer{ text-align: center; margin-top: 20px; font-size: 12px; font-weight: 700; }
-.finance-root .receipt-btn{ margin-top: 20px; width: 100%; border: 2px solid #000; background: transparent; padding: 10px; cursor: pointer; font-weight: 900; font-family: inherit; transition: 0.2s; color: #000; }
-.finance-root .receipt-btn:hover{ background: #000; color: #fff !important; }
-
 /* ── Waterfall Modal ─────────────────────────────────────── */
 .finance-root #waterfall-modal{
     display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85);

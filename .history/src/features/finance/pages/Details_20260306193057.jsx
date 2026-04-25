@@ -167,6 +167,7 @@ export default function Details() {
                                 <th>一级</th>
                                 <th>二级</th>
                                 <th>说明</th>
+                                <th>账户</th>
                                 <th style={{ textAlign:'right' }}>金额</th>
                                 <th />
                             </tr>
@@ -174,12 +175,13 @@ export default function Details() {
                         <tbody>
                             {filteredTxs.length === 0 ? (
                                 <tr>
-                                    <td colSpan={7} style={{ textAlign:'center', color:'#aaa', padding:30 }}>暂无数据</td>
+                                    <td colSpan={8} style={{ textAlign:'center', color:'#aaa', padding:30 }}>暂无数据</td>
                                 </tr>
                             ) : filteredTxs.map(t => (
                                 <TxRow
                                     key={t.id}
                                     tx={t}
+                                    acc={data.acc}
                                     colorMap={colorMap}
                                     cats={data.cats}
                                     onEdit={() => setEditTx(t)}
@@ -202,7 +204,10 @@ export default function Details() {
 }
 
 // ── 单行组件 ────────────────────────────────────────────────
-function TxRow({ tx: t, colorMap, cats, onEdit, onDelete }) {
+function TxRow({ tx: t, acc, colorMap, cats, onEdit, onDelete }) {
+    const accName = acc.find(a => String(a.id) === String(t.accId))?.name
+        || (t.accId === 'auto' ? '自动配扣' : '-');
+
     const c = colorMap[t.cat1] || '#ccc';
 
     let typeLabel = '支出', typeColor = 'var(--c-survive)', amtPrefix = '-';
@@ -223,6 +228,7 @@ function TxRow({ tx: t, colorMap, cats, onEdit, onDelete }) {
             </td>
             <td data-label="二级">{getCatName(cats, t.cat2)}</td>
             <td data-label="说明" style={{ color:'#2D3748', fontWeight:500 }}>{t.desc || ''}</td>
+            <td data-label="账户" style={{ color:'#A0AEC0', fontSize:12 }}>{accName}</td>
             <td data-label="金额" style={{ textAlign:'right', fontWeight:'bold', color:typeColor }}>
                 {amtPrefix} {(t.amount || 0).toLocaleString()}
             </td>

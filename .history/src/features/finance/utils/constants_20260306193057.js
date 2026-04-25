@@ -23,6 +23,12 @@ export const DEFAULT_CATS = [
     { id:"cat_i006", name:"意外掉落",   icon:"✨", color:"#A78BFA", group:"非经常收入", type:"income", domain:"explore",  sort:5 },
 ];
 
+/** 分类管理弹窗：固定分组名 */
+export const CAT_GROUPS = {
+    expense: ['生存底座', '生活消耗', '事件支出'],
+    income:  ['主动收入', '资产增值', '非经常收入'],
+};
+
 /** 生活域选项 */
 export const DOMAIN_OPTS = [
     { v:'food',      l:'🍖 食物' },

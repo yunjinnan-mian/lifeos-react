@@ -180,6 +180,7 @@ export default function Details() {
                                 <TxRow
                                     key={t.id}
                                     tx={t}
+                                    acc={data.acc}
                                     colorMap={colorMap}
                                     cats={data.cats}
                                     onEdit={() => setEditTx(t)}
@@ -202,7 +203,7 @@ export default function Details() {
 }
 
 // ── 单行组件 ────────────────────────────────────────────────
-function TxRow({ tx: t, colorMap, cats, onEdit, onDelete }) {
+function TxRow({ tx: t, acc, colorMap, cats, onEdit, onDelete }) {
     const c = colorMap[t.cat1] || '#ccc';
 
     let typeLabel = '支出', typeColor = 'var(--c-survive)', amtPrefix = '-';
