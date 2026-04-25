@@ -156,6 +156,10 @@
     padding: 30px;
     overflow-y: auto;
     scroll-behavior: smooth;
+    transition: padding 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.finance-root .sidebar.collapsed + .main{
+    padding-left: 40px;
 }
 
 /* ── Cards ──────────────────────────────────────────────── */
@@ -800,6 +804,7 @@
     .finance-root .table td:before{ content: attr(data-label); font-weight: 700; color: var(--text-sub); text-align: left; margin-right: 10px; }
 
     .finance-root #details .card-header{ flex-direction: column; align-items: flex-start; gap: 10px; }
-    .finance-root #details .card-header input{ max-width: 100%; }
+    .finance-root #details .card-header > div:last-child{ width: 100%; display: flex; flex-wrap: wrap; gap: 8px; }
+    .finance-root #details .card-header select, .finance-root #details .card-header input{ flex: 1 1 auto; min-width: 100px; width: auto !important; }
     .finance-root #filter-key{ min-width: 80px; }
 }

@@ -77,10 +77,12 @@ export default function FinancePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // ── 仪表盘排行榜 → 跳转明细 ─────────────────────────
+    // ── 仪表盘排行榜 → 跳转明细并筛选 ───────────────────
     const handleJumpToCategory = useCallback((catId) => {
         setActivePage('details');
-    }, []);
+        financeHook.updateData(prev => ({ ...prev, _jumpCat: catId }));
+    }, [financeHook]);
+
     // ── Journal 需要打开订阅弹窗 ─────────────────────────
     const handleOpenSub = useCallback(() => setSubModalOpen(true), []);
 

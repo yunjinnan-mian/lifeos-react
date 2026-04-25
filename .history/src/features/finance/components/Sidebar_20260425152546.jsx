@@ -69,6 +69,14 @@ export default function Sidebar({ activePage, onNav, onOpenExportModal, onClearD
 
             {/* 侧边栏主体 */}
             <div className={sidebarCls} id="sidebar">
+                <button
+                    className="toggle-btn"
+                    onClick={toggleSidebar}
+                    style={{ background: 'none', border: 'none' }}
+                >
+                    <i className={collapsed ? 'ri-menu-unfold-line' : 'ri-menu-fold-line'} />
+                </button>
+
                 <div className="logo">
                     <span><i className="ri-wallet-3-fill" /> Finance Pro</span>
                 </div>
