@@ -78,6 +78,7 @@ export default function FinancePage() {
         activePage,
         setActivePage,
         openSubModal:    () => setSubModalOpen(true),
+        openCatModal:    () => setCatModalOpen(true),
         openReceiptModal:() => setReceiptOpen(true),
         openExportModal: () => setExportOpen(true),
     };
@@ -91,6 +92,7 @@ export default function FinancePage() {
                     activePage={activePage}
                     onNav={setActivePage}
                     onOpenReceipt={() => setReceiptOpen(true)}
+                    onOpenCatModal={() => setCatModalOpen(true)}
                     onOpenExportModal={() => setExportOpen(true)}
                     onClearData={clearData}
                 />
@@ -115,6 +117,10 @@ export default function FinancePage() {
                 <ReceiptModal
                     open={receiptOpen}
                     onClose={() => setReceiptOpen(false)}
+                />
+                <CategoryModal
+                    open={catModalOpen}
+                    onClose={() => setCatModalOpen(false)}
                 />
                 <ExportModal
                     open={exportOpen}

@@ -21,7 +21,7 @@ const PAGE_TITLES = {
     details:   '账单明细',
 };
 
-export default function Sidebar({ activePage, onNav, onOpenReceipt, onOpenExportModal, onClearData }) {
+export default function Sidebar({ activePage, onNav, onOpenReceipt, onOpenCatModal, onOpenExportModal, onClearData }) {
     const [collapsed, setCollapsed] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
 
