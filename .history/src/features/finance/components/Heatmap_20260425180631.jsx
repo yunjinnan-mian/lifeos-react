@@ -141,9 +141,9 @@ function Heatmap({ data, activeYear }) {
                 }
 
                 const rect = cell.getBoundingClientRect();
-                let left = rect.left + window.scrollX + 20;
-                let top  = rect.top  + window.scrollY - 10;
-                if (left + 170 > window.innerWidth) left = rect.left + window.scrollX - 175;
+                let left = rect.left + 20;
+                let top  = rect.top  - 10;
+                if (left + 170 > window.innerWidth) left = rect.left - 175;
 
                 setTooltip({ visible: true, html: content, x: left, y: top });
             });
@@ -157,13 +157,11 @@ function Heatmap({ data, activeYear }) {
         <>
             <div ref={containerRef} className="heatmap-container" />
             {tooltip.visible && createPortal(
-                <div className="finance-root">
-                    <div
-                        className="heatmap-tooltip"
-                        style={{ left: tooltip.x, top: tooltip.y, display: 'block', position: 'fixed' }}
-                        dangerouslySetInnerHTML={{ __html: tooltip.html }}
-                    />
-                </div>,
+                <div
+                    className="heatmap-tooltip"
+                    style={{ left: tooltip.x, top: tooltip.y }}
+                    dangerouslySetInnerHTML={{ __html: tooltip.html }}
+                />,
                 document.body
             )}
         </>

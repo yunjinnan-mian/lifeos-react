@@ -157,13 +157,11 @@ function Heatmap({ data, activeYear }) {
         <>
             <div ref={containerRef} className="heatmap-container" />
             {tooltip.visible && createPortal(
-                <div className="finance-root">
-                    <div
-                        className="heatmap-tooltip"
-                        style={{ left: tooltip.x, top: tooltip.y, display: 'block', position: 'fixed' }}
-                        dangerouslySetInnerHTML={{ __html: tooltip.html }}
-                    />
-                </div>,
+                <div
+                    className="heatmap-tooltip"
+                    style={{ left: tooltip.x, top: tooltip.y, display: 'block', position: 'fixed' }}
+                    dangerouslySetInnerHTML={{ __html: tooltip.html }}
+                />,
                 document.body
             )}
         </>
