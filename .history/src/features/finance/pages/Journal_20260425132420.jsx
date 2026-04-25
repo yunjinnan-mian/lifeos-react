@@ -371,20 +371,21 @@ function CleanRow({ bill: b, idx, accOptsHtml, expOptsHtml, incOptsHtml, cats, o
     // 操作区
     let actionCell;
     if (b.mode === 'transfer') {
+        const alertStyle = (!b.fromAcc || !b.toAcc) ? 'borderColor:#F56565' : '';
         actionCell = (
             <>
                 <div style={{ display:'flex', gap:4, alignItems:'center', justifyContent:'center' }}>
                     <select
-                        className="edit-naked-select"
-                        style={{ width:90, ...(!b.fromAcc ? { color:'#F56565' } : {}) }}
+                        className="clean-select"
+                        style={{ width:90, ...(!b.fromAcc ? { borderColor:'#F56565' } : {}) }}
                         value={b.fromAcc}
                         onChange={e => onUpdate(idx, { fromAcc: e.target.value })}
                         dangerouslySetInnerHTML={{ __html: accOptsHtml }}
                     />
                     <i className="ri-arrow-right-line" style={{ color:'#CBD5E0' }} />
                     <select
-                        className="edit-naked-select"
-                        style={{ width:90, ...(!b.toAcc ? { color:'#F56565' } : {}) }}
+                        className="clean-select"
+                        style={{ width:90, ...(!b.toAcc ? { borderColor:'#F56565' } : {}) }}
                         value={b.toAcc}
                         onChange={e => onUpdate(idx, { toAcc: e.target.value })}
                         dangerouslySetInnerHTML={{ __html: accOptsHtml }}
@@ -392,7 +393,7 @@ function CleanRow({ bill: b, idx, accOptsHtml, expOptsHtml, incOptsHtml, cats, o
                 </div>
                 <div style={{ textAlign:'center', marginTop:4 }}>
                     <input
-                        type="number" className="edit-naked-input" style={{ width:100, textAlign:'center', fontWeight:700 }}
+                        type="number" className="clean-input amt" style={{ width:100 }}
                         value={b.amount}
                         onChange={e => onUpdate(idx, { amount: parseFloat(e.target.value) || 0 })}
                     />
@@ -407,8 +408,8 @@ function CleanRow({ bill: b, idx, accOptsHtml, expOptsHtml, incOptsHtml, cats, o
         actionCell = (
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:3 }}>
                 <select
-                    className="edit-naked-select"
-                    style={{ flex:1, minWidth:0, ...(!b.cat ? { color:'#F56565' } : {}) }}
+                    className="clean-select"
+                    style={{ flex:1, minWidth:0, ...(!b.cat ? { border:'1px solid #F56565', background:'#fff' } : {}) }}
                     value={b.cat}
                     onChange={e => onUpdate(idx, { cat: e.target.value })}
                     dangerouslySetInnerHTML={{ __html: '<option value="">(分类)</option>' + catOpts }}
@@ -423,8 +424,8 @@ function CleanRow({ bill: b, idx, accOptsHtml, expOptsHtml, incOptsHtml, cats, o
                 }
                 <div style={{ position:'relative', width:74, flexShrink:0 }}>
                     <input
-                        type="number" className="edit-naked-input"
-                        style={{ width:'100%', color: toggleColor, textAlign:'center', fontWeight:700 }}
+                        type="number" className="clean-input amt"
+                        style={{ width:'100%', color: toggleColor, padding:'0 2px' }}
                         value={b.amount}
                         onChange={e => onUpdate(idx, { amount: parseFloat(e.target.value) || 0 })}
                     />

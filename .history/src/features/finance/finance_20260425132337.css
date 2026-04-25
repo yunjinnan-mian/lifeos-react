@@ -495,7 +495,7 @@
     color: var(--text-sub); font-size: 11px; font-family: var(--font-pixel); font-weight: 700; text-align: left;
 }
 .finance-root .clean-table th.th-center{ text-align: center; }
-.finance-root .clean-row td{ padding: 12px 6px; vertical-align: middle; border-bottom: 1px solid #DDD0BC; color: var(--text-main); }
+.finance-root .clean-row td{ padding: 8px 6px; vertical-align: middle; border-bottom: 1px solid #DDD0BC; color: var(--text-main); }
 .finance-root .clean-row:hover{ background: rgba(245,214,138,0.15); }
 .finance-root .clean-row.ignored{ opacity: 0.45; filter: grayscale(80%); background: #F0E8D4; }
 .finance-root .clean-row.ignored td{ text-decoration: line-through; color: #B8A88A; }
