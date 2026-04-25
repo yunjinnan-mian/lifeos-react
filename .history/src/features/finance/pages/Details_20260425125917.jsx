@@ -32,6 +32,9 @@ export default function Details() {
     const [filterKey,   setFilterKey]   = useState('');
     const [sortDesc,    setSortDesc]    = useState(true);
 
+    // 编辑弹窗
+    const [editTx, setEditTx] = useState(null);
+
     // 行内编辑状态
     const [editingTxId, setEditingTxId] = useState(null);
     const [editFormData, setEditFormData] = useState({ date: '', cat2: '', desc: '', amount: 0 });
@@ -282,12 +285,7 @@ export default function Details() {
                                     tx={t}
                                     colorMap={colorMap}
                                     cats={data.cats}
-                                    editingTxId={editingTxId}
-                                    editFormData={editFormData}
-                                    setEditFormData={setEditFormData}
-                                    onStartEdit={handleStartEdit}
-                                    onSaveEdit={handleSaveEdit}
-                                    onCancelEdit={handleCancelEdit}
+                                    onEdit={() => setEditTx(t)}
                                     onDelete={() => handleDelete(t)}
                                 />
                             ))}
@@ -295,14 +293,20 @@ export default function Details() {
                     </table>
                 </div>
             </div>
+
+            {/* 编辑弹窗 */}
+            <EditModal
+                open={!!editTx}
+                tx={editTx}
+                onClose={() => setEditTx(null)}
+            />
         </>
     );
 }
 
-// ── 单行组件（支持行内编辑）────────────────────────────────
-function TxRow({ tx: t, colorMap, cats, editingTxId, editFormData, setEditFormData, onStartEdit, onSaveEdit, onCancelEdit, onDelete }) {
+// ── 单行组件 ────────────────────────────────────────────────
+function TxRow({ tx: t, colorMap, cats, onEdit, onDelete }) {
     const c = colorMap[t.cat1] || '#ccc';
-    const isEditing = editingTxId === t.id;
 
     let typeLabel = '支出', typeColor = 'var(--c-survive)', amtPrefix = '-';
     if (t.type === 'income')   { typeLabel = '收入'; typeColor = 'var(--c-income)';  amtPrefix = '+'; }
@@ -313,95 +317,25 @@ function TxRow({ tx: t, colorMap, cats, editingTxId, editFormData, setEditFormDa
         amtPrefix = isInc ? '+' : '-';
     }
 
-    // 编辑态下的分类下拉选项
-    const catOptsHtml = t.type === 'income'
-        ? getIncomeOpts(cats)
-        : getExpenseOpts(cats);
-
     return (
         <tr>
-            <td data-label="日期">
-                {isEditing ? (
-                    <input
-                        type="date"
-                        className="form-control"
-                        style={{ width:130 }}
-                        value={editFormData.date}
-                        onChange={e => setEditFormData(f => ({ ...f, date: e.target.value }))}
-                    />
-                ) : t.date}
-            </td>
-            <td data-label="类型">
-                <span style={{ color:typeColor, fontWeight:700 }}>{typeLabel}</span>
-            </td>
+            <td data-label="日期">{t.date}</td>
+            <td data-label="类型"><span style={{ color:typeColor, fontWeight:700 }}>{typeLabel}</span></td>
             <td data-label="一级">
                 <span className="tag" style={{ background:`${c}22`, color:c }}>{t.cat1 || '-'}</span>
             </td>
-            <td data-label="二级">
-                {isEditing ? (
-                    <select
-                        className="form-control"
-                        style={{ width:130 }}
-                        value={editFormData.cat2}
-                        onChange={e => setEditFormData(f => ({ ...f, cat2: e.target.value }))}
-                        dangerouslySetInnerHTML={{ __html: '<option value="">(选择分类)</option>' + catOptsHtml }}
-                    />
-                ) : getCatName(cats, t.cat2)}
-            </td>
-            <td data-label="说明" style={{ color:'#2D3748', fontWeight:500 }}>
-                {isEditing ? (
-                    <input
-                        type="text"
-                        className="form-control"
-                        style={{ width:'100%', minWidth:80 }}
-                        value={editFormData.desc}
-                        onChange={e => setEditFormData(f => ({ ...f, desc: e.target.value }))}
-                    />
-                ) : (t.desc || '')}
-            </td>
+            <td data-label="二级">{getCatName(cats, t.cat2)}</td>
+            <td data-label="说明" style={{ color:'#2D3748', fontWeight:500 }}>{t.desc || ''}</td>
             <td data-label="金额" style={{ textAlign:'right', fontWeight:'bold', color:typeColor }}>
-                {isEditing ? (
-                    <input
-                        type="number"
-                        className="form-control"
-                        style={{ width:100, textAlign:'right' }}
-                        value={editFormData.amount}
-                        onChange={e => setEditFormData(f => ({ ...f, amount: parseFloat(e.target.value) || 0 }))}
-                    />
-                ) : (
-                    <>{amtPrefix} {(t.amount || 0).toLocaleString()}</>
-                )}
+                {amtPrefix} {(t.amount || 0).toLocaleString()}
             </td>
-            <td style={{ whiteSpace:'nowrap' }}>
-                <div style={{ display:'flex', gap:8, alignItems:'center', justifyContent:'flex-end' }}>
-                    {isEditing ? (
-                        <>
-                            <button
-                                onClick={() => onSaveEdit(t)}
-                                title="保存"
-                                style={{ background:'none', border:'none', cursor:'pointer', padding:'0 4px', fontSize:16, lineHeight:1 }}
-                            >✅</button>
-                            <button
-                                onClick={onCancelEdit}
-                                title="取消"
-                                style={{ background:'none', border:'none', cursor:'pointer', padding:'0 4px', fontSize:16, lineHeight:1 }}
-                            >❌</button>
-                        </>
-                    ) : (
-                        <>
-                            <button
-                                onClick={() => onStartEdit(t)}
-                                title="编辑"
-                                style={{ background:'none', border:'none', cursor:'pointer', padding:'0 4px', fontSize:16, lineHeight:1 }}
-                            >✏️</button>
-                            <button
-                                onClick={onDelete}
-                                title="删除"
-                                style={{ background:'none', border:'none', cursor:'pointer', padding:'0 4px', fontSize:16, lineHeight:1 }}
-                            >🗑️</button>
-                        </>
-                    )}
-                </div>
+            <td>
+                <button className="btn-icon" onClick={onEdit} title="修改">
+                    <i className="ri-edit-line" />
+                </button>
+                <button className="btn-icon" onClick={onDelete} title="删除" style={{ color:'#E53935' }}>
+                    <i className="ri-delete-bin-line" />
+                </button>
             </td>
         </tr>
     );

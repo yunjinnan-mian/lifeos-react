@@ -5,21 +5,8 @@
 
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useFinance } from '../index';
-import { getCatName, getColorMap, getExpenseOpts, getIncomeOpts, getCatMap, getDomainForCat } from '../utils/catMap';
-import { db } from '../../../lib/firebase';
-import { doc, setDoc } from 'firebase/firestore';
-
-// ── Firestore 写入前清理（与 useFinanceData 中一致）──────────
-function sanitizeForFirestore(obj) {
-    const uiOnlyFields = new Set(['mode', 'dir', 'realType', 'isIgnored', 'source']);
-    const cleaned = {};
-    for (const [k, v] of Object.entries(obj)) {
-        if (v === undefined || v === null) continue;
-        if (uiOnlyFields.has(k)) continue;
-        cleaned[k] = v;
-    }
-    return cleaned;
-}
+import { getCatName, getColorMap, getExpenseOpts, getIncomeOpts } from '../utils/catMap';
+import EditModal from '../panels/EditModal';
 
 export default function Details() {
     const { data, setData, updateData, delTx, updateHistory, saveData, showToast } = useFinance();
@@ -32,9 +19,8 @@ export default function Details() {
     const [filterKey,   setFilterKey]   = useState('');
     const [sortDesc,    setSortDesc]    = useState(true);
 
-    // 行内编辑状态
-    const [editingTxId, setEditingTxId] = useState(null);
-    const [editFormData, setEditFormData] = useState({ date: '', cat2: '', desc: '', amount: 0 });
+    // 编辑弹窗
+    const [editTx, setEditTx] = useState(null);
 
     // 外部跳转（Dashboard 排行榜点击 → 过滤某分类）
     useEffect(() => {
@@ -101,92 +87,6 @@ export default function Details() {
         await delTx(tx.id);
         showToast('交易已删除');
     }, [data.acc, delTx, updateData, showToast]);
-
-    // ── 行内编辑：开始编辑 ─────────────────────────────────
-    const handleStartEdit = useCallback((t) => {
-        setEditingTxId(t.id);
-        setEditFormData({
-            date: t.date || '',
-            cat2: t.cat2 || '',
-            desc: t.desc || '',
-            amount: t.amount || 0,
-        });
-    }, []);
-
-    // ── 行内编辑：取消 ─────────────────────────────────────
-    const handleCancelEdit = useCallback(() => {
-        setEditingTxId(null);
-        setEditFormData({ date: '', cat2: '', desc: '', amount: 0 });
-    }, []);
-
-    // ── 行内编辑：保存（核心逻辑）──────────────────────────
-    const handleSaveEdit = useCallback(async (t) => {
-        const oldAmount = t.amount || 0;
-        const newAmount = parseFloat(editFormData.amount) || 0;
-        const amountDiff = newAmount - oldAmount;
-
-        // (a) 余额差值处理（参考 handleDelete 逻辑）
-        if (amountDiff !== 0) {
-            if (t.type === 'income') {
-                updateData(prev => ({
-                    ...prev,
-                    acc: prev.acc.map(a =>
-                        String(a.id) === String(t.accId) ? { ...a, bal: (a.bal || 0) + amountDiff } : a
-                    ),
-                }));
-            } else if (t.type === 'expense') {
-                const targetId = t.accId === 'auto' ? data.acc[0]?.id : t.accId;
-                updateData(prev => ({
-                    ...prev,
-                    acc: prev.acc.map(a =>
-                        String(a.id) === String(targetId) ? { ...a, bal: (a.bal || 0) - amountDiff } : a
-                    ),
-                }));
-            } else if (t.type === 'transfer') {
-                updateData(prev => ({
-                    ...prev,
-                    acc: prev.acc.map(a => {
-                        if (String(a.id) === String(t.accId))   return { ...a, bal: (a.bal || 0) - amountDiff };
-                        if (String(a.id) === String(t.toAccId)) return { ...a, bal: (a.bal || 0) + amountDiff };
-                        return a;
-                    }),
-                }));
-            }
-        }
-
-        // (b) 数据更新
-        const catMap = getCatMap(data.cats);
-        const updatedTx = {
-            ...t,
-            date: editFormData.date,
-            desc: editFormData.desc,
-            cat2: editFormData.cat2,
-            cat1: catMap[editFormData.cat2] || '其他',
-            amount: newAmount,
-            domain: getDomainForCat(data.cats, editFormData.cat2),
-            updatedAt: new Date().toISOString(),
-        };
-
-        // (c) 状态与 Firebase 同步
-        setData(prev => ({
-            ...prev,
-            txs: prev.txs.map(tx =>
-                String(tx.id) === String(t.id) ? updatedTx : tx
-            ),
-        }));
-
-        try {
-            await setDoc(doc(db, 'transactions', String(t.id)), sanitizeForFirestore(updatedTx), { merge: true });
-        } catch (e) {
-            console.error('edit save failed', e);
-        }
-        saveData({ ...data, txs: data.txs.map(tx => String(tx.id) === String(t.id) ? updatedTx : tx) });
-
-        // (d) 交互反馈
-        setEditingTxId(null);
-        setEditFormData({ date: '', cat2: '', desc: '', amount: 0 });
-        showToast('修改成功');
-    }, [editFormData, data, setData, updateData, saveData, showToast]);
 
     // ── 颜色映射 ──────────────────────────────────────────
     const colorMap = useMemo(() => getColorMap(data.cats), [data.cats]);
@@ -282,12 +182,7 @@ export default function Details() {
                                     tx={t}
                                     colorMap={colorMap}
                                     cats={data.cats}
-                                    editingTxId={editingTxId}
-                                    editFormData={editFormData}
-                                    setEditFormData={setEditFormData}
-                                    onStartEdit={handleStartEdit}
-                                    onSaveEdit={handleSaveEdit}
-                                    onCancelEdit={handleCancelEdit}
+                                    onEdit={() => setEditTx(t)}
                                     onDelete={() => handleDelete(t)}
                                 />
                             ))}
@@ -295,14 +190,20 @@ export default function Details() {
                     </table>
                 </div>
             </div>
+
+            {/* 编辑弹窗 */}
+            <EditModal
+                open={!!editTx}
+                tx={editTx}
+                onClose={() => setEditTx(null)}
+            />
         </>
     );
 }
 
-// ── 单行组件（支持行内编辑）────────────────────────────────
-function TxRow({ tx: t, colorMap, cats, editingTxId, editFormData, setEditFormData, onStartEdit, onSaveEdit, onCancelEdit, onDelete }) {
+// ── 单行组件 ────────────────────────────────────────────────
+function TxRow({ tx: t, colorMap, cats, onEdit, onDelete }) {
     const c = colorMap[t.cat1] || '#ccc';
-    const isEditing = editingTxId === t.id;
 
     let typeLabel = '支出', typeColor = 'var(--c-survive)', amtPrefix = '-';
     if (t.type === 'income')   { typeLabel = '收入'; typeColor = 'var(--c-income)';  amtPrefix = '+'; }
@@ -313,95 +214,25 @@ function TxRow({ tx: t, colorMap, cats, editingTxId, editFormData, setEditFormDa
         amtPrefix = isInc ? '+' : '-';
     }
 
-    // 编辑态下的分类下拉选项
-    const catOptsHtml = t.type === 'income'
-        ? getIncomeOpts(cats)
-        : getExpenseOpts(cats);
-
     return (
         <tr>
-            <td data-label="日期">
-                {isEditing ? (
-                    <input
-                        type="date"
-                        className="form-control"
-                        style={{ width:130 }}
-                        value={editFormData.date}
-                        onChange={e => setEditFormData(f => ({ ...f, date: e.target.value }))}
-                    />
-                ) : t.date}
-            </td>
-            <td data-label="类型">
-                <span style={{ color:typeColor, fontWeight:700 }}>{typeLabel}</span>
-            </td>
+            <td data-label="日期">{t.date}</td>
+            <td data-label="类型"><span style={{ color:typeColor, fontWeight:700 }}>{typeLabel}</span></td>
             <td data-label="一级">
                 <span className="tag" style={{ background:`${c}22`, color:c }}>{t.cat1 || '-'}</span>
             </td>
-            <td data-label="二级">
-                {isEditing ? (
-                    <select
-                        className="form-control"
-                        style={{ width:130 }}
-                        value={editFormData.cat2}
-                        onChange={e => setEditFormData(f => ({ ...f, cat2: e.target.value }))}
-                        dangerouslySetInnerHTML={{ __html: '<option value="">(选择分类)</option>' + catOptsHtml }}
-                    />
-                ) : getCatName(cats, t.cat2)}
-            </td>
-            <td data-label="说明" style={{ color:'#2D3748', fontWeight:500 }}>
-                {isEditing ? (
-                    <input
-                        type="text"
-                        className="form-control"
-                        style={{ width:'100%', minWidth:80 }}
-                        value={editFormData.desc}
-                        onChange={e => setEditFormData(f => ({ ...f, desc: e.target.value }))}
-                    />
-                ) : (t.desc || '')}
-            </td>
+            <td data-label="二级">{getCatName(cats, t.cat2)}</td>
+            <td data-label="说明" style={{ color:'#2D3748', fontWeight:500 }}>{t.desc || ''}</td>
             <td data-label="金额" style={{ textAlign:'right', fontWeight:'bold', color:typeColor }}>
-                {isEditing ? (
-                    <input
-                        type="number"
-                        className="form-control"
-                        style={{ width:100, textAlign:'right' }}
-                        value={editFormData.amount}
-                        onChange={e => setEditFormData(f => ({ ...f, amount: parseFloat(e.target.value) || 0 }))}
-                    />
-                ) : (
-                    <>{amtPrefix} {(t.amount || 0).toLocaleString()}</>
-                )}
+                {amtPrefix} {(t.amount || 0).toLocaleString()}
             </td>
-            <td style={{ whiteSpace:'nowrap' }}>
-                <div style={{ display:'flex', gap:8, alignItems:'center', justifyContent:'flex-end' }}>
-                    {isEditing ? (
-                        <>
-                            <button
-                                onClick={() => onSaveEdit(t)}
-                                title="保存"
-                                style={{ background:'none', border:'none', cursor:'pointer', padding:'0 4px', fontSize:16, lineHeight:1 }}
-                            >✅</button>
-                            <button
-                                onClick={onCancelEdit}
-                                title="取消"
-                                style={{ background:'none', border:'none', cursor:'pointer', padding:'0 4px', fontSize:16, lineHeight:1 }}
-                            >❌</button>
-                        </>
-                    ) : (
-                        <>
-                            <button
-                                onClick={() => onStartEdit(t)}
-                                title="编辑"
-                                style={{ background:'none', border:'none', cursor:'pointer', padding:'0 4px', fontSize:16, lineHeight:1 }}
-                            >✏️</button>
-                            <button
-                                onClick={onDelete}
-                                title="删除"
-                                style={{ background:'none', border:'none', cursor:'pointer', padding:'0 4px', fontSize:16, lineHeight:1 }}
-                            >🗑️</button>
-                        </>
-                    )}
-                </div>
+            <td>
+                <button className="btn-icon" onClick={onEdit} title="修改">
+                    <i className="ri-edit-line" />
+                </button>
+                <button className="btn-icon" onClick={onDelete} title="删除" style={{ color:'#E53935' }}>
+                    <i className="ri-delete-bin-line" />
+                </button>
             </td>
         </tr>
     );

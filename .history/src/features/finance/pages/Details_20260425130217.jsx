@@ -288,6 +288,7 @@ export default function Details() {
                                     onStartEdit={handleStartEdit}
                                     onSaveEdit={handleSaveEdit}
                                     onCancelEdit={handleCancelEdit}
+                                    onEdit={() => setEditTx(t)}
                                     onDelete={() => handleDelete(t)}
                                 />
                             ))}
@@ -295,12 +296,19 @@ export default function Details() {
                     </table>
                 </div>
             </div>
+
+            {/* 编辑弹窗 */}
+            <EditModal
+                open={!!editTx}
+                tx={editTx}
+                onClose={() => setEditTx(null)}
+            />
         </>
     );
 }
 
 // ── 单行组件（支持行内编辑）────────────────────────────────
-function TxRow({ tx: t, colorMap, cats, editingTxId, editFormData, setEditFormData, onStartEdit, onSaveEdit, onCancelEdit, onDelete }) {
+function TxRow({ tx: t, colorMap, cats, editingTxId, editFormData, setEditFormData, onStartEdit, onSaveEdit, onCancelEdit, onEdit, onDelete }) {
     const c = colorMap[t.cat1] || '#ccc';
     const isEditing = editingTxId === t.id;
 
@@ -372,36 +380,26 @@ function TxRow({ tx: t, colorMap, cats, editingTxId, editFormData, setEditFormDa
                     <>{amtPrefix} {(t.amount || 0).toLocaleString()}</>
                 )}
             </td>
-            <td style={{ whiteSpace:'nowrap' }}>
-                <div style={{ display:'flex', gap:8, alignItems:'center', justifyContent:'flex-end' }}>
-                    {isEditing ? (
-                        <>
-                            <button
-                                onClick={() => onSaveEdit(t)}
-                                title="保存"
-                                style={{ background:'none', border:'none', cursor:'pointer', padding:'0 4px', fontSize:16, lineHeight:1 }}
-                            >✅</button>
-                            <button
-                                onClick={onCancelEdit}
-                                title="取消"
-                                style={{ background:'none', border:'none', cursor:'pointer', padding:'0 4px', fontSize:16, lineHeight:1 }}
-                            >❌</button>
-                        </>
-                    ) : (
-                        <>
-                            <button
-                                onClick={() => onStartEdit(t)}
-                                title="编辑"
-                                style={{ background:'none', border:'none', cursor:'pointer', padding:'0 4px', fontSize:16, lineHeight:1 }}
-                            >✏️</button>
-                            <button
-                                onClick={onDelete}
-                                title="删除"
-                                style={{ background:'none', border:'none', cursor:'pointer', padding:'0 4px', fontSize:16, lineHeight:1 }}
-                            >🗑️</button>
-                        </>
-                    )}
-                </div>
+            <td>
+                {isEditing ? (
+                    <>
+                        <button className="btn-icon" onClick={() => onSaveEdit(t)} title="保存" style={{ color:'#38A169' }}>
+                            <i className="ri-check-line" />
+                        </button>
+                        <button className="btn-icon" onClick={onCancelEdit} title="取消" style={{ color:'#A0AEC0' }}>
+                            <i className="ri-close-line" />
+                        </button>
+                    </>
+                ) : (
+                    <>
+                        <button className="btn-icon" onClick={() => onStartEdit(t)} title="编辑">
+                            ✏️
+                        </button>
+                        <button className="btn-icon" onClick={onDelete} title="删除" style={{ color:'#E53935' }}>
+                            <i className="ri-delete-bin-line" />
+                        </button>
+                    </>
+                )}
             </td>
         </tr>
     );
