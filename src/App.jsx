@@ -403,6 +403,11 @@ export default function App() {
         💰
       </NavButton>
 
+      {/* Gemini Echo 入口 */}
+      <NavButton onClick={() => window.open('/gemini_echo.html', '_blank')} title="Gemini Echo" top="108px">
+        ✦
+      </NavButton>
+
       <div className="rpgui-content" id="ui-root">
 
         {/* HUD */}

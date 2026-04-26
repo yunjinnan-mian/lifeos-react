@@ -15,6 +15,7 @@ import Wardrobe from './features/wardrobe/index.jsx';
 import Finance from './features/finance/index.jsx';
 import { ZONE_TYPES, ZOOM_STEP } from './lib/config.js';
 import ExplorationModal from './features/exploration/index.jsx';
+import PlantModal from './features/plant/PlantModal.jsx';
 
 export default function App() {
   // ── Page routing ──────────────────────────────────────────
@@ -96,24 +97,6 @@ export default function App() {
     setAiStatusCallback(setAiStatus);
   }, []);
 
-  // ── Firebase listeners ────────────────────────────────────
-  useEffect(() => {
-    const unsubZones = onSnapshot(doc(db, 'config', 'itemMapZones'), snap => {
-      setSyncStatus('syncing');
-      const newZones = snap.exists() ? (snap.data().zones || []) : [];
-      setZones(newZones);
-      setSyncStatus('synced');
-    }, () => setSyncStatus('error'));
-
-    const q = query(collection(db, 'items'), where('domain', 'in', ['home', 'explore', 'supplies']));
-    const unsubItems = onSnapshot(q, snap => {
-      const newItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      setItems(newItems);
-    }, () => { });
-
-    return () => { unsubZones(); unsubItems(); };
-  }, []);
-
   // ── Rebuild world grid whenever data changes ──────────────
   useEffect(() => {
     const ibz = buildWorldGrid(zones, items);
@@ -132,6 +115,9 @@ export default function App() {
     if (zone?.type === ZONE_TYPES.EXPLORATION) {
       setActiveZoneId(zoneId);
       setOpenModal('exploration');
+    } else if (zone?.type === ZONE_TYPES.PLANT) {
+      setActiveZoneId(zoneId);
+      setOpenModal('plant');
     } else {
       setActiveZoneId(zoneId);
       setActiveTab('items');
@@ -323,6 +309,14 @@ export default function App() {
 
     try {
       const remoteUrl = await DB.uploadPhoto(path, currentBlob);
+      // 上传期间用户可能已删除该条目，校验文档仍存在再写入
+      const snap = await DB.getItem(id);
+      if (!snap.exists()) {
+        await DB.deletePhoto(path).catch(() => {});
+        localPreviewCache.current.delete(id);
+        revokePhotoUrl();
+        return;
+      }
       await DB.patchItem(id, { photoUrl: remoteUrl });
       localPreviewCache.current.delete(id);
       revokePhotoUrl();
@@ -409,6 +403,11 @@ export default function App() {
         💰
       </NavButton>
 
+      {/* Gemini Echo 入口 */}
+      <NavButton onClick={() => window.open('/gemini_echo.html', '_blank')} title="Gemini Echo" top="108px">
+        ✦
+      </NavButton>
+
       <div className="rpgui-content" id="ui-root">
 
         {/* HUD */}
@@ -476,6 +475,13 @@ export default function App() {
           onClose={() => setOpenModal(null)}
         />
       </div>{/* /ui-root */}
+
+      {/* PlantModal 在 rpgui-content 外，不继承游戏风格样式 */}
+      <PlantModal
+        isOpen={openModal === 'plant'}
+        onClose={() => setOpenModal(null)}
+        showToast={showToast}
+      />
     </>
 
   );
