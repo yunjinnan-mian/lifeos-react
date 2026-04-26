@@ -5,7 +5,6 @@
 // ============================================================
 
 import { useState, useMemo, useCallback, useRef, memo, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import { useFinance } from '../index';
 import { getCatName, getColorMap, getExpenseOpts, getIncomeOpts, getCatMap, getDomainForCat } from '../utils/catMap';
 import { db } from '../../../lib/firebase';
@@ -24,29 +23,22 @@ function sanitizeForFirestore(obj) {
     return cleaned;
 }
 
-// ── 表头筛选下拉组件（Portal 到 body，避免 overflow:hidden 裁剪）──
-const FilterDropdown = memo(function FilterDropdown({ anchorEl, onClose, options, filterState, onApply, type }) {
+// ── 表头筛选下拉组件 ────────────────────────────────────────
+const FilterDropdown = memo(function FilterDropdown({ col, anchorRef, onClose, options, filterState, onApply, type }) {
     const [local, setLocal] = useState({ ...filterState });
     const panelRef = useRef(null);
-    const [pos, setPos] = useState({ top: 0, left: 0 });
-
-    useEffect(() => {
-        if (anchorEl) {
-            const rect = anchorEl.getBoundingClientRect();
-            setPos({ top: rect.bottom + 4, left: rect.left });
-        }
-    }, [anchorEl]);
 
     // 点击外部关闭
     useEffect(() => {
         const handler = (e) => {
-            if (panelRef.current && !panelRef.current.contains(e.target) && e.target !== anchorEl && !anchorEl?.contains(e.target)) {
+            if (panelRef.current && !panelRef.current.contains(e.target)) {
                 onClose();
             }
         };
+        // 延迟绑定，避免打开时的 click 立即触发关闭
         const timer = setTimeout(() => document.addEventListener('mousedown', handler), 0);
         return () => { clearTimeout(timer); document.removeEventListener('mousedown', handler); };
-    }, [onClose, anchorEl]);
+    }, [onClose]);
 
     const handleApply = () => {
         onApply(local);
@@ -60,22 +52,15 @@ const FilterDropdown = memo(function FilterDropdown({ anchorEl, onClose, options
         onClose();
     };
 
-    const dropdownStyle = {
-        position: 'fixed',
-        top: pos.top,
-        left: pos.left,
-        zIndex: 9999,
-    };
-
     if (type === 'date') {
-        return createPortal(
-            <div className="filter-dropdown" ref={panelRef} style={{ ...dropdownStyle, minWidth: 200 }}>
+        return (
+            <div className="filter-dropdown" ref={panelRef} style={{ minWidth: 200 }}>
                 <div className="filter-section">
                     <div className="filter-label">按月份</div>
                     <select
                         className="form-control"
                         style={{ height: 32, fontSize: 12 }}
-                        value={local.dateMonth || ''}
+                        value={local.dateMonth}
                         onChange={e => setLocal(l => ({ ...l, dateMonth: e.target.value }))}
                     >
                         <option value="">全部月份</option>
@@ -92,7 +77,7 @@ const FilterDropdown = memo(function FilterDropdown({ anchorEl, onClose, options
                         style={{ height: 32, fontSize: 12, width: '100%' }}
                         placeholder="如 15"
                         min={1} max={31}
-                        value={local.dateDay || ''}
+                        value={local.dateDay}
                         onChange={e => setLocal(l => ({ ...l, dateDay: e.target.value }))}
                     />
                 </div>
@@ -100,14 +85,13 @@ const FilterDropdown = memo(function FilterDropdown({ anchorEl, onClose, options
                     <button className="btn btn-outline btn-sm" onClick={handleClear}>清除</button>
                     <button className="btn btn-primary btn-sm" onClick={handleApply}>确定</button>
                 </div>
-            </div>,
-            document.body
+            </div>
         );
     }
 
     if (type === 'amount') {
-        return createPortal(
-            <div className="filter-dropdown" ref={panelRef} style={{ ...dropdownStyle, minWidth: 180 }}>
+        return (
+            <div className="filter-dropdown" ref={panelRef} style={{ minWidth: 180 }}>
                 <div className="filter-section">
                     <div className="filter-label">最小金额</div>
                     <input
@@ -115,7 +99,7 @@ const FilterDropdown = memo(function FilterDropdown({ anchorEl, onClose, options
                         className="form-control"
                         style={{ height: 32, fontSize: 12, width: '100%' }}
                         placeholder="0"
-                        value={local.amountMin || ''}
+                        value={local.amountMin}
                         onChange={e => setLocal(l => ({ ...l, amountMin: e.target.value }))}
                     />
                 </div>
@@ -126,7 +110,7 @@ const FilterDropdown = memo(function FilterDropdown({ anchorEl, onClose, options
                         className="form-control"
                         style={{ height: 32, fontSize: 12, width: '100%' }}
                         placeholder="999999"
-                        value={local.amountMax || ''}
+                        value={local.amountMax}
                         onChange={e => setLocal(l => ({ ...l, amountMax: e.target.value }))}
                     />
                 </div>
@@ -134,17 +118,13 @@ const FilterDropdown = memo(function FilterDropdown({ anchorEl, onClose, options
                     <button className="btn btn-outline btn-sm" onClick={handleClear}>清除</button>
                     <button className="btn btn-primary btn-sm" onClick={handleApply}>确定</button>
                 </div>
-            </div>,
-            document.body
+            </div>
         );
     }
 
-    // 判断 options 是对象数组（{id, name}）还是字符串数组
-    const isObjOpts = options && options.length > 0 && typeof options[0] === 'object';
-
     // text / select 类型
-    return createPortal(
-        <div className="filter-dropdown fd-portal" ref={panelRef} style={{ ...dropdownStyle, minWidth: 160 }}>
+    return (
+        <div className="filter-dropdown" ref={panelRef} style={{ minWidth: 160 }}>
             {type === 'text' ? (
                 <div className="filter-section">
                     <input
@@ -166,14 +146,9 @@ const FilterDropdown = memo(function FilterDropdown({ anchorEl, onClose, options
                         onChange={e => setLocal({ value: e.target.value })}
                     >
                         <option value="">全部</option>
-                        {isObjOpts
-                            ? (options || []).map(opt => (
-                                <option key={opt.id} value={opt.id}>{opt.name}</option>
-                            ))
-                            : (options || []).map(opt => (
-                                <option key={opt} value={opt}>{opt}</option>
-                            ))
-                        }
+                        {(options || []).map(opt => (
+                            <option key={opt} value={opt}>{opt}</option>
+                        ))}
                     </select>
                 </div>
             )}
@@ -181,8 +156,7 @@ const FilterDropdown = memo(function FilterDropdown({ anchorEl, onClose, options
                 <button className="btn btn-outline btn-sm" onClick={handleClear}>清除</button>
                 <button className="btn btn-primary btn-sm" onClick={handleApply}>确定</button>
             </div>
-        </div>,
-        document.body
+        </div>
     );
 });
 
@@ -216,7 +190,8 @@ const FilterableTh = memo(function FilterableTh({ className, label, sortable, so
             </span>
             {open && (
                 <FilterDropdown
-                    anchorEl={filterBtnRef.current}
+                    col={label}
+                    anchorRef={thRef}
                     onClose={() => setOpen(false)}
                     type={filterType}
                     options={filterOptions}
@@ -537,7 +512,7 @@ const Details = memo(function Details() {
                             label="二级"
                             filterType="select"
                             filterState={{ value: colFilters.cat2 }}
-                            filterOptions={filterOptions.cat2s}
+                            filterOptions={filterOptions.cat2s.map(c => c.id)}
                             onFilterApply={handleCat2FilterApply}
                             isFiltered={hasCat2Filter}
                         />

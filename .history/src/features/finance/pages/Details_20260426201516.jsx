@@ -139,12 +139,9 @@ const FilterDropdown = memo(function FilterDropdown({ anchorEl, onClose, options
         );
     }
 
-    // 判断 options 是对象数组（{id, name}）还是字符串数组
-    const isObjOpts = options && options.length > 0 && typeof options[0] === 'object';
-
     // text / select 类型
     return createPortal(
-        <div className="filter-dropdown fd-portal" ref={panelRef} style={{ ...dropdownStyle, minWidth: 160 }}>
+        <div className="filter-dropdown" ref={panelRef} style={{ ...dropdownStyle, minWidth: 160 }}>
             {type === 'text' ? (
                 <div className="filter-section">
                     <input
@@ -166,14 +163,9 @@ const FilterDropdown = memo(function FilterDropdown({ anchorEl, onClose, options
                         onChange={e => setLocal({ value: e.target.value })}
                     >
                         <option value="">全部</option>
-                        {isObjOpts
-                            ? (options || []).map(opt => (
-                                <option key={opt.id} value={opt.id}>{opt.name}</option>
-                            ))
-                            : (options || []).map(opt => (
-                                <option key={opt} value={opt}>{opt}</option>
-                            ))
-                        }
+                        {(options || []).map(opt => (
+                            <option key={opt} value={opt}>{opt}</option>
+                        ))}
                     </select>
                 </div>
             )}
@@ -216,7 +208,8 @@ const FilterableTh = memo(function FilterableTh({ className, label, sortable, so
             </span>
             {open && (
                 <FilterDropdown
-                    anchorEl={filterBtnRef.current}
+                    col={label}
+                    anchorRef={thRef}
                     onClose={() => setOpen(false)}
                     type={filterType}
                     options={filterOptions}
@@ -537,7 +530,7 @@ const Details = memo(function Details() {
                             label="二级"
                             filterType="select"
                             filterState={{ value: colFilters.cat2 }}
-                            filterOptions={filterOptions.cat2s}
+                            filterOptions={filterOptions.cat2s.map(c => c.id)}
                             onFilterApply={handleCat2FilterApply}
                             isFiltered={hasCat2Filter}
                         />

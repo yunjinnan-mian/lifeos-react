@@ -782,12 +782,11 @@
 }
 .finance-root .virt-thead{
     display: grid;
-    grid-template-columns: 120px 60px 70px 120px 1fr 120px 60px;
+    grid-template-columns: 110px 60px 70px 110px 1fr 110px 60px;
     gap: 0;
     border-bottom: 2px solid #C4A882;
     padding: 0 0 8px 0;
     flex-shrink: 0;
-    position: relative;
 }
 .finance-root .virt-th{
     font-family: var(--font-pixel);
@@ -799,10 +798,6 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    position: relative;
-    display: flex;
-    align-items: center;
-    gap: 4px;
 }
 .finance-root .virt-th-date{
     cursor: pointer;
@@ -832,65 +827,71 @@
 }
 
 /* ── 筛选下拉面板（Google Sheets 风格）───────────────── */
-/* 在 .finance-root 内也保留一份应对非 portal 场景 */
-.finance-root .filter-dropdown,
-.filter-dropdown.fd-portal {
-    position: fixed;
-    z-index: 9999;
-    background: var(--bg-card, #FEFCF7);
+.finance-root .filter-dropdown{
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 100;
+    background: var(--bg-card);
     border: 2px solid #C4A882;
-    border-radius: var(--radius, 8px);
-    padding: 16px;
-    box-shadow: 0 8px 32px rgba(100,60,20,0.20), 0 1px 0 rgba(255,255,255,0.6) inset, 0 0 0 1px rgba(196,168,130,0.1);
+    border-radius: var(--radius);
+    padding: 12px;
+    box-shadow: 0 8px 24px rgba(100,60,20,0.18), 0 1px 0 rgba(255,255,255,0.6) inset;
+    margin-top: 6px;
     min-width: 160px;
     animation: filterSlideDown 0.15s ease;
-    font-family: var(--font-sans);
 }
 @keyframes filterSlideDown {
     from { opacity: 0; transform: translateY(-6px); }
     to   { opacity: 1; transform: translateY(0); }
 }
-.filter-dropdown .filter-section,
-.finance-root .filter-section {
-    margin-bottom: 14px;
+.finance-root .filter-section{
+    margin-bottom: 10px;
 }
-.filter-dropdown .filter-section:last-of-type {
-    margin-bottom: 0;
-}
-.filter-dropdown .filter-label,
-.finance-root .filter-label {
+.finance-root .filter-label{
     font-size: 10px;
     font-family: var(--font-pixel);
     color: var(--text-sub);
-    margin-bottom: 6px;
+    margin-bottom: 4px;
     letter-spacing: 0.5px;
     text-transform: uppercase;
-    font-weight: 600;
 }
-.filter-dropdown .form-control,
-.finance-root .filter-dropdown .form-control {
-    height: 34px;
+.finance-root .filter-dropdown .form-control{
+    height: 32px;
     font-size: 12px;
-    padding: 4px 10px;
-    border-radius: 6px;
+    padding: 4px 8px;
 }
-.filter-dropdown .filter-actions,
-.finance-root .filter-actions {
+.finance-root .filter-actions{
     display: flex;
-    gap: 10px;
+    gap: 8px;
     justify-content: flex-end;
-    padding-top: 10px;
-    border-top: 1px solid #E8DCC8;
-    margin-top: 4px;
+    padding-top: 6px;
+    border-top: 1px solid #DDD0BC;
+    margin-top: 2px;
 }
-.filter-dropdown .filter-actions .btn,
-.finance-root .filter-actions .btn {
-    padding: 5px 14px;
+.finance-root .filter-actions .btn{
+    padding: 4px 12px;
     font-size: 11px;
-    border-radius: 6px;
-    font-weight: 500;
 }
 
+/* ── 虚拟表头 relative 定位（让 filter-dropdown 相对其定位）── */
+.finance-root .virt-thead{
+    position: relative;
+}
+.finance-root .virt-th{
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* ── 表头筛选时微调 grid ────────────────────────────── */
+.finance-root .virt-thead{
+    grid-template-columns: 120px 60px 70px 120px 1fr 120px 60px;
+}
+.finance-root .virt-row{
+    grid-template-columns: 120px 60px 70px 120px 1fr 120px 60px;
+}
 .finance-root .virt-tbody{
     flex: 1;
     overflow-y: auto;
@@ -907,7 +908,7 @@
     left: 0;
     right: 0;
     display: grid;
-    grid-template-columns: 120px 60px 70px 120px 1fr 120px 60px;
+    grid-template-columns: 110px 60px 70px 110px 1fr 110px 60px;
     gap: 0;
     align-items: center;
     border-bottom: 1px solid #DDD0BC;
