@@ -343,9 +343,7 @@ const handleAiApply = useCallback((billId, catId) => {
             <AiClassifyProgressBar aiClassify={aiClassify} />
         </>
     );
-});
-
-export default Journal;
+}
 
 // ── 清洗台单行组件 ─────────────────────────────────────────
 function CleanRow({ bill: b, idx, accOptsHtml, expOptsHtml, incOptsHtml, cats, onToggle, onUpdate, onSwitchType, onQuickRule }) {

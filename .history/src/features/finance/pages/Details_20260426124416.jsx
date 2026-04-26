@@ -252,8 +252,6 @@ const Details = memo(function Details() {
     );
 });
 
-export default Details;
-
 // ── 单行组件（支持行内编辑）+ React.memo ──────────────────
 const TxRow = memo(function TxRow({ tx: t, colorMap, cats, editingTxId, editFormData, setEditFormData, onStartEdit, onSaveEdit, onCancelEdit, onDelete }) {
     const c = colorMap[t.cat1] || '#ccc';

@@ -250,9 +250,7 @@ const Details = memo(function Details() {
             </div>
         </>
     );
-});
-
-export default Details;
+}
 
 // ── 单行组件（支持行内编辑）+ React.memo ──────────────────
 const TxRow = memo(function TxRow({ tx: t, colorMap, cats, editingTxId, editFormData, setEditFormData, onStartEdit, onSaveEdit, onCancelEdit, onDelete }) {

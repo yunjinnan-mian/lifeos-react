@@ -533,9 +533,7 @@ const Assets = memo(function Assets() {
             </div>
         </div>
     );
-});
-
-export default Assets;
+}
 
 // ── 样式常量 ──────────────────────────────────────────────
 const BORDER_COLOR = '#e2e8f0';
