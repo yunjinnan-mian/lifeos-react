@@ -644,13 +644,13 @@ body{overflow:hidden;background:#0a0806;font-family:'Zpix','VT323',monospace}
   display: block;
   font-size: 13px;
   letter-spacing: 1.5px;
-  color: var(--c-gold-dim);
+  color: #8B6914;
   margin-bottom: 4px;
   text-shadow: 1px 1px 0 var(--c-shadow);
   font-weight: bold;
 }
 .edit-col-emoji .rpgui-input,
-.edit-col-wide  .rpgui-input { width: 100% !important; }
+.edit-col-wide  .rpgui-input { width: 100% !important; color: #1a0c02 !important; }
 
 .confirm-msg {
   font-size: 16px;
