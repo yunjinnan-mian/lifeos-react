@@ -1394,30 +1394,6 @@ App.FileImport = (() => {
         }
     }
 
-    /**
-     * Extract the timestamp of the first turn that has one.
-     * Returns null when turns or timestamps are absent.
-     */
-    function _deriveFirstMessageTime(turns) {
-        if (!Array.isArray(turns)) return null;
-        for (const t of turns) {
-            if (t.timestamp) return t.timestamp;
-        }
-        return null;
-    }
-
-    /**
-     * Extract the timestamp of the last turn that has one.
-     * Returns null when turns or timestamps are absent.
-     */
-    function _deriveLastMessageTime(turns) {
-        if (!Array.isArray(turns)) return null;
-        for (let i = turns.length - 1; i >= 0; i--) {
-            if (turns[i].timestamp) return turns[i].timestamp;
-        }
-        return null;
-    }
-
     return { init, processFile, setInternalDrag };
 })();
 
@@ -1813,25 +1789,12 @@ App.Sidebar = (() => {
         infoEl.className = 'file-info';
         const turns      = Array.isArray(sess.turns) ? sess.turns : [];
         const count      = turns.length || sess.turnCount || 0;
-
-        // 优先用 turns 内的时间戳计算跨度；turns 未加载时退回到
-        // session 级别的 firstMessageTime / lastMessageTime（已在导入
-        // 时从原始数据提取，且经过 Firestore 往返持久化）。
-        const firstTs = (turns.length > 0 && turns[0].timestamp)
-            ? turns[0].timestamp
-            : sess.firstMessageTime;
-
-        const lastTs = (turns.length > 0 && turns[turns.length - 1].timestamp)
-            ? turns[turns.length - 1].timestamp
-            : sess.lastMessageTime;
-
-        if (firstTs && lastTs && firstTs !== lastTs) {
-            const range = `${App.Utils.formatTime(firstTs)} → ${App.Utils.formatTime(lastTs)}`;
+        const tsArr      = turns.filter(t => t.timestamp);
+        if (tsArr.length >= 2) {
+            const range = `${App.Utils.formatTime(tsArr[0].timestamp)} → ${App.Utils.formatTime(tsArr[tsArr.length - 1].timestamp)}`;
             infoEl.textContent = `${count} 条 • ${range}`;
-        } else if (firstTs) {
-            infoEl.textContent = `${count} 条 • ${new Date(firstTs).toLocaleDateString()}`;
         } else {
-            infoEl.textContent = `${count} 条对话`;
+            infoEl.textContent = `${count} 条对话 • ${new Date(sess.timestamp).toLocaleDateString()}`;
         }
 
         // ── Delete ───────────────────────────────────────────────
@@ -2923,30 +2886,26 @@ function sessionToMetaDoc(session, turnsStoragePath, turnsUrl) {
         groupId:           session.groupId           ?? null,
         createdAt:         session.createdAt         ?? now,
         updatedAt:         now,
-        firstMessageTime:  session.firstMessageTime  ?? null,
-        lastMessageTime:   session.lastMessageTime   ?? null,
     };
 }
 
-    function docToSession(id, data) {
-        return {
-            id,
-            name:              data.name              ?? '未命名会话',
-            systemInstruction: data.systemInstruction ?? '',
-            modelName:         data.modelName         ?? '',
-            turns:             null,          // null = 尚未加载，由 switchTo 懒加载
-            turnsStoragePath:  data.turnsStoragePath ?? null,
-            turnsUrl:          data.turnsUrl          ?? null,
-            turnCount:         data.turnCount         ?? 0,
-            sortOrder:         data.sortOrder         ?? 0,
-            groupId:           data.groupId           ?? null,
-            timestamp:         data.createdAt         ?? data.updatedAt ?? new Date().toISOString(),
-            createdAt:         data.createdAt         ?? new Date().toISOString(),
-            updatedAt:         data.updatedAt         ?? new Date().toISOString(),
-            firstMessageTime:  data.firstMessageTime  ?? null,
-            lastMessageTime:   data.lastMessageTime   ?? null,
-        };
-    }
+function docToSession(id, data) {
+    return {
+        id,
+        name:              data.name              ?? '未命名会话',
+        systemInstruction: data.systemInstruction ?? '',
+        modelName:         data.modelName         ?? '',
+        turns:             null,          // null = 尚未加载，由 switchTo 懒加载
+        turnsStoragePath:  data.turnsStoragePath ?? null,
+        turnsUrl:          data.turnsUrl          ?? null,
+        turnCount:         data.turnCount         ?? 0,
+        sortOrder:         data.sortOrder         ?? 0,
+        groupId:           data.groupId           ?? null,
+        timestamp:         data.createdAt         ?? data.updatedAt ?? new Date().toISOString(),
+        createdAt:         data.createdAt         ?? new Date().toISOString(),
+        updatedAt:         data.updatedAt         ?? new Date().toISOString(),
+    };
+}
 
 /* ================================================================
    DB 层——所有 Firebase 操作的唯一入口
