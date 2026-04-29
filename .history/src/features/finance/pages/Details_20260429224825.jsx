@@ -61,7 +61,7 @@ const CopyConfigPopover = memo(function CopyConfigPopover({ anchorEl, onClose, s
     };
 
     return createPortal(
-<div className="filter-dropdown copy-config-popover fd-portal" ref={panelRef} style={dropdownStyle}>
+        <div className="filter-dropdown copy-config-popover" ref={panelRef} style={dropdownStyle}>
             <div className="filter-section">
                 <div className="filter-label">复制字段</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>

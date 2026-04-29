@@ -61,7 +61,7 @@ const CopyConfigPopover = memo(function CopyConfigPopover({ anchorEl, onClose, s
     };
 
     return createPortal(
-<div className="filter-dropdown copy-config-popover fd-portal" ref={panelRef} style={dropdownStyle}>
+        <div className="filter-dropdown copy-config-popover" ref={panelRef} style={dropdownStyle}>
             <div className="filter-section">
                 <div className="filter-label">复制字段</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -634,42 +634,20 @@ const Details = memo(function Details() {
                         onChange={handleSearchChange}
                     />
                     <button
-                        ref={copyBtnRef}
                         className="btn btn-outline btn-sm"
                         style={{ flexShrink: 0 }}
-                        onClick={() => setCopyConfigOpen(v => !v)}
-                        title="配置复制字段与选择范围"
+                        onClick={handleCopyDesc}
+                        title="复制当前筛选条件下所有记录（月份,说明,金额）"
                     >
                         <i className="ri-file-copy-line" style={{ marginRight: 4 }} />
                         复制
                     </button>
-                    {copyConfigOpen && (
-                        <CopyConfigPopover
-                            anchorEl={copyBtnRef.current}
-                            onClose={() => setCopyConfigOpen(false)}
-                            selectedCols={selectedCols}
-                            onToggleCol={handleToggleCol}
-                            selectedCount={selectedCount}
-                            totalCount={filteredTxs.length}
-                            onClearSelection={handleClearSelection}
-                            onCopy={executeCopy}
-                        />
-                    )}
                 </div>
 
                 {/* 虚拟滚动表格 */}
                 <div className="virt-table-container">
                     {/* 表头（固定不滚动） */}
                     <div className="virt-thead">
-                        <div className="virt-th virt-th-checkbox">
-                            <input
-                                type="checkbox"
-                                checked={isAllSelected}
-                                onChange={handleSelectAllToggle}
-                                title="全选/取消全选"
-                                style={{ accentColor: 'var(--primary)', cursor: 'pointer' }}
-                            />
-                        </div>
                         <FilterableTh
                             className="virt-th-date"
                             label="日期"
@@ -748,14 +726,6 @@ const Details = memo(function Details() {
                                                 transform: `translateY(${virtualItem.start}px)`,
                                             }}
                                         >
-                                            <div className="virt-td virt-td-checkbox">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={isAllSelected || (selectedTxIds && selectedTxIds.has(t.id))}
-                                                    onChange={() => handleToggleRow(t.id)}
-                                                    title="选择/取消选择此条记录"
-                                                />
-                                            </div>
                                             <TxRow
                                                 tx={t}
                                                 colorMap={colorMap}

@@ -61,7 +61,7 @@ const CopyConfigPopover = memo(function CopyConfigPopover({ anchorEl, onClose, s
     };
 
     return createPortal(
-<div className="filter-dropdown copy-config-popover fd-portal" ref={panelRef} style={dropdownStyle}>
+        <div className="filter-dropdown copy-config-popover" ref={panelRef} style={dropdownStyle}>
             <div className="filter-section">
                 <div className="filter-label">复制字段</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -540,65 +540,25 @@ const Details = memo(function Details() {
         showToast('修改成功');
     }, [editFormData, data, setData, updateData, showToast]);
 
-    // ── 复制：使用 selectedCols + selectedTxIds 生成 CSV ────
-    const executeCopy = useCallback(async () => {
-        const targets = selectedTxIds
-            ? filteredTxs.filter(t => selectedTxIds.has(t.id))
-            : filteredTxs;
-        if (targets.length === 0) {
+    // ── 一键复制当前筛选下的月份,说明,金额 ──────────────────
+    const handleCopyDesc = useCallback(async () => {
+        const lines = filteredTxs.map(t => {
+            const month = (t.date || '').slice(0, 7);
+            const desc = t.desc || '';
+            const amount = (t.amount || 0).toLocaleString();
+            return `${month},${desc},${amount}`;
+        });
+        if (lines.length === 0) {
             showToast('没有可复制的内容');
             return;
         }
-        const lines = targets.map(t => {
-            const parts = [];
-            if (selectedCols.has('month')) parts.push((t.date || '').slice(0, 7));
-            if (selectedCols.has('desc')) parts.push(t.desc || '');
-            if (selectedCols.has('amount')) parts.push((t.amount || 0).toLocaleString());
-            return parts.join(',');
-        });
         try {
             await navigator.clipboard.writeText(lines.join('\n'));
             showToast(`已复制 ${lines.length} 条记录`);
         } catch {
             showToast('复制失败，请手动复制');
         }
-    }, [filteredTxs, selectedCols, selectedTxIds, showToast]);
-
-    // ── 选择回调 ─────────────────────────────────────────
-    const handleToggleRow = useCallback((txId) => {
-        setSelectedTxIds(prev => {
-            const next = prev ? new Set(prev) : new Set(filteredTxs.map(t => t.id));
-            if (next.has(txId)) {
-                next.delete(txId);
-                return next.size === 0 ? null : next; // 全不选 → null（即全部）
-            } else {
-                next.add(txId);
-                return next.size === filteredTxs.length ? null : next; // 全选 → null
-            }
-        });
-    }, [filteredTxs]);
-
-    const handleSelectAllToggle = useCallback(() => {
-        setSelectedTxIds(prev => prev ? null : new Set()); // null ↔ 空 Set（只选部分 → 全选）
-    }, []);
-
-    const handleToggleCol = useCallback((key) => {
-        setSelectedCols(prev => {
-            const next = new Set(prev);
-            if (next.has(key)) next.delete(key);
-            else next.add(key);
-            return next;
-        });
-    }, []);
-
-    const handleClearSelection = useCallback(() => {
-        setSelectedTxIds(null);
-    }, []);
-
-    // 判断全选状态
-    const isAllSelected = selectedTxIds === null;
-    const isSomeSelected = selectedTxIds !== null && selectedTxIds.size > 0;
-    const selectedCount = selectedTxIds ? selectedTxIds.size : filteredTxs.length;
+    }, [filteredTxs, showToast]);
 
     // ── 各列筛选应用回调 ────────────────────────────────
     const handleDateFilterApply = useCallback((f) => {
@@ -634,42 +594,20 @@ const Details = memo(function Details() {
                         onChange={handleSearchChange}
                     />
                     <button
-                        ref={copyBtnRef}
                         className="btn btn-outline btn-sm"
                         style={{ flexShrink: 0 }}
-                        onClick={() => setCopyConfigOpen(v => !v)}
-                        title="配置复制字段与选择范围"
+                        onClick={handleCopyDesc}
+                        title="复制当前筛选条件下所有记录（月份,说明,金额）"
                     >
                         <i className="ri-file-copy-line" style={{ marginRight: 4 }} />
                         复制
                     </button>
-                    {copyConfigOpen && (
-                        <CopyConfigPopover
-                            anchorEl={copyBtnRef.current}
-                            onClose={() => setCopyConfigOpen(false)}
-                            selectedCols={selectedCols}
-                            onToggleCol={handleToggleCol}
-                            selectedCount={selectedCount}
-                            totalCount={filteredTxs.length}
-                            onClearSelection={handleClearSelection}
-                            onCopy={executeCopy}
-                        />
-                    )}
                 </div>
 
                 {/* 虚拟滚动表格 */}
                 <div className="virt-table-container">
                     {/* 表头（固定不滚动） */}
                     <div className="virt-thead">
-                        <div className="virt-th virt-th-checkbox">
-                            <input
-                                type="checkbox"
-                                checked={isAllSelected}
-                                onChange={handleSelectAllToggle}
-                                title="全选/取消全选"
-                                style={{ accentColor: 'var(--primary)', cursor: 'pointer' }}
-                            />
-                        </div>
                         <FilterableTh
                             className="virt-th-date"
                             label="日期"
@@ -748,14 +686,6 @@ const Details = memo(function Details() {
                                                 transform: `translateY(${virtualItem.start}px)`,
                                             }}
                                         >
-                                            <div className="virt-td virt-td-checkbox">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={isAllSelected || (selectedTxIds && selectedTxIds.has(t.id))}
-                                                    onChange={() => handleToggleRow(t.id)}
-                                                    title="选择/取消选择此条记录"
-                                                />
-                                            </div>
                                             <TxRow
                                                 tx={t}
                                                 colorMap={colorMap}

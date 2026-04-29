@@ -61,7 +61,7 @@ const CopyConfigPopover = memo(function CopyConfigPopover({ anchorEl, onClose, s
     };
 
     return createPortal(
-<div className="filter-dropdown copy-config-popover fd-portal" ref={panelRef} style={dropdownStyle}>
+        <div className="filter-dropdown copy-config-popover" ref={panelRef} style={dropdownStyle}>
             <div className="filter-section">
                 <div className="filter-label">复制字段</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -748,14 +748,6 @@ const Details = memo(function Details() {
                                                 transform: `translateY(${virtualItem.start}px)`,
                                             }}
                                         >
-                                            <div className="virt-td virt-td-checkbox">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={isAllSelected || (selectedTxIds && selectedTxIds.has(t.id))}
-                                                    onChange={() => handleToggleRow(t.id)}
-                                                    title="选择/取消选择此条记录"
-                                                />
-                                            </div>
                                             <TxRow
                                                 tx={t}
                                                 colorMap={colorMap}
