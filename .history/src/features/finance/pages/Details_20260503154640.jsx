@@ -1,6 +1,6 @@
 // ============================================================
 // Finance Pro — Details 账单明细
-// 功能：关键词筛选 + 排序 + 编辑 + 删除 + 表头筛选（多选）
+// 功能：关键词筛选 + 排序 + 编辑 + 删除 + 表头筛选
 // 优化：虚拟滚动 + React.memo + 搜索防抖
 // ============================================================
 
@@ -93,61 +93,16 @@ const CopyConfigPopover = memo(function CopyConfigPopover({ anchorEl, onClose, s
     );
 });
 
-// ── 多选复选框下拉组件（用于类型/一级/二级）────────
-const MultiCheckDropdown = memo(function MultiCheckDropdown({ options, selectedValues, onChange, onSelectAll, onDeselectAll }) {
-    // options 可能是字符串数组或 {id, name} 对象数组
-    const isObjOpts = options && options.length > 0 && typeof options[0] === 'object';
-
-    const getKey = (opt) => isObjOpts ? opt.id : opt;
-    const getLabel = (opt) => isObjOpts ? opt.name : opt;
-
-    const allSelected = options && options.length > 0 && options.every(opt => selectedValues.includes(getKey(opt)));
-    const someSelected = selectedValues.length > 0 && !allSelected;
-
-    return (
-        <div className="multi-check-list">
-            <div className="multi-check-actions">
-                <button className="btn btn-outline btn-xs" onClick={onSelectAll}>全选</button>
-                <button className="btn btn-outline btn-xs" onClick={onDeselectAll}>取消</button>
-            </div>
-            <div className="multi-check-options">
-                {(options || []).map(opt => {
-                    const key = getKey(opt);
-                    const label = getLabel(opt);
-                    return (
-                        <label key={key} className="multi-check-item">
-                            <input
-                                type="checkbox"
-                                checked={selectedValues.includes(key)}
-                                onChange={() => onChange(key)}
-                                style={{ accentColor: 'var(--primary)' }}
-                            />
-                            <span>{label}</span>
-                        </label>
-                    );
-                })}
-            </div>
-        </div>
-    );
-});
-
 // ── 表头筛选下拉组件（Portal 到 body，避免 overflow:hidden 裁剪）──
 const FilterDropdown = memo(function FilterDropdown({ anchorEl, onClose, options, filterState, onApply, type }) {
-    const [local, setLocal] = useState(() => {
-        // 深拷贝，特别是数组类型
-        const s = {};
-        for (const k of Object.keys(filterState)) {
-            s[k] = Array.isArray(filterState[k]) ? [...filterState[k]] : filterState[k];
-        }
-        return s;
-    });
+    const [local, setLocal] = useState({ ...filterState });
     const panelRef = useRef(null);
     const [pos, setPos] = useState({ top: 0, left: 0 });
 
     useEffect(() => {
         if (anchorEl) {
             const rect = anchorEl.getBoundingClientRect();
-            setPos({ top: rect.bottom + 4, left: Math.max(0, rect.left - 100) });
+            setPos({ top: rect.bottom + 4, left: rect.left });
         }
     }, [anchorEl]);
 
@@ -168,11 +123,8 @@ const FilterDropdown = memo(function FilterDropdown({ anchorEl, onClose, options
     };
 
     const handleClear = () => {
-        // 清除：数组字段设为空数组，标量字段设为空字符串
         const cleared = {};
-        for (const k of Object.keys(local)) {
-            cleared[k] = Array.isArray(local[k]) ? [] : '';
-        }
+        Object.keys(local).forEach(k => { cleared[k] = ''; });
         onApply(cleared);
         onClose();
     };
@@ -184,47 +136,22 @@ const FilterDropdown = memo(function FilterDropdown({ anchorEl, onClose, options
         zIndex: 9999,
     };
 
-    // ── 日期筛选：月份多选 + 日输入 ──
     if (type === 'date') {
-        const allMonths = (local.dateMonth || []).length === 0;
-        const monthsList = (options?.months || []);
-
-        const toggleMonth = (m) => {
-            setLocal(l => {
-                const cur = l.dateMonth || [];
-                if (cur.includes(m)) {
-                    return { ...l, dateMonth: cur.filter(x => x !== m) };
-                } else {
-                    return { ...l, dateMonth: [...cur, m] };
-                }
-            });
-        };
-        const selectAllMonths = () => setLocal(l => ({ ...l, dateMonth: [...monthsList] }));
-        const deselectAllMonths = () => setLocal(l => ({ ...l, dateMonth: [] }));
-
         return createPortal(
-            <div className="filter-dropdown fd-portal" ref={panelRef} style={{ ...dropdownStyle, minWidth: 220 }}>
+            <div className="filter-dropdown" ref={panelRef} style={{ ...dropdownStyle, minWidth: 200 }}>
                 <div className="filter-section">
-                    <div className="filter-label">按月份（可多选）</div>
-                    <div className="multi-check-list">
-                        <div className="multi-check-actions">
-                            <button className="btn btn-outline btn-xs" onClick={selectAllMonths}>全选</button>
-                            <button className="btn btn-outline btn-xs" onClick={deselectAllMonths}>取消</button>
-                        </div>
-                        <div className="multi-check-options">
-                            {monthsList.map(m => (
-                                <label key={m} className="multi-check-item">
-                                    <input
-                                        type="checkbox"
-                                        checked={(local.dateMonth || []).includes(m)}
-                                        onChange={() => toggleMonth(m)}
-                                        style={{ accentColor: 'var(--primary)' }}
-                                    />
-                                    <span>{m}</span>
-                                </label>
-                            ))}
-                        </div>
-                    </div>
+                    <div className="filter-label">按月份</div>
+                    <select
+                        className="form-control"
+                        style={{ height: 32, fontSize: 12 }}
+                        value={local.dateMonth || ''}
+                        onChange={e => setLocal(l => ({ ...l, dateMonth: e.target.value }))}
+                    >
+                        <option value="">全部月份</option>
+                        {(options?.months || []).map(m => (
+                            <option key={m} value={m}>{m}</option>
+                        ))}
+                    </select>
                 </div>
                 <div className="filter-section">
                     <div className="filter-label">按日期（日）</div>
@@ -240,17 +167,16 @@ const FilterDropdown = memo(function FilterDropdown({ anchorEl, onClose, options
                 </div>
                 <div className="filter-actions">
                     <button className="btn btn-outline btn-sm" onClick={handleClear}>清除</button>
-                    <button className="btn btn-primary btn-sm" onClick={handleApply}>应用</button>
+                    <button className="btn btn-primary btn-sm" onClick={handleApply}>确定</button>
                 </div>
             </div>,
             document.body
         );
     }
 
-    // ── 金额筛选 ──
     if (type === 'amount') {
         return createPortal(
-            <div className="filter-dropdown fd-portal" ref={panelRef} style={{ ...dropdownStyle, minWidth: 180 }}>
+            <div className="filter-dropdown" ref={panelRef} style={{ ...dropdownStyle, minWidth: 180 }}>
                 <div className="filter-section">
                     <div className="filter-label">最小金额</div>
                     <input
@@ -275,17 +201,20 @@ const FilterDropdown = memo(function FilterDropdown({ anchorEl, onClose, options
                 </div>
                 <div className="filter-actions">
                     <button className="btn btn-outline btn-sm" onClick={handleClear}>清除</button>
-                    <button className="btn btn-primary btn-sm" onClick={handleApply}>应用</button>
+                    <button className="btn btn-primary btn-sm" onClick={handleApply}>确定</button>
                 </div>
             </div>,
             document.body
         );
     }
 
-    // ── 文本筛选 ──
-    if (type === 'text') {
-        return createPortal(
-            <div className="filter-dropdown fd-portal" ref={panelRef} style={{ ...dropdownStyle, minWidth: 160 }}>
+    // 判断 options 是对象数组（{id, name}）还是字符串数组
+    const isObjOpts = options && options.length > 0 && typeof options[0] === 'object';
+
+    // text / select 类型
+    return createPortal(
+        <div className="filter-dropdown fd-portal" ref={panelRef} style={{ ...dropdownStyle, minWidth: 160 }}>
+            {type === 'text' ? (
                 <div className="filter-section">
                     <input
                         type="text"
@@ -297,63 +226,29 @@ const FilterDropdown = memo(function FilterDropdown({ anchorEl, onClose, options
                         onKeyDown={e => { if (e.key === 'Enter') { handleApply(); } }}
                     />
                 </div>
-                <div className="filter-actions">
-                    <button className="btn btn-outline btn-sm" onClick={handleClear}>清除</button>
-                    <button className="btn btn-primary btn-sm" onClick={handleApply}>应用</button>
+            ) : (
+                <div className="filter-section">
+                    <select
+                        className="form-control"
+                        style={{ height: 32, fontSize: 12 }}
+                        value={local.value || ''}
+                        onChange={e => setLocal({ value: e.target.value })}
+                    >
+                        <option value="">全部</option>
+                        {isObjOpts
+                            ? (options || []).map(opt => (
+                                <option key={opt.id} value={opt.id}>{opt.name}</option>
+                            ))
+                            : (options || []).map(opt => (
+                                <option key={opt} value={opt}>{opt}</option>
+                            ))
+                        }
+                    </select>
                 </div>
-            </div>,
-            document.body
-        );
-    }
-
-    // ── 多选（类型/一级/二级）──
-    // options 可能是字符串数组或 {id, name} 对象数组
-    const isObjOpts = options && options.length > 0 && typeof options[0] === 'object';
-    const flatOpts = isObjOpts
-        ? options
-        : (options || []).map(o => ({ id: o, name: o }));
-
-    const selectedArr = local.value || [];
-
-    const toggleItem = (id) => {
-        setLocal(l => {
-            const cur = l.value || [];
-            if (cur.includes(id)) {
-                return { ...l, value: cur.filter(x => x !== id) };
-            } else {
-                return { ...l, value: [...cur, id] };
-            }
-        });
-    };
-    const selectAll = () => setLocal(l => ({ ...l, value: flatOpts.map(o => o.id) }));
-    const deselectAll = () => setLocal(l => ({ ...l, value: [] }));
-
-    return createPortal(
-        <div className="filter-dropdown fd-portal" ref={panelRef} style={{ ...dropdownStyle, minWidth: 180 }}>
-            <div className="filter-section">
-                <div className="multi-check-list">
-                    <div className="multi-check-actions">
-                        <button className="btn btn-outline btn-xs" onClick={selectAll}>全选</button>
-                        <button className="btn btn-outline btn-xs" onClick={deselectAll}>取消</button>
-                    </div>
-                    <div className="multi-check-options">
-                        {flatOpts.map(opt => (
-                            <label key={opt.id} className="multi-check-item">
-                                <input
-                                    type="checkbox"
-                                    checked={selectedArr.includes(opt.id)}
-                                    onChange={() => toggleItem(opt.id)}
-                                    style={{ accentColor: 'var(--primary)' }}
-                                />
-                                <span>{opt.name}</span>
-                            </label>
-                        ))}
-                    </div>
-                </div>
-            </div>
+            )}
             <div className="filter-actions">
                 <button className="btn btn-outline btn-sm" onClick={handleClear}>清除</button>
-                <button className="btn btn-primary btn-sm" onClick={handleApply}>应用</button>
+                <button className="btn btn-primary btn-sm" onClick={handleApply}>确定</button>
             </div>
         </div>,
         document.body
@@ -409,9 +304,9 @@ const Details = memo(function Details() {
     const [filterKey, setFilterKey] = useState('');        // 全局搜索（说明列文本）
     const [sortDesc, setSortDesc] = useState(true);
 
-    // 各列筛选状态（dateMonth/type/cat1/cat2 均为多选数组）
+    // 各列筛选状态（type/cat1/cat2/dateMonth 均为多选数组）
     const [colFilters, setColFilters] = useState({
-        dateMonth: [],
+        dateMonth: [new Date().toISOString().slice(0, 7)],
         dateDay: '',
         type: [],
         cat1: [],
@@ -479,27 +374,26 @@ const Details = memo(function Details() {
                 if (!txt.includes(filterKey.toLowerCase())) return false;
             }
 
-            // 日期 - 月份筛选（多选数组）
-            if (Array.isArray(colFilters.dateMonth) && colFilters.dateMonth.length > 0) {
-                const matchesMonth = colFilters.dateMonth.some(m => t.date && t.date.startsWith(m));
-                if (!matchesMonth) return false;
+            // 日期 - 月份筛选
+            if (colFilters.dateMonth) {
+                if (!t.date || !t.date.startsWith(colFilters.dateMonth)) return false;
             }
             // 日期 - 日筛选
             if (colFilters.dateDay) {
                 const day = String(colFilters.dateDay).padStart(2, '0');
                 if (!t.date || t.date.slice(8, 10) !== day) return false;
             }
-            // 类型筛选（多选数组）
-            if (Array.isArray(colFilters.type) && colFilters.type.length > 0) {
-                if (!colFilters.type.includes(t.type)) return false;
+            // 类型筛选
+            if (colFilters.type) {
+                if (t.type !== colFilters.type) return false;
             }
-            // 一级分类（多选数组）
-            if (Array.isArray(colFilters.cat1) && colFilters.cat1.length > 0) {
-                if (!colFilters.cat1.includes(t.cat1)) return false;
+            // 一级分类
+            if (colFilters.cat1) {
+                if (t.cat1 !== colFilters.cat1) return false;
             }
-            // 二级分类（多选数组）
-            if (Array.isArray(colFilters.cat2) && colFilters.cat2.length > 0) {
-                if (!colFilters.cat2.includes(t.cat2)) return false;
+            // 二级分类
+            if (colFilters.cat2) {
+                if (t.cat2 !== colFilters.cat2) return false;
             }
             // 说明筛选（列头）
             if (colFilters.desc) {
@@ -523,11 +417,11 @@ const Details = memo(function Details() {
     // ── 颜色映射 ─────────────────────────────────────────
     const colorMap = useMemo(() => getColorMap(data.cats), [data.cats]);
 
-    // 判断某列是否有活动筛选（dateMonth/type/cat1/cat2 为数组）
-    const hasDateFilter = !!(Array.isArray(colFilters.dateMonth) && colFilters.dateMonth.length > 0) || !!colFilters.dateDay;
-    const hasTypeFilter = Array.isArray(colFilters.type) && colFilters.type.length > 0;
-    const hasCat1Filter = Array.isArray(colFilters.cat1) && colFilters.cat1.length > 0;
-    const hasCat2Filter = Array.isArray(colFilters.cat2) && colFilters.cat2.length > 0;
+    // 判断某列是否有活动筛选
+    const hasDateFilter = !!(colFilters.dateMonth || colFilters.dateDay);
+    const hasTypeFilter = !!colFilters.type;
+    const hasCat1Filter = !!colFilters.cat1;
+    const hasCat2Filter = !!colFilters.cat2;
     const hasDescFilter = !!colFilters.desc;
     const hasAmountFilter = !!(colFilters.amountMin !== '' || colFilters.amountMax !== '');
 
@@ -706,22 +600,18 @@ const Details = memo(function Details() {
     const isSomeSelected = selectedTxIds !== null && selectedTxIds.size > 0;
     const selectedCount = selectedTxIds ? selectedTxIds.size : filteredTxs.length;
 
-    // ── 各列筛选应用回调（多选字段使用数组）────────────
+    // ── 各列筛选应用回调 ────────────────────────────────
     const handleDateFilterApply = useCallback((f) => {
-        setColFilters(prev => ({
-            ...prev,
-            dateMonth: Array.isArray(f.dateMonth) ? f.dateMonth : [],
-            dateDay: f.dateDay || '',
-        }));
+        setColFilters(prev => ({ ...prev, dateMonth: f.dateMonth || '', dateDay: f.dateDay || '' }));
     }, []);
     const handleTypeFilterApply = useCallback((f) => {
-        setColFilters(prev => ({ ...prev, type: Array.isArray(f.value) ? f.value : [] }));
+        setColFilters(prev => ({ ...prev, type: f.value || '' }));
     }, []);
     const handleCat1FilterApply = useCallback((f) => {
-        setColFilters(prev => ({ ...prev, cat1: Array.isArray(f.value) ? f.value : [] }));
+        setColFilters(prev => ({ ...prev, cat1: f.value || '' }));
     }, []);
     const handleCat2FilterApply = useCallback((f) => {
-        setColFilters(prev => ({ ...prev, cat2: Array.isArray(f.value) ? f.value : [] }));
+        setColFilters(prev => ({ ...prev, cat2: f.value || '' }));
     }, []);
     const handleDescFilterApply = useCallback((f) => {
         setColFilters(prev => ({ ...prev, desc: f.value || '' }));
@@ -795,7 +685,7 @@ const Details = memo(function Details() {
                         <FilterableTh
                             className="virt-th-type"
                             label="类型"
-                            filterType="multi"
+                            filterType="select"
                             filterState={{ value: colFilters.type }}
                             filterOptions={filterOptions.types}
                             onFilterApply={handleTypeFilterApply}
@@ -804,7 +694,7 @@ const Details = memo(function Details() {
                         <FilterableTh
                             className="virt-th-cat1"
                             label="一级"
-                            filterType="multi"
+                            filterType="select"
                             filterState={{ value: colFilters.cat1 }}
                             filterOptions={filterOptions.cat1s}
                             onFilterApply={handleCat1FilterApply}
@@ -813,7 +703,7 @@ const Details = memo(function Details() {
                         <FilterableTh
                             className="virt-th-cat2"
                             label="二级"
-                            filterType="multi"
+                            filterType="select"
                             filterState={{ value: colFilters.cat2 }}
                             filterOptions={filterOptions.cat2s}
                             onFilterApply={handleCat2FilterApply}
