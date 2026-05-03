@@ -1102,11 +1102,6 @@
 /* ──────────────────────────────────────────────────────── */
 .finance-root .settings-page{ max-width: 900px; }
 
-/* 两列布局：支出左 / 收入右 */
-.finance-root .settings-columns{ display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
-.finance-root .settings-col-header{ font-weight: 700; font-size: 15px; padding: 6px 12px; margin-bottom: 12px; border-radius: 8px; background: #fff; border: 1px solid #EDF2F7; display: flex; align-items: center; gap: 6px; }
-.finance-root .settings-col-empty{ padding: 20px; text-align: center; color: var(--text-sub); font-size: 13px; background: #fff; border-radius: 10px; border: 1px dashed #DDD; }
-
 /* 分组卡片 */
 .finance-root .settings-group-card{ border: 1px solid #EDF2F7; border-radius: 14px; background: #fff; }
 .finance-root .settings-group-header{ display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
@@ -1147,9 +1142,6 @@
 .finance-root .icon-picker-btn{ background: transparent; border: 2px solid transparent; border-radius: 6px; font-size: 18px; cursor: pointer; padding: 4px 6px; transition: 0.15s; }
 .finance-root .icon-picker-btn:hover{ background: #F0F0F0; }
 .finance-root .icon-picker-btn.selected{ border-color: var(--primary); background: #EDF7F3; }
-.finance-root .icon-picker-custom-btn{ color: #999; font-size: 14px; }
-.finance-root .icon-picker-custom-btn.active{ background: #F0F0F0; border-color: #CCC; }
-.finance-root .icon-picker-custom-row{ display: flex; gap: 6px; align-items: center; margin-top: 6px; padding-top: 6px; border-top: 1px solid #EEE; }
 
 /* 颜色选择器 */
 .finance-root .color-picker-swatches{ display: flex; flex-wrap: wrap; gap: 4px; }

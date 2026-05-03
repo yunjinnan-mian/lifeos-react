@@ -408,7 +408,7 @@ const Details = memo(function Details() {
     // ── 筛选状态 ─────────────────────────────────────────
     const [filterKey, setFilterKey] = useState('');        // 全局搜索（说明列文本）
     const [sortDesc, setSortDesc] = useState(true);
-    const displayLimit = 30; // 默认显示最近30笔
+    const [displayLimit, setDisplayLimit] = useState(30); // 默认显示最近30笔，null = 全部
 
     // 各列筛选状态（dateMonth/type/cat1/cat2 均为多选数组）
     const [colFilters, setColFilters] = useState({
@@ -520,9 +520,9 @@ const Details = memo(function Details() {
             return sortDesc ? d : -d;
         });
         const total = sorted.length;
-        const limited = sorted.length > displayLimit ? sorted.slice(0, displayLimit) : sorted;
+        const limited = displayLimit !== null ? sorted.slice(0, displayLimit) : sorted;
         return { filteredTxs: limited, totalMatched: total };
-    }, [data.txs, filterKey, colFilters, sortDesc]);
+    }, [data.txs, filterKey, colFilters, sortDesc, displayLimit]);
 
     // ── 颜色映射 ─────────────────────────────────────────
     const colorMap = useMemo(() => getColorMap(data.cats), [data.cats]);
@@ -683,10 +683,10 @@ const Details = memo(function Details() {
                 return next.size === 0 ? null : next; // 全不选 → null（即全部）
             } else {
                 next.add(txId);
-                return next.size === totalMatched ? null : next; // 全选 → null
+                return next.size === filteredTxs.length ? null : next; // 全选 → null
             }
         });
-    }, [filteredTxs, totalMatched]);
+    }, [filteredTxs]);
 
     const handleSelectAllToggle = useCallback(() => {
         setSelectedTxIds(prev => prev ? null : new Set()); // null ↔ 空 Set（只选部分 → 全选）
@@ -708,7 +708,7 @@ const Details = memo(function Details() {
     // 判断全选状态
     const isAllSelected = selectedTxIds === null;
     const isSomeSelected = selectedTxIds !== null && selectedTxIds.size > 0;
-    const selectedCount = selectedTxIds ? selectedTxIds.size : totalMatched;
+    const selectedCount = selectedTxIds ? selectedTxIds.size : filteredTxs.length;
 
     // ── 各列筛选应用回调（多选字段使用数组）────────────
     const handleDateFilterApply = useCallback((f) => {
@@ -741,7 +741,7 @@ const Details = memo(function Details() {
                     <div className="title" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <span>收支明细</span>
                         <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-sub)' }}>
-                            {totalMatched > displayLimit
+                            {displayLimit !== null && totalMatched > displayLimit
                                 ? `最近${displayLimit}笔，共${totalMatched}笔`
                                 : `共${totalMatched}笔`}
                         </span>
@@ -754,6 +754,16 @@ const Details = memo(function Details() {
                         value={searchInput}
                         onChange={handleSearchChange}
                     />
+                    {totalMatched > 30 && (
+                        <button
+                            className="btn btn-outline btn-sm"
+                            style={{ flexShrink: 0, whiteSpace: 'nowrap' }}
+                            onClick={() => setDisplayLimit(prev => prev !== null ? null : 30)}
+                            title={displayLimit !== null ? '显示全部交易记录' : '仅显示最近30笔'}
+                        >
+                            {displayLimit !== null ? '显示全部' : '最近30笔'}
+                        </button>
+                    )}
                     <button
                         ref={copyBtnRef}
                         className="btn btn-outline btn-sm"

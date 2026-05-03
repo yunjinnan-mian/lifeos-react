@@ -741,7 +741,7 @@ const Details = memo(function Details() {
                     <div className="title" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <span>收支明细</span>
                         <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-sub)' }}>
-                            {totalMatched > displayLimit
+                            {displayLimit !== null && totalMatched > displayLimit
                                 ? `最近${displayLimit}笔，共${totalMatched}笔`
                                 : `共${totalMatched}笔`}
                         </span>
