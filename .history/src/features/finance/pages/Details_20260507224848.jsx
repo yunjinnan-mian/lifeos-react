@@ -525,8 +525,7 @@ const Details = memo(function Details() {
             return sortDesc ? d : -d;
         });
         const total = sorted.length;
-        const hasAnyFilter = !!filterKey || colFilters.dateMonth.length > 0 || !!colFilters.dateDay || colFilters.type.length > 0 || colFilters.cat1.length > 0 || colFilters.cat2.length > 0 || !!colFilters.desc || colFilters.amountMin !== '' || colFilters.amountMax !== '';
-        const limited = !hasAnyFilter && sorted.length > displayLimit ? sorted.slice(0, displayLimit) : sorted;
+        const limited = sorted.length > displayLimit ? sorted.slice(0, displayLimit) : sorted;
         return { filteredTxs: limited, totalMatched: total };
     }, [data.txs, filterKey, colFilters, sortDesc, amountSortDir]);
 
@@ -747,7 +746,7 @@ const Details = memo(function Details() {
                     <div className="title" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <span>收支明细</span>
                         <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-sub)' }}>
-                            {!filterKey && colFilters.dateMonth.length === 0 && !colFilters.dateDay && colFilters.type.length === 0 && colFilters.cat1.length === 0 && colFilters.cat2.length === 0 && !colFilters.desc && colFilters.amountMin === '' && colFilters.amountMax === '' && totalMatched > displayLimit
+                            {totalMatched > displayLimit
                                 ? `最近${displayLimit}笔，共${totalMatched}笔`
                                 : `共${totalMatched}笔`}
                         </span>
