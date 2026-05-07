@@ -251,7 +251,7 @@ const Assets = memo(function Assets() {
         commitEdit(null);
     }, [commitEdit]);
 
-    // ── 原生 SVG 平滑曲线图 (必须有 2 条及以上数据才显示) ──
+    // ── 原生 SVG 折线图 (必须有 2 条及以上数据才显示) ──
     const chartRender = useMemo(() => {
         if (rows.length < 2) return null; 
         
@@ -265,44 +265,15 @@ const Assets = memo(function Assets() {
         const yMax = maxTotal + pad;
         const yRange = yMax - yMin;
 
-        const pts = rows.map((r, i) => ({
-            x: (i / (rows.length - 1)) * chartWidth,
-            y: chartHeight - ((r.total - yMin) / yRange) * chartHeight,
-        }));
+        const points = rows.map((r, i) => {
+            const x = (i / (rows.length - 1)) * chartWidth;
+            const y = chartHeight - ((r.total - yMin) / yRange) * chartHeight;
+            return `${x},${y}`;
+        }).join(' ');
 
-        // 通过每个数据点的 Catmull–Rom 风格三次贝塞尔曲线
-        let curvePath = '';
-        if (pts.length === 2) {
-            curvePath = `M ${pts[0].x},${pts[0].y} L ${pts[1].x},${pts[1].y}`;
-        } else {
-            curvePath = `M ${pts[0].x},${pts[0].y}`;
-            for (let i = 0; i < pts.length - 1; i++) {
-                const p0 = pts[i];
-                const p1 = pts[i + 1];
-                // 离开 p0 的切线
-                const tx0 = i === 0
-                    ? p1.x - p0.x
-                    : (p1.x - pts[i - 1].x) / 2;
-                const ty0 = i === 0
-                    ? p1.y - p0.y
-                    : (p1.y - pts[i - 1].y) / 2;
-                // 进入 p1 的切线
-                const tx1 = i === pts.length - 2
-                    ? p1.x - p0.x
-                    : (pts[i + 2].x - p0.x) / 2;
-                const ty1 = i === pts.length - 2
-                    ? p1.y - p0.y
-                    : (pts[i + 2].y - p0.y) / 2;
-                const cp1x = p0.x + tx0 / 3;
-                const cp1y = p0.y + ty0 / 3;
-                const cp2x = p1.x - tx1 / 3;
-                const cp2y = p1.y - ty1 / 3;
-                curvePath += ` C ${cp1x},${cp1y} ${cp2x},${cp2y} ${p1.x},${p1.y}`;
-            }
-        }
-        const fillPath = curvePath + ` L ${chartWidth},${chartHeight} L 0,${chartHeight} Z`;
+        const fillPoints = `0,${chartHeight} ${points} ${chartWidth},${chartHeight}`;
 
-        return { chartWidth, chartHeight, curvePath, fillPath, yMin, yRange };
+        return { chartWidth, chartHeight, points, fillPoints, yMin, yRange };
     }, [rows]);
 
     if (!loaded) return <div style={{ textAlign:'center', marginTop:50, color:'#999' }}>加载中…</div>;
@@ -412,16 +383,22 @@ const Assets = memo(function Assets() {
             {/* 折线图区 — 每个点就是数值本身，线纯粹连接相邻点 */}
             {chartRender && (
                 <div style={{ position: 'relative', height: 80, marginBottom: 12, borderRadius: 8, overflow: 'hidden' }}>
-                    <svg viewBox={`0 0 ${chartRender.chartWidth} ${chartRender.chartHeight}`} preserveAspectRatio="none" style={{ width: '100%', height: '100%', display: 'block' }}>
+                    <svg viewBox={`0 0 ${chartRender.chartWidth} ${chartRender.chartHeight}`} preserveAspectRatio="xMidYMid meet" style={{ width: '100%', height: '100%', display: 'block' }}>
                         <defs>
                             <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
                                 <stop offset="0%" stopColor="#10b981" stopOpacity="0.25"/>
                                 <stop offset="100%" stopColor="#10b981" stopOpacity="0"/>
                             </linearGradient>
                         </defs>
-                        <path d={chartRender.fillPath} fill="url(#chartGradient)" />
-                        <path d={chartRender.curvePath} fill="none" stroke="#10b981" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" strokeLinejoin="round" />
-                        {/* 悬停竖线：用数据点的精确 x 坐标 */}
+                        <polygon points={chartRender.fillPoints} fill="url(#chartGradient)" />
+                        <polyline points={chartRender.points} fill="none" stroke="#10b981" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" strokeLinejoin="round" />
+                        {/* 数据点圆点 */}
+                        {rows.map((r, i) => {
+                            const x = (i / (rows.length - 1)) * chartRender.chartWidth;
+                            const y = chartRender.chartHeight - ((r.total - chartRender.yMin) / chartRender.yRange) * chartRender.chartHeight;
+                            return <circle key={r.id} cx={x} cy={y} r="3.5" fill="#10b981" stroke="#fff" strokeWidth="1.5" />;
+                        })}
+                        {/* 悬停竖线：用数据点的精确 x 坐标，与圆点完全对齐 */}
                         {hoverChartIdx != null && (() => {
                             const hx = (hoverChartIdx / (rows.length - 1)) * chartRender.chartWidth;
                             return <line x1={hx} y1="0" x2={hx} y2={chartRender.chartHeight} stroke="rgba(16,185,129,0.5)" strokeWidth="1" strokeDasharray="4 4" />;

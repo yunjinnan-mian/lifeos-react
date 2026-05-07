@@ -3,7 +3,7 @@
 // 多账户 · 手动快照 · Firebase 持久化 · 差额对比账单净额
 // ============================================================
 
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, memo } from 'react';
 import { db } from '../../../lib/firebase';
 import { doc, getDoc, setDoc, collection, getDocs, deleteDoc } from 'firebase/firestore';
 import { useFinance } from '../index';
@@ -52,7 +52,7 @@ function getTodayDate() {
 }
 
 // ════════════════════════════════════════════════════════════
-export default function Assets() {
+const Assets = memo(function Assets() {
     const { data: financeData } = useFinance();
 
     const [accounts,  setAccounts]  = useState([]);
@@ -503,11 +503,12 @@ export default function Assets() {
                                                         <input
                                                             ref={inputRef} value={editVal} onChange={e => setEditVal(e.target.value)}
                                                             onBlur={handleCellBlur} onKeyDown={handleCellKey}
+                                                            className="edit-naked-input"
                                                             style={{ 
                                                                 position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
-                                                                boxSizing: 'border-box', padding: '8px 10px', margin: 0, textAlign: 'center',
-                                                                border: '2px solid #3b82f6', outline: 'none', background: '#fff',
-                                                                fontSize: 13, color: '#0f172a', zIndex: 10, fontFamily: 'inherit', fontWeight: 'bold'
+                                                                margin: 0, textAlign: 'center',
+                                                                color: '#0f172a', zIndex: 10, fontWeight: 'bold',
+                                                                background: 'transparent',
                                                             }}
                                                         />
                                                     )}
@@ -532,7 +533,9 @@ export default function Assets() {
             </div>
         </div>
     );
-}
+});
+
+export default Assets;
 
 // ── 样式常量 ──────────────────────────────────────────────
 const BORDER_COLOR = '#e2e8f0';
@@ -558,3 +561,4 @@ const ICON_BTN = {
     background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer',
     fontSize: 12, padding: '0 4px', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1
 };
+//

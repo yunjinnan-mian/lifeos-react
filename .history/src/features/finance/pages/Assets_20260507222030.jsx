@@ -3,7 +3,7 @@
 // 多账户 · 手动快照 · Firebase 持久化 · 差额对比账单净额
 // ============================================================
 
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, memo } from 'react';
 import { db } from '../../../lib/firebase';
 import { doc, getDoc, setDoc, collection, getDocs, deleteDoc } from 'firebase/firestore';
 import { useFinance } from '../index';
@@ -52,7 +52,7 @@ function getTodayDate() {
 }
 
 // ════════════════════════════════════════════════════════════
-export default function Assets() {
+const Assets = memo(function Assets() {
     const { data: financeData } = useFinance();
 
     const [accounts,  setAccounts]  = useState([]);
@@ -251,7 +251,7 @@ export default function Assets() {
         commitEdit(null);
     }, [commitEdit]);
 
-    // ── 原生 SVG 折线图 ───────────────────────────
+    // ── 原生 SVG 折线图 (必须有 2 条及以上数据才显示) ──
     const chartRender = useMemo(() => {
         if (rows.length < 2) return null; 
         
@@ -273,7 +273,7 @@ export default function Assets() {
 
         const fillPoints = `0,${chartHeight} ${points} ${chartWidth},${chartHeight}`;
 
-        return { chartWidth, chartHeight, points, fillPoints };
+        return { chartWidth, chartHeight, points, fillPoints, yMin, yRange };
     }, [rows]);
 
     if (!loaded) return <div style={{ textAlign:'center', marginTop:50, color:'#999' }}>加载中…</div>;
@@ -281,15 +281,54 @@ export default function Assets() {
     return (
         <div style={{ paddingBottom: 40, width: '100%' }}>
             
-            {/* 注入极简滚动条与响应式 CSS */}
+            {/* 注入组件专属 CSS：高级统一控制条 */}
             <style>{`
                 .assets-table-scroll::-webkit-scrollbar { height: 6px; }
                 .assets-table-scroll::-webkit-scrollbar-track { background: transparent; }
                 .assets-table-scroll::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 10px; }
                 .assets-table-scroll::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.25); }
                 
-                /* 核心移动端适配：强制所有操作按钮不换行 */
-                .action-btn { white-space: nowrap !important; }
+                /* iOS 风格聚合控制条 */
+                .glass-toolbar {
+                    display: inline-flex;
+                    align-items: center;
+                    background: #f1f5f9;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 10px;
+                    padding: 4px;
+                }
+                .glass-btn {
+                    background: transparent;
+                    border: none;
+                    border-radius: 6px;
+                    padding: 6px 12px;
+                    font-size: 13px;
+                    font-weight: 600;
+                    color: #475569;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    gap: 4px;
+                    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                    white-space: nowrap; /* 绝对禁止换行 */
+                }
+                .glass-btn:active { transform: scale(0.95); }
+                .glass-btn:hover { background: rgba(0,0,0,0.04); color: #0f172a; }
+                .glass-btn.active-mode { background: #fff; color: #0284c7; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+                
+                .glass-divider { width: 1px; height: 16px; background: #cbd5e1; margin: 0 4px; }
+                
+                .glass-input {
+                    background: #fff;
+                    border: 1px solid #3b82f6;
+                    border-radius: 6px;
+                    padding: 5px 10px;
+                    font-size: 13px;
+                    width: 90px;
+                    outline: none;
+                    box-shadow: 0 0 0 2px rgba(59,130,246,0.1);
+                    text-align: center;
+                }
             `}</style>
 
             {error && (
@@ -298,81 +337,52 @@ export default function Assets() {
                 </div>
             )}
 
-            {/* 🚀 重构后的响应式顶栏区 */}
+            {/* 🚀 重构顶栏：Flex 自动折行 + 聚合控制条 */}
             <div style={{ 
                 display: 'flex', 
-                flexWrap: 'wrap', // 允许在屏幕太窄时换行
+                flexWrap: 'wrap', 
                 alignItems: 'center', 
                 justifyContent: 'space-between',
                 gap: '12px',
-                marginBottom: chartRender ? 10 : 20 
+                marginBottom: chartRender ? 12 : 20 
             }}>
-                {/* 标题（左侧/上侧） */}
                 <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, whiteSpace: 'nowrap' }}>💰 资产快照表</h2>
                 
-                {/* 按钮组（右侧/下侧）合并在一个容器内自动折行排列 */}
-                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px' }}>
-                    
-                    <div style={{ fontSize:12, color:'#888', display: 'none', '@media(minWidth: 768px)': { display: 'block' } }}>
-                        💡 点击单元格修改 · ← → 切换 · Enter 保存
-                    </div>
-
-                    <button
-                        className="action-btn"
-                        onClick={handleRecordToday}
-                        style={{
-                            background: '#fff', border: '1px solid #cbd5e1', borderRadius: 6,
-                            padding: '4px 12px', cursor: 'pointer', fontWeight: 600, fontSize: 13, color: '#334155',
-                            display: 'flex', alignItems: 'center', gap: 4, boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
-                            transition: 'all 0.2s'
-                        }}
-                        onMouseEnter={e => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.borderColor = '#94a3b8'; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
-                    >
+                {/* 聚合控制条 (iOS Segmented Control 风格) */}
+                <div className="glass-toolbar">
+                    <button className="glass-btn" onClick={handleRecordToday}>
                         <span style={{ fontSize: 14 }}>📅</span> 记录今日
                     </button>
 
-                    <button
-                        className="action-btn"
+                    <div className="glass-divider" />
+
+                    <button 
+                        className={`glass-btn ${isEditMode ? 'active-mode' : ''}`} 
                         onClick={() => setIsEditMode(p => !p)}
-                        style={{
-                            background: isEditMode ? '#e0f2fe' : '#fff',
-                            border: isEditMode ? '1px solid #7dd3fc' : '1px solid #cbd5e1', 
-                            borderRadius: 6, padding: '4px 10px',
-                            cursor: 'pointer', color: isEditMode ? '#0284c7' : '#64748b',
-                            fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 4,
-                            fontSize: 13, transition: 'all 0.2s'
-                        }}
                     >
-                        ⚙️ {isEditMode ? '完成' : '编辑结构'}
+                        <span style={{ fontSize: 14 }}>⚙️</span> {isEditMode ? '完成' : '编辑'}
                     </button>
-                    
+
+                    <div className="glass-divider" />
+
                     {showAddAcc ? (
                         <input
-                            autoFocus placeholder="输入回车" value={newAccName}
+                            className="glass-input"
+                            autoFocus placeholder="回车确认" value={newAccName}
                             onChange={e => setNewAccName(e.target.value)} onBlur={handleAddAccount}
                             onKeyDown={e => { if (e.key === 'Enter') handleAddAccount(); if (e.key === 'Escape') setShowAddAcc(false); }}
-                            style={{ 
-                                padding:'3px 8px', border:'1px solid #3b82f6', borderRadius: 6, 
-                                outline:'none', fontSize:13, width: 90, textAlign: 'center' // 手机上稍微改窄一点点
-                            }}
                         />
                     ) : (
-                        <button 
-                            className="action-btn"
-                            onClick={() => setShowAddAcc(true)}
-                            style={{ 
-                                padding:'4px 10px', background:'#fff', border:'1px solid #cbd5e1', 
-                                borderRadius: 6, color:'#334155', cursor:'pointer', fontSize: 13, fontWeight: 500
-                            }}
-                        >+ 增加账户</button>
+                        <button className="glass-btn" onClick={() => setShowAddAcc(true)}>
+                            ➕ 账户
+                        </button>
                     )}
                 </div>
             </div>
 
-            {/* 折线图区 */}
+            {/* 折线图区 — 每个点就是数值本身，线纯粹连接相邻点 */}
             {chartRender && (
-                <div style={{ position: 'relative', height: 60, marginBottom: 12, borderRadius: 8, overflow: 'hidden' }}>
+                <div style={{ position: 'relative', height: 80, marginBottom: 12, borderRadius: 8, overflow: 'hidden' }}>
                     <svg viewBox={`0 0 ${chartRender.chartWidth} ${chartRender.chartHeight}`} preserveAspectRatio="none" style={{ width: '100%', height: '100%', display: 'block' }}>
                         <defs>
                             <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
@@ -382,32 +392,42 @@ export default function Assets() {
                         </defs>
                         <polygon points={chartRender.fillPoints} fill="url(#chartGradient)" />
                         <polyline points={chartRender.points} fill="none" stroke="#10b981" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" strokeLinejoin="round" />
+                        {/* 悬停竖线：用数据点的精确 x 坐标 */}
+                        {hoverChartIdx != null && (() => {
+                            const hx = (hoverChartIdx / (rows.length - 1)) * chartRender.chartWidth;
+                            return <line x1={hx} y1="0" x2={hx} y2={chartRender.chartHeight} stroke="rgba(16,185,129,0.5)" strokeWidth="1" strokeDasharray="4 4" />;
+                        })()}
                     </svg>
 
+                    {/* 透明 hit area（只负责检测鼠标落在哪个分区），视觉线由 SVG 绘制 */}
                     <div style={{ position: 'absolute', inset: 0, display: 'flex' }}>
                         {rows.map((r, i) => (
                             <div 
                                 key={r.id} 
-                                style={{ flex: 1, position: 'relative', cursor: 'crosshair' }}
+                                style={{ flex: 1, cursor: 'crosshair' }}
                                 onMouseEnter={() => setHoverChartIdx(i)}
                                 onMouseLeave={() => setHoverChartIdx(null)}
-                            >
-                                {hoverChartIdx === i && (
-                                    <>
-                                        <div style={{ position: 'absolute', left: '50%', top: 0, bottom: 0, width: 1, borderLeft: '1px dashed rgba(16, 185, 129, 0.5)', pointerEvents: 'none' }} />
-                                        <div style={{
-                                            position: 'absolute', bottom: '60%', left: '50%', transform: 'translateX(-50%)',
-                                            background: '#1e293b', color: '#fff', padding: '4px 8px', borderRadius: 4,
-                                            fontSize: 11, whiteSpace: 'nowrap', pointerEvents: 'none', zIndex: 10,
-                                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                                        }}>
-                                            {fmtDate(r.date)} : {fmt(r.total)}
-                                        </div>
-                                    </>
-                                )}
-                            </div>
+                            />
                         ))}
                     </div>
+                    {/* Tooltip：边缘自适应，避免被 overflow:hidden 裁切 */}
+                    {hoverChartIdx != null && (() => {
+                        const ratio = hoverChartIdx / (rows.length - 1);
+                        const lastIdx = rows.length - 1;
+                        let transform = 'translateX(-50%)'; // 中间：居中
+                        if (hoverChartIdx <= 1) transform = 'translateX(0)';           // 最左：右展开
+                        else if (hoverChartIdx >= lastIdx - 1) transform = 'translateX(-100%)'; // 最右：左展开
+                        return (
+                            <div style={{
+                                position: 'absolute', bottom: '60%', left: `${ratio * 100}%`, transform,
+                                background: '#1e293b', color: '#fff', padding: '4px 8px', borderRadius: 4,
+                                fontSize: 11, whiteSpace: 'nowrap', pointerEvents: 'none', zIndex: 10,
+                                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                            }}>
+                                {fmtDate(rows[hoverChartIdx].date)} : {fmt(rows[hoverChartIdx].total)}
+                            </div>
+                        );
+                    })()}
                 </div>
             )}
 
@@ -493,11 +513,12 @@ export default function Assets() {
                                                         <input
                                                             ref={inputRef} value={editVal} onChange={e => setEditVal(e.target.value)}
                                                             onBlur={handleCellBlur} onKeyDown={handleCellKey}
+                                                            className="edit-naked-input"
                                                             style={{ 
                                                                 position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
-                                                                boxSizing: 'border-box', padding: '8px 10px', margin: 0, textAlign: 'center',
-                                                                border: '2px solid #3b82f6', outline: 'none', background: '#fff',
-                                                                fontSize: 13, color: '#0f172a', zIndex: 10, fontFamily: 'inherit', fontWeight: 'bold'
+                                                                margin: 0, textAlign: 'center',
+                                                                color: '#0f172a', zIndex: 10, fontWeight: 'bold',
+                                                                background: 'transparent',
                                                             }}
                                                         />
                                                     )}
@@ -522,7 +543,9 @@ export default function Assets() {
             </div>
         </div>
     );
-}
+});
+
+export default Assets;
 
 // ── 样式常量 ──────────────────────────────────────────────
 const BORDER_COLOR = '#e2e8f0';
@@ -534,7 +557,7 @@ const TH_STYLE = {
     color: '#334155',
     fontWeight: 'bold',
     textAlign: 'center',
-    whiteSpace: 'nowrap' // 防止表头文字换行
+    whiteSpace: 'nowrap'
 };
 
 const TD_STYLE = {
@@ -548,3 +571,4 @@ const ICON_BTN = {
     background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer',
     fontSize: 12, padding: '0 4px', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1
 };
+//

@@ -3,7 +3,7 @@
 // 多账户 · 手动快照 · Firebase 持久化 · 差额对比账单净额
 // ============================================================
 
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, memo } from 'react';
 import { db } from '../../../lib/firebase';
 import { doc, getDoc, setDoc, collection, getDocs, deleteDoc } from 'firebase/firestore';
 import { useFinance } from '../index';
@@ -52,7 +52,7 @@ function getTodayDate() {
 }
 
 // ════════════════════════════════════════════════════════════
-export default function Assets() {
+const Assets = memo(function Assets() {
     const { data: financeData } = useFinance();
 
     const [accounts,  setAccounts]  = useState([]);
@@ -69,10 +69,8 @@ export default function Assets() {
     const [showAddAcc, setShowAddAcc] = useState(false);
     const [newAccName, setNewAccName] = useState('');
 
-    // 图表悬浮状态
     const [hoverChartIdx, setHoverChartIdx] = useState(null);
 
-    // 滚动阴影状态
     const tableContainerRef = useRef(null);
     const [showLeftShadow, setShowLeftShadow] = useState(false);
     const [showRightShadow, setShowRightShadow] = useState(false);
@@ -108,7 +106,6 @@ export default function Assets() {
     const handleScroll = () => checkShadows();
 
     // ── 派生数据 ──────────────────────────────────────────
-    // rows: 升序排列（从旧到新），用于图表渲染和基础计算
     const rows = useMemo(() => {
         const sorted = [...snapshots].sort((a, b) => a.date.localeCompare(b.date));
         return sorted.map((snap, idx) => {
@@ -131,8 +128,9 @@ export default function Assets() {
         });
     }, [snapshots, accounts, financeData.txs]);
 
-    // displayRows: 倒序排列（最新在最上面），用于表格显示
     const displayRows = useMemo(() => [...rows].reverse(), [rows]);
+    const latestSnap = rows[rows.length - 1];
+    const grandTotal = latestSnap ? latestSnap.total : 0;
 
     // ── 账户操作 ──────────────────────────────────────────
     const handleAddAccount = useCallback(async () => {
@@ -253,46 +251,84 @@ export default function Assets() {
         commitEdit(null);
     }, [commitEdit]);
 
-    // ── 原生 SVG 折线图生成逻辑 ───────────────────────────
+    // ── 原生 SVG 折线图 (必须有 2 条及以上数据才显示) ──
     const chartRender = useMemo(() => {
-        if (rows.length < 2) return null; // 数据少于2条不画图
+        if (rows.length < 2) return null; 
         
         const chartWidth = 1000;
         const chartHeight = 80;
         const totals = rows.map(r => r.total);
         const minTotal = Math.min(...totals);
         const maxTotal = Math.max(...totals);
-        // 上下留出 10% 的呼吸空间
         const pad = (maxTotal - minTotal) * 0.1 || maxTotal * 0.1 || 1; 
         const yMin = minTotal - pad;
         const yMax = maxTotal + pad;
         const yRange = yMax - yMin;
 
-        // 计算 SVG 点坐标
         const points = rows.map((r, i) => {
             const x = (i / (rows.length - 1)) * chartWidth;
             const y = chartHeight - ((r.total - yMin) / yRange) * chartHeight;
             return `${x},${y}`;
         }).join(' ');
 
-        // 填充用的闭合路径
         const fillPoints = `0,${chartHeight} ${points} ${chartWidth},${chartHeight}`;
 
-        return { chartWidth, chartHeight, points, fillPoints };
+        return { chartWidth, chartHeight, points, fillPoints, yMin, yRange };
     }, [rows]);
-
 
     if (!loaded) return <div style={{ textAlign:'center', marginTop:50, color:'#999' }}>加载中…</div>;
 
     return (
         <div style={{ paddingBottom: 40, width: '100%' }}>
             
-            {/* 注入极简滚动条 CSS */}
+            {/* 注入组件专属 CSS：高级统一控制条 */}
             <style>{`
                 .assets-table-scroll::-webkit-scrollbar { height: 6px; }
                 .assets-table-scroll::-webkit-scrollbar-track { background: transparent; }
                 .assets-table-scroll::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 10px; }
                 .assets-table-scroll::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.25); }
+                
+                /* iOS 风格聚合控制条 */
+                .glass-toolbar {
+                    display: inline-flex;
+                    align-items: center;
+                    background: #f1f5f9;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 10px;
+                    padding: 4px;
+                }
+                .glass-btn {
+                    background: transparent;
+                    border: none;
+                    border-radius: 6px;
+                    padding: 6px 12px;
+                    font-size: 13px;
+                    font-weight: 600;
+                    color: #475569;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    gap: 4px;
+                    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                    white-space: nowrap; /* 绝对禁止换行 */
+                }
+                .glass-btn:active { transform: scale(0.95); }
+                .glass-btn:hover { background: rgba(0,0,0,0.04); color: #0f172a; }
+                .glass-btn.active-mode { background: #fff; color: #0284c7; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+                
+                .glass-divider { width: 1px; height: 16px; background: #cbd5e1; margin: 0 4px; }
+                
+                .glass-input {
+                    background: #fff;
+                    border: 1px solid #3b82f6;
+                    border-radius: 6px;
+                    padding: 5px 10px;
+                    font-size: 13px;
+                    width: 90px;
+                    outline: none;
+                    box-shadow: 0 0 0 2px rgba(59,130,246,0.1);
+                    text-align: center;
+                }
             `}</style>
 
             {error && (
@@ -301,73 +337,53 @@ export default function Assets() {
                 </div>
             )}
 
-            {/* 顶栏操作区 */}
-            <div style={{ display:'flex', alignItems:'center', marginBottom: chartRender ? 10 : 20 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                    <h2 style={{ margin:0, fontSize:18, fontWeight:700 }}>💰 资产快照表</h2>
-                    {/* 优雅的幽灵按钮 */}
-                    <button
-                        onClick={handleRecordToday}
-                        style={{
-                            background: '#fff', border: '1px solid #cbd5e1', borderRadius: 6,
-                            padding: '4px 12px', cursor: 'pointer', fontWeight: 600, fontSize: 13, color: '#334155',
-                            display: 'flex', alignItems: 'center', gap: 4, boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
-                            transition: 'all 0.2s'
-                        }}
-                        onMouseEnter={e => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.borderColor = '#94a3b8'; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
-                    >
+            {/* 🚀 重构顶栏：Flex 自动折行 + 聚合控制条 */}
+            <div style={{ 
+                display: 'flex', 
+                flexWrap: 'wrap', 
+                alignItems: 'center', 
+                justifyContent: 'space-between',
+                gap: '12px',
+                marginBottom: chartRender ? 12 : 20 
+            }}>
+                <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, whiteSpace: 'nowrap' }}>💰 资产快照表</h2>
+                
+                {/* 聚合控制条 (iOS Segmented Control 风格) */}
+                <div className="glass-toolbar">
+                    <button className="glass-btn" onClick={handleRecordToday}>
                         <span style={{ fontSize: 14 }}>📅</span> 记录今日
                     </button>
-                </div>
-                
-                <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 16 }}>
-                    <div style={{ fontSize:12, color:'#888', display: 'none', '@media(minWidth: 768px)': { display: 'block' } }}>
-                        💡 点击单元格修改 · ← → 切换 · Enter 保存
-                    </div>
 
-                    <button
+                    <div className="glass-divider" />
+
+                    <button 
+                        className={`glass-btn ${isEditMode ? 'active-mode' : ''}`} 
                         onClick={() => setIsEditMode(p => !p)}
-                        style={{
-                            background: isEditMode ? '#e0f2fe' : '#fff',
-                            border: isEditMode ? '1px solid #7dd3fc' : '1px solid #cbd5e1', 
-                            borderRadius: 6, padding: '4px 10px',
-                            cursor: 'pointer', color: isEditMode ? '#0284c7' : '#64748b',
-                            fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 4,
-                            fontSize: 13, transition: 'all 0.2s'
-                        }}
                     >
-                        ⚙️ {isEditMode ? '完成编辑' : '编辑结构'}
+                        <span style={{ fontSize: 14 }}>⚙️</span> {isEditMode ? '完成' : '编辑'}
                     </button>
-                    
-                    <div>
-                        {showAddAcc ? (
-                            <input
-                                autoFocus placeholder="输入名称并回车" value={newAccName}
-                                onChange={e => setNewAccName(e.target.value)} onBlur={handleAddAccount}
-                                onKeyDown={e => { if (e.key === 'Enter') handleAddAccount(); if (e.key === 'Escape') setShowAddAcc(false); }}
-                                style={{ 
-                                    padding:'4px 10px', border:'1px solid #3b82f6', borderRadius: 6, 
-                                    outline:'none', fontSize:13, width: 140, textAlign: 'center'
-                                }}
-                            />
-                        ) : (
-                            <button 
-                                onClick={() => setShowAddAcc(true)}
-                                style={{ 
-                                    padding:'4px 12px', background:'#fff', border:'1px solid #cbd5e1', 
-                                    borderRadius: 6, color:'#334155', cursor:'pointer', fontSize: 13, fontWeight: 500
-                                }}
-                            >+ 增加账户</button>
-                        )}
-                    </div>
+
+                    <div className="glass-divider" />
+
+                    {showAddAcc ? (
+                        <input
+                            className="glass-input"
+                            autoFocus placeholder="回车确认" value={newAccName}
+                            onChange={e => setNewAccName(e.target.value)} onBlur={handleAddAccount}
+                            onKeyDown={e => { if (e.key === 'Enter') handleAddAccount(); if (e.key === 'Escape') setShowAddAcc(false); }}
+                        />
+                    ) : (
+                        <button className="glass-btn" onClick={() => setShowAddAcc(true)}>
+                            ➕ 账户
+                        </button>
+                    )}
                 </div>
             </div>
 
-            {/* 极简折线图区 (原生 SVG) */}
+            {/* 折线图区 — 每个点就是数值本身，线纯粹连接相邻点 */}
             {chartRender && (
-                <div style={{ position: 'relative', height: 60, marginBottom: 12, borderRadius: 8, overflow: 'hidden' }}>
-                    <svg viewBox={`0 0 ${chartRender.chartWidth} ${chartRender.chartHeight}`} preserveAspectRatio="none" style={{ width: '100%', height: '100%', display: 'block' }}>
+                <div style={{ position: 'relative', height: 80, marginBottom: 12, borderRadius: 8, overflow: 'hidden' }}>
+                    <svg viewBox={`0 0 ${chartRender.chartWidth} ${chartRender.chartHeight}`} preserveAspectRatio="xMidYMid meet" style={{ width: '100%', height: '100%', display: 'block' }}>
                         <defs>
                             <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
                                 <stop offset="0%" stopColor="#10b981" stopOpacity="0.25"/>
@@ -375,14 +391,14 @@ export default function Assets() {
                             </linearGradient>
                         </defs>
                         <polygon points={chartRender.fillPoints} fill="url(#chartGradient)" />
-                        <polyline 
-                            points={chartRender.points} 
-                            fill="none" stroke="#10b981" strokeWidth="2" 
-                            vectorEffect="non-scaling-stroke" strokeLinecap="round" strokeLinejoin="round" 
-                        />
+                        <polyline points={chartRender.points} fill="none" stroke="#10b981" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" strokeLinejoin="round" />
+                        {rows.map((r, i) => {
+                            const x = (i / (rows.length - 1)) * chartRender.chartWidth;
+                            const y = chartRender.chartHeight - ((r.total - chartRender.yMin) / chartRender.yRange) * chartRender.chartHeight;
+                            return <circle key={r.id} cx={x} cy={y} r="3.5" fill="#10b981" stroke="#fff" strokeWidth="1.5" />;
+                        })}
                     </svg>
 
-                    {/* 悬浮热区层：切片覆盖整个宽度，实现完美 Hover */}
                     <div style={{ position: 'absolute', inset: 0, display: 'flex' }}>
                         {rows.map((r, i) => (
                             <div 
@@ -410,7 +426,7 @@ export default function Assets() {
                 </div>
             )}
 
-            {/* 表格视图：带悬浮呼吸阴影的包裹器 */}
+            {/* 表格区 */}
             <div style={{ position: 'relative', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', borderRadius: 4, overflow: 'hidden' }}>
                 
                 {/* 边缘呼吸阴影 */}
@@ -433,7 +449,7 @@ export default function Assets() {
                                     <th key={acc.id} style={{ ...TH_STYLE, minWidth: 110 }}>
                                         <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:2 }}>
                                             {isEditMode && idx > 0 && <button onClick={() => handleMoveAccount(idx, -1)} style={ICON_BTN}>◀</button>}
-                                            <span style={{ margin: '0 4px' }}>{acc.name}</span>
+                                            <span style={{ margin: '0 4px', whiteSpace: 'nowrap' }}>{acc.name}</span>
                                             {isEditMode && <button onClick={() => handleDeleteAccount(acc.id)} style={{...ICON_BTN, color: '#ef4444'}}>×</button>}
                                             {isEditMode && idx < accounts.length - 1 && <button onClick={() => handleMoveAccount(idx, 1)} style={ICON_BTN}>▶</button>}
                                         </div>
@@ -445,10 +461,7 @@ export default function Assets() {
 
                         <tbody>
                             {displayRows.map((row, idx) => {
-                                // 逻辑：displayRows 是倒序的，所以 idx === 0 就是真实的“当前最新行”
                                 const isLatestRow = idx === 0 && !isEditMode;
-                                
-                                // 根据是否是最新行，动态计算样式
                                 const rowBg = isLatestRow ? '#f0fdf4' : '#fff';
                                 const rowBorder = isLatestRow ? '2px solid #bbf7d0' : '1px solid #f1f5f9';
                                 const textColor = isLatestRow ? '#166534' : '#475569';
@@ -461,7 +474,6 @@ export default function Assets() {
                                         onMouseEnter={e => { if(!isLatestRow) e.currentTarget.style.background = '#f8fafc'; }} 
                                         onMouseLeave={e => { if(!isLatestRow) e.currentTarget.style.background = '#fff'; }}
                                     >
-                                        
                                         <td style={{ ...TD_STYLE, fontWeight:'bold', background: isLatestRow ? 'transparent' : '#fafafa', color: isLatestRow ? '#166534' : '#0f172a' }}>
                                             {fmt(row.total)}
                                         </td>
@@ -488,27 +500,20 @@ export default function Assets() {
                                                     onClick={() => { if (!isEditing && !isEditMode) startEdit(row.id, acc.id, val); }}
                                                     style={{ ...TD_STYLE, cursor: isEditMode ? 'not-allowed' : 'text', position: 'relative' }}
                                                 >
-                                                    <div style={{ 
-                                                        opacity: isEditing ? 0 : (isEditMode ? 0.5 : 1), 
-                                                        color: val ? textColor : '#cbd5e1',
-                                                        fontWeight: fw
-                                                    }}>
+                                                    <div style={{ opacity: isEditing ? 0 : (isEditMode ? 0.5 : 1), color: val ? textColor : '#cbd5e1', fontWeight: fw }}>
                                                         {val ? fmt(val) : '—'}
                                                     </div>
 
                                                     {isEditing && !isEditMode && (
                                                         <input
-                                                            ref={inputRef}
-                                                            value={editVal}
-                                                            onChange={e => setEditVal(e.target.value)}
-                                                            onBlur={handleCellBlur}
-                                                            onKeyDown={handleCellKey}
+                                                            ref={inputRef} value={editVal} onChange={e => setEditVal(e.target.value)}
+                                                            onBlur={handleCellBlur} onKeyDown={handleCellKey}
+                                                            className="edit-naked-input"
                                                             style={{ 
                                                                 position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
-                                                                boxSizing: 'border-box', padding: '8px 10px', margin: 0, textAlign: 'center',
-                                                                border: '2px solid #3b82f6', outline: 'none', background: '#fff',
-                                                                fontSize: 13, color: '#0f172a', zIndex: 10, fontFamily: 'inherit',
-                                                                fontWeight: 'bold'
+                                                                margin: 0, textAlign: 'center',
+                                                                color: '#0f172a', zIndex: 10, fontWeight: 'bold',
+                                                                background: 'transparent',
                                                             }}
                                                         />
                                                     )}
@@ -533,7 +538,9 @@ export default function Assets() {
             </div>
         </div>
     );
-}
+});
+
+export default Assets;
 
 // ── 样式常量 ──────────────────────────────────────────────
 const BORDER_COLOR = '#e2e8f0';
@@ -559,3 +566,4 @@ const ICON_BTN = {
     background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer',
     fontSize: 12, padding: '0 4px', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1
 };
+//
