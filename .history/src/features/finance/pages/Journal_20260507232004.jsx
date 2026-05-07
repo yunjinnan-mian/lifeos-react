@@ -3,7 +3,7 @@
 // 功能：拖拽导入 → 清洗台 → 规则管理 → 确认入账
 // ============================================================
 
-import { useRef, useCallback, useMemo, useState } from 'react';
+import { useRef, useCallback, useMemo, useState, memo } from 'react';
 import { useFinance } from '../index';
 import { useWxParser } from '../hooks/useWxParser';
 import { getExpenseOpts, getIncomeOpts, getCatName } from '../utils/catMap';
@@ -11,7 +11,7 @@ import RuleModal from '../panels/RuleModal';
 import AiClassifyModal, { useAiClassify, AiClassifyProgressBar } from '../panels/AiClassifyModal';
 
 
-export default function Journal() {
+const Journal = memo(function Journal({ onOpenSub }) {
     const { data, addTxBatch, updateData, saveData, showToast } = useFinance();
     const fileInputRef = useRef(null);
     const [ruleModalOpen, setRuleModalOpen] = useState(false);
@@ -97,68 +97,39 @@ export default function Journal() {
     }, [setParsedBills, showToast]);
 
     // ── AI 分类结果应用 ───────────────────────────────────
-const handleAiApply = useCallback((billId, catId) => {
-    const idx = parsedBills.findIndex(b => b.id === billId);
-    if (idx !== -1) updateRow(idx, { cat: catId });
-}, [parsedBills, updateRow]);
+    const handleAiApply = useCallback((billId, catId) => {
+        const idx = parsedBills.findIndex(b => b.id === billId);
+        if (idx !== -1) updateRow(idx, { cat: catId });
+    }, [parsedBills, updateRow]);
 
     // ── 确认入账 ─────────────────────────────────────────
     const handleImport = useCallback(async () => {
         const selected = parsedBills.filter(b => !b.isIgnored);
-        const ready = selected.filter(b =>
-            b.mode === 'transfer'
-                ? b.fromAcc && b.toAcc && b.fromAcc !== b.toAcc
-                : b.cat && b.amount > 0
-        );
-        const notReady = selected.filter(b =>
-            !(b.mode === 'transfer'
-                ? b.fromAcc && b.toAcc && b.fromAcc !== b.toAcc
-                : b.cat && b.amount > 0)
-        );
-        if (ready.length === 0) { showToast('请至少为一笔交易选择分类或账户', 'error'); return; }
+        const ready = selected.filter(b => b.cat && b.amount > 0);
+        const notReady = selected.filter(b => !(b.cat && b.amount > 0));
+        if (ready.length === 0) { showToast('请至少为一笔交易选择分类', 'error'); return; }
 
         setImporting(true);
         try {
             const txsToAdd = [];
             ready.forEach(b => {
-                if (b.mode === 'transfer') {
-                    const fromA = data.acc.find(a => String(a.id) === String(b.fromAcc));
-                    const toA   = data.acc.find(a => String(a.id) === String(b.toAcc));
-                    if (fromA && toA) {
-                        txsToAdd.push({
-                            id: Date.now() + Math.random(), date: b.date, type: 'transfer',
-                            amount: b.amount, cat1: '内部转账', cat2: '资产调拨',
-                            desc: `[导入] ${b.desc}`, accId: fromA.id, toAccId: toA.id,
-                            ...(b.wxId ? { wxId: b.wxId } : {}),
-                        });
-                        updateData(prev => ({
-                            ...prev,
-                            acc: prev.acc.map(a =>
-                                a.id === fromA.id ? { ...a, bal: a.bal - b.amount }
-                                : a.id === toA.id  ? { ...a, bal: a.bal + b.amount }
-                                : a
-                            ),
-                        }));
-                    }
-                } else {
-                    const catMap = {};
-                    data.cats.forEach(c => { catMap[c.id] = c.group; });
-                    const cat1      = catMap[b.cat] || '其他';
-                    const targetAcc = b.fromAcc || data.acc[0]?.id || 'auto';
-                    txsToAdd.push({
-                        id: Date.now() + Math.random(), date: b.date, amount: b.amount,
-                        desc: b.desc, cat2: b.cat, cat1, type: b.realType,
-                        accId: targetAcc,
-                        ...(b.wxId ? { wxId: b.wxId } : {}),
-                    });
-                    updateData(prev => ({
-                        ...prev,
-                        acc: prev.acc.map(a => {
-                            if (String(a.id) !== String(targetAcc)) return a;
-                            return { ...a, bal: a.bal + (b.realType === 'income' ? b.amount : -b.amount) };
-                        }),
-                    }));
-                }
+                const catMap = {};
+                data.cats.forEach(c => { catMap[c.id] = c.group; });
+                const cat1      = catMap[b.cat] || '其他';
+                const targetAcc = b.fromAcc || data.acc[0]?.id || 'auto';
+                txsToAdd.push({
+                    id: Date.now() + Math.random(), date: b.date, amount: b.amount,
+                    desc: b.desc, cat2: b.cat, cat1, type: b.realType,
+                    accId: targetAcc,
+                    ...(b.wxId ? { wxId: b.wxId } : {}),
+                });
+                updateData(prev => ({
+                    ...prev,
+                    acc: prev.acc.map(a => {
+                        if (String(a.id) !== String(targetAcc)) return a;
+                        return { ...a, bal: a.bal + (b.realType === 'income' ? b.amount : -b.amount) };
+                    }),
+                }));
             });
 
             await addTxBatch(txsToAdd);
@@ -192,7 +163,7 @@ const handleAiApply = useCallback((billId, catId) => {
                     <div className="title" id="journal-title">
                         {showCleanZone ? '记账工作台' : '记账工作台'}
                     </div>
-                    <button className="btn btn-outline btn-sm" onClick={() => setRuleModalOpen(true)}>
+                    <button className="btn btn-outline btn-sm" onClick={() => onOpenSub()}>
                         📅 周期订阅
                     </button>
                 </div>
@@ -343,13 +314,13 @@ const handleAiApply = useCallback((billId, catId) => {
             <AiClassifyProgressBar aiClassify={aiClassify} />
         </>
     );
-}
+});
+
+export default Journal;
 
 // ── 清洗台单行组件 ─────────────────────────────────────────
 function CleanRow({ bill: b, idx, accOptsHtml, expOptsHtml, incOptsHtml, cats, onToggle, onUpdate, onSwitchType, onQuickRule }) {
-    const isReady = b.mode === 'transfer'
-        ? b.fromAcc && b.toAcc && b.fromAcc !== b.toAcc
-        : b.cat && b.amount > 0;
+    const isReady = b.cat && b.amount > 0;
 
     const rowBg = b.isIgnored ? '' : (isReady ? '#F0FFF4' : '');
 
@@ -357,8 +328,6 @@ function CleanRow({ bill: b, idx, accOptsHtml, expOptsHtml, incOptsHtml, cats, o
     let tagHtml;
     if (b.amount < 0 && b.realType === 'expense') {
         tagHtml = <span className="tag-badge" style={{ background:'#FED7D7', color:'#C53030' }}>退款</span>;
-    } else if (b.mode === 'transfer') {
-        tagHtml = <span className="tag-badge tag-tf">转账</span>;
     } else {
         tagHtml = b.realType === 'income'
             ? <span className="tag-badge tag-inc">收入</span>
@@ -369,83 +338,50 @@ function CleanRow({ bill: b, idx, accOptsHtml, expOptsHtml, incOptsHtml, cats, o
     const showType = b.type && !['商户消费', '/', '扫二维码付款'].includes(b.type);
 
     // 操作区
-    let actionCell;
-    if (b.mode === 'transfer') {
-        const alertStyle = (!b.fromAcc || !b.toAcc) ? 'borderColor:#F56565' : '';
-        actionCell = (
-            <>
-                <div style={{ display:'flex', gap:4, alignItems:'center', justifyContent:'center' }}>
-                    <select
-                        className="clean-select"
-                        style={{ width:90, ...(!b.fromAcc ? { borderColor:'#F56565' } : {}) }}
-                        value={b.fromAcc}
-                        onChange={e => onUpdate(idx, { fromAcc: e.target.value })}
-                        dangerouslySetInnerHTML={{ __html: accOptsHtml }}
-                    />
-                    <i className="ri-arrow-right-line" style={{ color:'#CBD5E0' }} />
-                    <select
-                        className="clean-select"
-                        style={{ width:90, ...(!b.toAcc ? { borderColor:'#F56565' } : {}) }}
-                        value={b.toAcc}
-                        onChange={e => onUpdate(idx, { toAcc: e.target.value })}
-                        dangerouslySetInnerHTML={{ __html: accOptsHtml }}
-                    />
-                </div>
-                <div style={{ textAlign:'center', marginTop:4 }}>
-                    <input
-                        type="number" className="clean-input amt" style={{ width:100 }}
-                        value={b.amount}
-                        onChange={e => onUpdate(idx, { amount: parseFloat(e.target.value) || 0 })}
-                    />
-                </div>
-            </>
-        );
-    } else {
-        const catOpts  = b.realType === 'income' ? incOptsHtml : expOptsHtml;
-        const toggleIcon  = b.realType === 'income' ? 'ri-add-circle-line' : 'ri-indeterminate-circle-line';
-        const toggleColor = b.realType === 'income' ? 'var(--c-income)' : 'var(--c-survive)';
+    const catOpts  = b.realType === 'income' ? incOptsHtml : expOptsHtml;
+    const toggleIcon  = b.realType === 'income' ? 'ri-add-circle-line' : 'ri-indeterminate-circle-line';
+    const toggleColor = b.realType === 'income' ? 'var(--c-income)' : 'var(--c-survive)';
 
-        actionCell = (
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:3 }}>
-                <select
-                    className="clean-select"
-                    style={{ flex:1, minWidth:0, ...(!b.cat ? { border:'1px solid #F56565', background:'#fff' } : {}) }}
-                    value={b.cat}
-                    onChange={e => onUpdate(idx, { cat: e.target.value })}
-                    dangerouslySetInnerHTML={{ __html: '<option value="">(分类)</option>' + catOpts }}
+    const actionCell = (
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:3 }}>
+            <select
+                className="edit-naked-select"
+                style={{ flex:1, minWidth:0, ...(!b.cat ? { color:'#F56565' } : {}) }}
+                value={b.cat}
+                onChange={e => onUpdate(idx, { cat: e.target.value })}
+                dangerouslySetInnerHTML={{ __html: '<option value="">(分类)</option>' + catOpts }}
+            />
+            {b.cat
+                ? <button
+                    onClick={() => onQuickRule(idx)}
+                    title="存为规则"
+                    style={{ border:'none', background:'none', cursor:'pointer', fontSize:13, padding:'0 2px', color:'#A0AEC0', flexShrink:0 }}
+                  >📌</button>
+                : <span style={{ width:19, flexShrink:0 }} />
+            }
+            <div style={{ position:'relative', width:74, flexShrink:0 }}>
+                <input
+                    type="number" className="edit-naked-input"
+                    style={{ width:'100%', color: toggleColor, textAlign:'center', fontWeight:700 }}
+                    value={b.amount}
+                    onChange={e => onUpdate(idx, { amount: parseFloat(e.target.value) || 0 })}
                 />
-                {b.cat
-                    ? <button
-                        onClick={() => onQuickRule(idx)}
-                        title="存为规则"
-                        style={{ border:'none', background:'none', cursor:'pointer', fontSize:13, padding:'0 2px', color:'#A0AEC0', flexShrink:0 }}
-                      >📌</button>
-                    : <span style={{ width:19, flexShrink:0 }} />
-                }
-                <div style={{ position:'relative', width:74, flexShrink:0 }}>
-                    <input
-                        type="number" className="clean-input amt"
-                        style={{ width:'100%', color: toggleColor, padding:'0 2px' }}
-                        value={b.amount}
-                        onChange={e => onUpdate(idx, { amount: parseFloat(e.target.value) || 0 })}
-                    />
-                    <i
-                        className={toggleIcon}
-                        style={{ position:'absolute', right:-6, top:-6, cursor:'pointer', color:'#A0AEC0', background:'#fff', borderRadius:'50%', fontSize:14 }}
-                        title="切换收支"
-                        onClick={() => onSwitchType(idx)}
-                    />
-                </div>
+                <i
+                    className={toggleIcon}
+                    style={{ position:'absolute', right:-6, top:-6, cursor:'pointer', color:'#A0AEC0', background:'#fff', borderRadius:'50%', fontSize:14 }}
+                    title="切换收支"
+                    onClick={() => onSwitchType(idx)}
+                />
             </div>
-        );
-    }
+        </div>
+    );
 
     return (
         <tr
             className={`clean-row${b.isIgnored ? ' ignored' : ''}`}
             style={{ background: rowBg }}
         >
-            <td style={{ textAlign:'center' }}>
+            <td style={{ textAlign:'center', padding:'12px 6px', verticalAlign:'middle' }}>
                 <input
                     type="checkbox"
                     className="clean-checkbox"
@@ -453,30 +389,31 @@ function CleanRow({ bill: b, idx, accOptsHtml, expOptsHtml, incOptsHtml, cats, o
                     onChange={e => onToggle(idx, e.target.checked)}
                 />
             </td>
-            <td>
+            <td style={{ padding:'12px 6px', verticalAlign:'middle' }}>
                 <input
-                    type="text" className="clean-input-date"
+                    type="text" className="edit-naked-input"
+                    style={{ fontFamily:'monospace', fontSize:12, textAlign:'center', color:'var(--text-sub)' }}
                     value={b.date}
                     onChange={e => onUpdate(idx, { date: e.target.value })}
                 />
             </td>
-            <td>
-                <div className="clean-text-main">
+            <td style={{ padding:'12px 6px', verticalAlign:'middle' }}>
+                <div className="clean-text-main" style={{ display:'flex', alignItems:'center', gap:4, flexWrap:'wrap' }}>
                     {tagHtml}
                     {showType && (
-                        <span style={{ fontSize:10, color:'#4A5568', background:'#EDF2F7', padding:'1px 6px', borderRadius:4, marginRight:5, verticalAlign:'middle', border:'1px solid #E2E8F0' }}>
+                        <span style={{ fontSize:10, color:'#4A5568', background:'#EDF2F7', padding:'1px 6px', borderRadius:4, verticalAlign:'middle', border:'1px solid #E2E8F0', lineHeight:'1.5' }}>
                             {b.type}
                         </span>
                     )}
                     <input
-                        type="text" className="clean-input"
-                        style={{ fontWeight:600 }}
+                        type="text" className="edit-naked-input"
+                        style={{ fontWeight:600, flex:1, minWidth:60 }}
                         value={b.desc}
                         onChange={e => onUpdate(idx, { desc: e.target.value })}
                     />
                 </div>
             </td>
-            <td>{actionCell}</td>
+            <td style={{ padding:'12px 6px', verticalAlign:'middle' }}>{actionCell}</td>
         </tr>
     );
 }

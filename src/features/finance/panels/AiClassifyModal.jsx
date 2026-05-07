@@ -107,7 +107,7 @@ export default function AiClassifyModal({ open, onClose, bills, cats, onApply, a
     const [showHints, setShowHints] = useState(false);
     const [error,   setError]     = useState('');
 
-    const pending  = useMemo(() => bills.filter(b => !b.isIgnored && !b.cat && b.mode !== 'transfer'), [bills]);
+    const pending  = useMemo(() => bills.filter(b => !b.isIgnored && !b.cat), [bills]);
     const validIds = useMemo(() => new Set(cats.map(c => c.id)), [cats]);
 
     if (!open) return null;

@@ -6,16 +6,6 @@
 import { useState, useCallback } from 'react';
 import * as XLSX from 'xlsx';
 
-// ── 查找账户 id ────────────────────────────────────────────
-function findAccId(acc, txt) {
-    if (!txt || typeof txt !== 'string') return '';
-    const byName = acc.find(a => txt.includes(a.name) || (a.name.length > 2 && a.name.includes(txt)));
-    if (byName) return byName.id;
-    const numMatch = txt.match(/\d{4}/);
-    if (numMatch) { const byNum = acc.find(a => a.name.includes(numMatch[0])); if (byNum) return byNum.id; }
-    return '';
-}
-
 // ── CSV 原始行解析 ─────────────────────────────────────────
 function parseCsvLine(line) {
     const cols = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
@@ -67,6 +57,24 @@ function processAlipayRows(rows) {
     return bills;
 }
 
+// ── 账户间转账关键词 ──────────────────────────────────────
+const TRANSFER_PATTERNS = [
+    '转入零钱', '提现', '信用卡还款', '充值',
+    '转入余额宝', '余额宝转出', '转入余额',
+    '零钱通转入', '零钱通转出', '零钱提现',
+    '购买理财', '赎回理财', '基金转入', '基金转出',
+];
+
+function isTransferBill(b) {
+    if (!b) return false;
+    const combined =
+        (b.typeStr || '') + ' ' +
+        (b.item || '') + ' ' +
+        (b.counterparty || '') + ' ' +
+        (b.remark || '');
+    return TRANSFER_PATTERNS.some(p => combined.includes(p));
+}
+
 // ── 识别账单格式 + 解析 ────────────────────────────────────
 function parseRawData(rawData, type, acc, existingTxs, rules, parsedBills) {
     let allRows = [];
@@ -94,7 +102,7 @@ function parseRawData(rawData, type, acc, existingTxs, rules, parsedBills) {
 // ── 标准化 + 去重 ──────────────────────────────────────────
 function normalizeBills(rawBills, acc, existingTxs, rules, parsedBills) {
     const newBills = [];
-    let addedCount = 0;
+    let addedCount = 0, skippedTransfer = 0;
 
     rawBills.forEach(b => {
         // 已在 DB 里
@@ -108,6 +116,12 @@ function normalizeBills(rawBills, acc, existingTxs, rules, parsedBills) {
         const isExistInPool = parsedBills.some(t => b.wxId && t.wxId === b.wxId);
         if (isExistInPool) return;
 
+        // 跳过账户间转账（信用卡还款、提现、充值等）
+        if (isTransferBill(b)) {
+            skippedTransfer++;
+            return;
+        }
+
         // 组合 desc
         let desc = b.counterparty;
         if (b.source === 'wechat') {
@@ -118,21 +132,9 @@ function normalizeBills(rawBills, acc, existingTxs, rules, parsedBills) {
         if (b.remark && b.remark !== '/') desc += ` ${b.remark}`;
 
         // 模式判断
-        let mode = 'tx', finalType = '', fromAcc = '', toAcc = '', cat = '';
+        let finalType = '', cat = '';
         if (b.isContra) {
-            finalType = 'expense'; mode = 'tx';
-        } else if (
-            b.typeStr.includes('转入零钱') || b.typeStr.includes('提现') ||
-            b.item.includes('信用卡还款') || b.typeStr.includes('充值')
-        ) {
-            mode = 'transfer'; finalType = 'transfer';
-            if (b.source === 'wechat') {
-                if (b.typeStr.includes('转入零钱')) { fromAcc = findAccId(acc, b.method); toAcc = findAccId(acc, '微信'); }
-                else if (b.typeStr.includes('提现')) { fromAcc = findAccId(acc, '微信'); toAcc = findAccId(acc, b.method); }
-            } else {
-                if (b.typeStr.includes('充值'))  { desc = '资产: 银行卡→支付宝'; fromAcc = findAccId(acc, b.method); toAcc = findAccId(acc, '支付宝'); }
-                else if (b.typeStr.includes('提现')) { desc = '资产: 支付宝→银行卡'; fromAcc = findAccId(acc, '支付宝'); toAcc = findAccId(acc, b.method); }
-            }
+            finalType = 'expense';
         } else {
             finalType = b.dir === '收入' ? 'income' : 'expense';
             // 规则匹配
@@ -140,7 +142,6 @@ function normalizeBills(rawBills, acc, existingTxs, rules, parsedBills) {
                 if (desc.includes(k) || b.counterparty.includes(k) || b.item.includes(k)) { cat = rules[k]; break; }
             }
             if (!cat && b.source === 'alipay' && b.typeStr && rules[b.typeStr]) cat = rules[b.typeStr];
-            if (finalType === 'expense') fromAcc = findAccId(acc, b.method);
         }
 
         newBills.push({
@@ -150,7 +151,7 @@ function normalizeBills(rawBills, acc, existingTxs, rules, parsedBills) {
             type: b.typeStr,
             dir: b.dir,
             amount: b.isContra ? -Math.abs(b.amt) : b.amt,
-            mode, fromAcc, toAcc, cat,
+            cat,
             isIgnored: false,
             wxId: b.wxId,
             realType: finalType,
@@ -160,7 +161,7 @@ function normalizeBills(rawBills, acc, existingTxs, rules, parsedBills) {
         addedCount++;
     });
 
-    return { newBills, addedCount };
+    return { newBills, addedCount, skippedTransfer };
 }
 
 // ════════════════════════════════════════════════════════════
@@ -213,13 +214,18 @@ reader.onload = (ev) => {
     }, []);
 
     // ── 处理解析结果，合并到 parsedBills ─────────────────
-    const applyParsed = useCallback(({ newBills, addedCount, error }, currentParsed = []) => {
+    const applyParsed = useCallback(({ newBills, addedCount, skippedTransfer, error }, currentParsed = []) => {
         if (error) return { ok: false, msg: error };
         const merged = [...currentParsed, ...newBills];
         if (merged.length > 0) {
             setParsedBills(merged);
             setShowCleanZone(true);
-            return { ok: true, msg: addedCount > 0 ? `已添加 ${addedCount} 笔新记录` : '文件已读取 (未发现新记录)' };
+            let msg = addedCount > 0 ? `已添加 ${addedCount} 笔新记录` : '文件已读取 (未发现新记录)';
+            if (skippedTransfer > 0) msg += `, 已跳过 ${skippedTransfer} 笔账户间转账`;
+            return { ok: true, msg };
+        }
+        if (skippedTransfer > 0) {
+            return { ok: false, msg: `已跳过 ${skippedTransfer} 笔账户间转账（无需入账），无其他记录` };
         }
         return { ok: false, msg: '没有记录可显示' };
     }, []);
@@ -261,7 +267,7 @@ reader.onload = (ev) => {
                 amount: parseFloat(Math.abs(netAmount).toFixed(2)),
                 type: 'merged', dir: netAmount >= 0 ? '收入' : '支出',
                 realType: netAmount >= 0 ? 'income' : 'expense',
-                isIgnored: false, source: 'merged', cat: '', fromAcc: '', toAcc: '',
+                isIgnored: false, source: 'merged', cat: '',
             };
             return [merged, ...remaining];
         });
@@ -286,13 +292,9 @@ reader.onload = (ev) => {
         bills.forEach(b => {
             if (b.isIgnored) return;
             count++;
-            if (b.mode === 'transfer') {
-                if (b.fromAcc && b.toAcc && b.fromAcc !== b.toAcc) readyCount++;
-            } else {
-                if (b.cat && b.amount > 0) readyCount++;
-                if (b.realType === 'income') totalInc += b.amount;
-                else totalExp += b.amount;
-            }
+            if (b.cat && b.amount > 0) readyCount++;
+            if (b.realType === 'income') totalInc += b.amount;
+            else totalExp += b.amount;
         });
         return { totalInc, totalExp, count, readyCount };
     }, []);
