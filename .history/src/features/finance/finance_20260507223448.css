@@ -166,7 +166,7 @@
     scrollbar-width: thin;
     scrollbar-color: rgba(139, 115, 85, 0.25) transparent;
 }
-.finance-root .main::-webkit-scrollbar{ width: 6px; background: transparent; }
+.finance-root .main::-webkit-scrollbar{ width: 6px; }
 .finance-root .main::-webkit-scrollbar-track{ background: transparent; border: none; }
 .finance-root .main::-webkit-scrollbar-thumb{ background: rgba(139, 115, 85, 0.25); border-radius: 3px; }
 .finance-root .main::-webkit-scrollbar-thumb:hover{ background: rgba(139, 115, 85, 0.45); }
@@ -1175,7 +1175,7 @@
 .finance-root .settings-page .btn-sm{ font-size: 12px; padding: 5px 12px; }
 
 /* -- ą¸ÍüÂź textarea šöśŻĚőÓĹťŻ -- */
-.finance-root .notes-textarea::-webkit-scrollbar{ width
+.finance-root .notes-textarea::-webkit-scrollbar{ width: 6px; }
 .finance-root .notes-textarea::-webkit-scrollbar-track{ background: transparent; border: none; }
 .finance-root .notes-textarea::-webkit-scrollbar-thumb{ background: rgba(139, 115, 85, 0.25); border-radius: 3px; }
 .finance-root .notes-textarea::-webkit-scrollbar-thumb:hover{ background: rgba(139, 115, 85, 0.45); }
