@@ -71,7 +71,7 @@ const Notes = memo(function Notes() {
     }[status];
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '20px 24px', boxSizing: 'border-box' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '20px 0 20px 24px', marginRight: -24, boxSizing: 'border-box' }}>
 
             {/* 标题栏 */}
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 16 }}>
@@ -86,6 +86,7 @@ const Notes = memo(function Notes() {
             {/* 文本区 */}
             {loaded ? (
                 <textarea
+                    className="notes-textarea"
                     value={content}
                     onChange={handleChange}
                     placeholder={"记点什么……"}
@@ -95,7 +96,7 @@ const Notes = memo(function Notes() {
                         resize: 'none',
                         border: 'none',
                         borderRadius: 8,
-                        padding: '16px 18px',
+                        padding: '16px 0 16px 18px',
                         fontSize: 14,
                         lineHeight: 1.8,
                         fontFamily: 'inherit',

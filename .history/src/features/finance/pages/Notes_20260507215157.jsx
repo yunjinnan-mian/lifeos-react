@@ -3,14 +3,14 @@
 // 自由文本 · Firebase 持久化 · 自动保存
 // ============================================================
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, memo } from 'react';
 import { db } from '../../../lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 const DOC_REF = doc(db, 'config', 'notes');
 const AUTOSAVE_DELAY = 1500;
 
-export default function Notes() {
+const Notes = memo(function Notes() {
     const [content, setContent]   = useState('');
     const [status, setStatus]     = useState('idle'); // idle | saving | saved | error
     const [loaded, setLoaded]     = useState(false);
@@ -86,6 +86,7 @@ export default function Notes() {
             {/* 文本区 */}
             {loaded ? (
                 <textarea
+                    className="notes-textarea"
                     value={content}
                     onChange={handleChange}
                     placeholder={"记点什么……"}
@@ -112,4 +113,6 @@ export default function Notes() {
             )}
         </div>
     );
-}
+});
+
+export default Notes;

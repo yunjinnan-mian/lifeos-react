@@ -1166,3 +1166,11 @@
 
 /* settings 椤甸潰鍐呯殑 ripplejs 鎸夐挳澶у皬閫傞厤 */
 .finance-root .settings-page .btn-sm{ font-size: 12px; padding: 5px 12px; }
+
+/* -- 备忘录 textarea 滚动条优化 -- */
+.finance-root .notes-textarea::-webkit-scrollbar{ width: 6px; }
+.finance-root .notes-textarea::-webkit-scrollbar-track{ background: transparent; border: none; }
+.finance-root .notes-textarea::-webkit-scrollbar-thumb{ background: rgba(139, 115, 85, 0.25); border-radius: 3px; }
+.finance-root .notes-textarea::-webkit-scrollbar-thumb:hover{ background: rgba(139, 115, 85, 0.45); }
+.finance-root .notes-textarea::-webkit-scrollbar-button{ display: none; width: 0; height: 0; }
+.finance-root .notes-textarea{ scrollbar-width: thin; scrollbar-color: rgba(139, 115, 85, 0.25) transparent; }

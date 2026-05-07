@@ -3,14 +3,14 @@
 // 自由文本 · Firebase 持久化 · 自动保存
 // ============================================================
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, memo } from 'react';
 import { db } from '../../../lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 const DOC_REF = doc(db, 'config', 'notes');
 const AUTOSAVE_DELAY = 1500;
 
-export default function Notes() {
+const Notes = memo(function Notes() {
     const [content, setContent]   = useState('');
     const [status, setStatus]     = useState('idle'); // idle | saving | saved | error
     const [loaded, setLoaded]     = useState(false);
@@ -71,7 +71,7 @@ export default function Notes() {
     }[status];
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '20px 24px', boxSizing: 'border-box' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '20px 0 20px 24px', marginRight: -6, boxSizing: 'border-box' }}>
 
             {/* 标题栏 */}
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 16 }}>
@@ -86,6 +86,7 @@ export default function Notes() {
             {/* 文本区 */}
             {loaded ? (
                 <textarea
+                    className="notes-textarea"
                     value={content}
                     onChange={handleChange}
                     placeholder={"记点什么……"}
@@ -93,13 +94,13 @@ export default function Notes() {
                         flex: 1,
                         width: '100%',
                         resize: 'none',
-                        border: '1px solid rgba(0,0,0,0.1)',
+                        border: 'none',
                         borderRadius: 8,
-                        padding: '16px 18px',
+                        padding: '16px 6px 16px 18px',
                         fontSize: 14,
                         lineHeight: 1.8,
                         fontFamily: 'inherit',
-                        background: 'var(--c-card, #fff)',
+                        background: 'transparent',
                         color: 'var(--c-text, #2d3748)',
                         outline: 'none',
                         boxSizing: 'border-box',
@@ -112,4 +113,6 @@ export default function Notes() {
             )}
         </div>
     );
-}
+});
+
+export default Notes;
