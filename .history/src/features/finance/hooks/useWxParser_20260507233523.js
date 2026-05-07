@@ -111,7 +111,6 @@ function normalizeBills(rawBills, acc, existingTxs, rules, parsedBills) {
             if (t.wxIds?.includes(b.wxId)) return true;
             return false;
         });
-        if (isExistInDb) return;
         if (!b.wxId) {
             const dbMatch = existingTxs.some(t => t.date === b.rawDate && Math.abs(t.amount - b.amt) < 0.01 && t.desc?.includes(b.item));
             if (dbMatch) return;

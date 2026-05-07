@@ -116,6 +116,7 @@ function normalizeBills(rawBills, acc, existingTxs, rules, parsedBills) {
             const dbMatch = existingTxs.some(t => t.date === b.rawDate && Math.abs(t.amount - b.amt) < 0.01 && t.desc?.includes(b.item));
             if (dbMatch) return;
         }
+        if (isExistInDb) return;
         // 已在临时池里
         const isExistInPool = parsedBills.some(t => b.wxId && t.wxId === b.wxId);
         if (isExistInPool) return;

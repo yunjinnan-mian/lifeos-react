@@ -105,17 +105,13 @@ function normalizeBills(rawBills, acc, existingTxs, rules, parsedBills) {
     let addedCount = 0, skippedTransfer = 0;
 
     rawBills.forEach(b => {
-        // 已在 DB 里（含合并交易携带的 wxIds）
-        const isExistInDb = b.wxId && existingTxs.some(t => {
-            if (t.wxId === b.wxId) return true;
-            if (t.wxIds?.includes(b.wxId)) return true;
+        // 已在 DB 里
+        const isExistInDb = existingTxs.some(t => {
+            if (b.wxId && t.wxId === b.wxId) return true;
+            if (!b.wxId && t.date === b.rawDate && Math.abs(t.amount - b.amt) < 0.01 && t.desc?.includes(b.item)) return true;
             return false;
         });
         if (isExistInDb) return;
-        if (!b.wxId) {
-            const dbMatch = existingTxs.some(t => t.date === b.rawDate && Math.abs(t.amount - b.amt) < 0.01 && t.desc?.includes(b.item));
-            if (dbMatch) return;
-        }
         // 已在临时池里
         const isExistInPool = parsedBills.some(t => b.wxId && t.wxId === b.wxId);
         if (isExistInPool) return;
