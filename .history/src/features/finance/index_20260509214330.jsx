@@ -132,7 +132,7 @@ function FinanceApp() {
                     )}
                     {activePage === 'details' && <Details />}
                     {activePage === 'settings' && <Settings />}
-                    {activePage === 'fifo' && <FifoCenter />}
+                    {activePage === 'fifo'     && <FifoCenter />}
                 </div>
 
                 {/* ── 浮动快速记账 ────────────────────── */}

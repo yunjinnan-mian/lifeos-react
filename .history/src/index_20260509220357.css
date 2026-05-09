@@ -1,0 +1,70 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ================================================================
+   Global styles (mirrors the original standalone HTML design tokens)
+   ================================================================ */
+#root {
+  height: 100%;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: var(--color-background, #fafaf5);
+  color: var(--color-on-background, #1a1c19);
+}
+
+.font-mono-num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Custom scrollbar (sleeker look) ── */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #d5e3db;
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #54615b;
+}
+
+/* ── Fluid circle animation (pool snapshot hero) ── */
+.fluid-circle {
+  position: absolute;
+  bottom: -10%;
+  left: -10%;
+  width: 120%;
+  height: 120%;
+  background: radial-gradient(circle at 50% 50%, rgba(213, 227, 219, 0.4) 0%, rgba(213, 227, 219, 0) 70%);
+  border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
+  animation: morph 8s ease-in-out infinite alternate;
+  z-index: -1;
+}
+
+@keyframes morph {
+  0% {
+    border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
+    transform: rotate(0deg) scale(1);
+  }
+  100% {
+    border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+    transform: rotate(10deg) scale(1.05);
+  }
+}
+
+/* ── Clean number input (hide spinners) ── */
+.number-input-clean {
+  -moz-appearance: textfield;
+}
+.number-input-clean::-webkit-outer-spin-button,
+.number-input-clean::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}

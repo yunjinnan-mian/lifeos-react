@@ -11,8 +11,8 @@ const NAV_ITEMS = [
     { id: 'dashboard', icon: 'ri-dashboard-line',    label: '总览透视' },
     { id: 'journal',   icon: 'ri-file-add-line',     label: '记账工作台',  section: '核心功能' },
     { id: 'details',   icon: 'ri-file-list-3-line',  label: '账单明细',   section: '数据管理' },
+    { id: 'fifo',      icon: 'ri-water-flash-line',   label: '蓄水池',       section: '核心功能' },
     { id: 'settings',  icon: 'ri-settings-3-line',    label: '系统设置' },
-    { id: 'fifo',      icon: 'ri-bar-chart-grouped-line', label: 'FIFO 成本' },
 ];
 
 const PAGE_TITLES = {
@@ -21,8 +21,8 @@ const PAGE_TITLES = {
     dashboard: '总览透视',
     journal:   '记账工作台',
     details:   '账单明细',
+    fifo:      '蓄水池 FIFO',
     settings:  '系统设置',
-    fifo:      'FIFO 成本',
 };
 
 function Sidebar({ activePage, onNav, onOpenExportModal, onClearData, isCollapsed, onToggleCollapse }) {

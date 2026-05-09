@@ -350,37 +350,3 @@ export const PlantDB = {
     return snap.exists() ? { id: snap.id, ...snap.data() } : null;
   },
 };
-
-// src/lib/db.js (补充到现有的导出对象中)
-export const FinanceDB = {
-  // ── 配置（预算） ──────────────────────────────────────────────
-  // 获取某年的 52 周预算。返回结构：{ W1: 500, W2: 600, ... }
-  getFifoBudgets: async (year) => {
-    const snap = await getDoc(doc(db, 'config', `fifoBudgets_${year}`));
-    return snap.exists() ? snap.data().value : {};
-  },
-  
-  saveFifoBudgets: (year, budgetsObj) =>
-    setDoc(doc(db, 'config', `fifoBudgets_${year}`), { value: budgetsObj }, { merge: true }),
-
-  // ── 交易明细（Transactions） ───────────────────────────────────
-  // 拉取某年的所有 finance 领域支出
-  listTransactionsByYear: async (year) => {
-    const start = `${year}-01-01`;
-    const end = `${year}-12-31`;
-    const snap = await getDocs(
-      query(
-        collection(db, 'transactions'),
-        where('domain', '==', 'finance'), // 严格遵守数据宪法
-        where('date', '>=', start),
-        where('date', '<=', end),
-        orderBy('date', 'asc')
-      )
-    );
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  },
-
-  createTransaction: (id, data) => setDoc(doc(db, 'transactions', id), data),
-  patchTransaction: (id, patch) => setDoc(doc(db, 'transactions', id), patch, { merge: true }),
-  deleteTransaction: (id) => deleteDoc(doc(db, 'transactions', id)),
-};
