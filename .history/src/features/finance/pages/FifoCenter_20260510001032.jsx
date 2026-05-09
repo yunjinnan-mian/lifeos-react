@@ -53,7 +53,7 @@ export default function FifoCenter() {
   return (
     <div className="flex-1 h-full flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden relative bg-surface text-primary antialiased">
       
-       <section className="w-full lg:w-[65%] h-auto lg:h-full flex flex-col p-6 lg:p-12 overflow-visible lg:overflow-visible border-0 border-b-[1px] lg:border-b-0 lg:border-r-[1px] border-solid border-surface-variant relative z-10 shrink-0">
+      <section className="w-full lg:w-[65%] h-auto lg:h-full flex flex-col p-6 lg:p-12 overflow-visible lg:overflow-y-auto border-0 border-b-[1px] lg:border-b-0 lg:border-r-[1px] border-solid border-surface-variant relative z-10 shrink-0">
         
         <div className="flex justify-between items-center mb-8">
           <div className="uppercase tracking-widest text-xs font-semibold text-on-surface-variant">
@@ -153,7 +153,8 @@ export default function FifoCenter() {
         {/* 常规周列表 (去除 absolute inset-0，让它留在文档流中撑开父级高度) */}
         <div className={`flex-1 h-full flex flex-col p-6 lg:p-12 transition-transform duration-300 ease-in-out ${activeWeekNum ? '-translate-x-full' : 'translate-x-0'}`}>
           <div className="flex justify-between items-end mb-8">
-            <h2 className="text-2xl font-semibold tracking-tight text-primary">周明细</h2>
+            <h2 className="text-2xl font-semibold tracking-tight text-primary">Quick Ledger</h2>
+            <span className="text-xs font-medium text-on-surface-variant bg-surface px-2 py-1 rounded">可编辑预算</span>
           </div>
 
           <div className="grid grid-cols-12 gap-2 pb-4 border-0 border-b-[1px] border-solid border-surface-variant text-[10px] uppercase tracking-widest font-semibold text-on-surface-variant pr-2">
