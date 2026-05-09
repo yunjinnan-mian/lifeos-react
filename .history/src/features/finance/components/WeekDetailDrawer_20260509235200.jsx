@@ -87,17 +87,20 @@ export default function WeekDetailDrawer({ weekData, onClose, onDeleteTx, onTogg
                     -{tx.amount}
                   </span>
                   
+                  {/* Emoji 原生开关 */}
                   <button
                     onClick={() => onTogglePool(tx)}
                     title={isCoin ? "已计入蓄水池" : "不计入蓄水池"}
-                    className="relative inline-flex h-[26px] w-[46px] shrink-0 cursor-pointer items-center rounded-full bg-surface-variant transition-colors duration-200 ease-in-out"
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                      isCoin ? 'bg-primary' : 'bg-surface-variant'
+                    }`}
                   >
                     <span
-                      className={`pointer-events-none flex h-[26px] w-[26px] transform items-center justify-center transition-transform duration-200 ease-in-out ${
-                        isCoin ? 'translate-x-[20px]' : 'translate-x-0'
+                      className={`pointer-events-none flex h-5 w-5 transform items-center justify-center rounded-full bg-surface shadow ring-0 transition duration-200 ease-in-out ${
+                        isCoin ? 'translate-x-5' : 'translate-x-0'
                       }`}
                     >
-                      <span className="text-[16px] leading-none">{isCoin ? '🪙' : '🏦'}</span>
+                      <span className="text-[12px] leading-none">{isCoin ? '🪙' : '🏦'}</span>
                     </span>
                   </button>
                 </div>

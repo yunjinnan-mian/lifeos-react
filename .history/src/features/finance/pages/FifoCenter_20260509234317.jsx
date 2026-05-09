@@ -53,7 +53,7 @@ export default function FifoCenter() {
   return (
     <div className="flex-1 h-full flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden relative bg-surface text-primary antialiased">
       
-      <section className="w-full lg:w-[65%] h-auto lg:h-full flex flex-col p-6 lg:p-12 overflow-visible lg:overflow-y-auto border-0 border-b-[1px] lg:border-b-0 lg:border-r-[1px] border-solid border-surface-variant relative z-10 shrink-0">
+      <section className="w-full lg:w-[65%] h-auto lg:h-full flex flex-col p-6 lg:p-12 overflow-visible lg:overflow-y-auto border-b-[1px] lg:border-b-0 lg:border-r-[1px] border-solid border-surface-variant relative z-10 shrink-0">
         
         <div className="flex justify-between items-center mb-8">
           <div className="uppercase tracking-widest text-xs font-semibold text-on-surface-variant">
@@ -107,7 +107,7 @@ export default function FifoCenter() {
         </div>
 
         {/* 恢复底部的 本周结余 + 周均消费 */}
-        <div className="grid grid-cols-2 gap-8 pt-8 border-0 border-t-[1px] border-solid border-surface-variant mt-auto">
+        <div className="grid grid-cols-2 gap-8 pt-8 border-t-[1px] border-surface-variant mt-auto">
           {(() => {
             // 计算当前时间对应到了第几周，以显示精准的本周结余
             const today = new Date();
@@ -157,7 +157,7 @@ export default function FifoCenter() {
             <span className="text-xs font-medium text-on-surface-variant bg-surface px-2 py-1 rounded">可编辑预算</span>
           </div>
 
-          <div className="grid grid-cols-12 gap-2 pb-4 border-0 border-b-[1px] border-solid border-surface-variant text-[10px] uppercase tracking-widest font-semibold text-on-surface-variant pr-2">
+          <div className="grid grid-cols-12 gap-2 pb-4 border-b-[1px] border-solid border-surface-variant text-[10px] uppercase tracking-widest font-semibold text-on-surface-variant pr-2">
             <div className="col-span-3">周/期</div>
             <div className="col-span-3 text-right">预算</div>
             <div className="col-span-3 text-right">实际(只读)</div>

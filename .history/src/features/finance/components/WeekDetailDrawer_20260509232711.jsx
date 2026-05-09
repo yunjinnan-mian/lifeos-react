@@ -2,30 +2,16 @@
 import React, { useState, useMemo } from 'react';
 
 export default function WeekDetailDrawer({ weekData, onClose, onDeleteTx, onTogglePool }) {
-  const [sortConfig, setSortConfig] = useState({ key: 'time', dir: 'desc' });
-
-  const handleSort = (key) => {
-    setSortConfig(prev => ({
-      key,
-      dir: prev.key === key && prev.dir === 'desc' ? 'asc' : 'desc'
-    }));
-  };
+  const [sortBy, setSortBy] = useState('time'); // 'time' | 'amount'
 
   const sortedTxs = useMemo(() => {
     return [...weekData.txs].sort((a, b) => {
-      let valA, valB;
-      if (sortConfig.key === 'amount') {
-        valA = parseFloat(a.amount) || 0;
-        valB = parseFloat(b.amount) || 0;
-      } else {
-        valA = new Date(a.date || 0).getTime();
-        valB = new Date(b.date || 0).getTime();
+      if (sortBy === 'amount') {
+        return (parseFloat(b.amount) || 0) - (parseFloat(a.amount) || 0);
       }
-      if (valA < valB) return sortConfig.dir === 'asc' ? -1 : 1;
-      if (valA > valB) return sortConfig.dir === 'asc' ? 1 : -1;
-      return 0;
+      return new Date(b.date || 0) - new Date(a.date || 0);
     });
-  },[weekData.txs, sortConfig]);
+  }, [weekData.txs, sortBy]);
 
   return (
     <div className="h-full bg-surface-bright flex flex-col p-6 lg:p-12 shadow-2xl overflow-y-auto">
@@ -44,22 +30,22 @@ export default function WeekDetailDrawer({ weekData, onClose, onDeleteTx, onTogg
         </div>
       </div>
 
-      <div className="flex justify-between items-center mb-4 border-0 border-b-[1px] border-solid border-surface-variant pb-2">
+      <div className="flex justify-between items-center mb-4 border-b-[1px] border-surface-variant pb-2">
         <div className="text-[11px] uppercase tracking-widest font-semibold text-on-surface-variant">
           {weekData.w} 账单明细
         </div>
         <div className="flex gap-2">
           <button 
-            onClick={() => handleSort('time')}
-            className={`text-[10px] px-2 py-1 rounded transition-colors flex items-center gap-1 ${sortConfig.key === 'time' ? 'bg-secondary text-surface' : 'bg-surface-variant text-on-surface-variant hover:bg-outline/20'}`}
+            onClick={() => setSortBy('time')}
+            className={`text-[10px] px-2 py-1 rounded transition-colors ${sortBy === 'time' ? 'bg-secondary text-surface' : 'bg-surface-variant text-on-surface-variant hover:bg-outline/20'}`}
           >
-            按时间 {sortConfig.key === 'time' && (sortConfig.dir === 'asc' ? '↑' : '↓')}
+            按时间
           </button>
           <button 
-            onClick={() => handleSort('amount')}
-            className={`text-[10px] px-2 py-1 rounded transition-colors flex items-center gap-1 ${sortConfig.key === 'amount' ? 'bg-secondary text-surface' : 'bg-surface-variant text-on-surface-variant hover:bg-outline/20'}`}
+            onClick={() => setSortBy('amount')}
+            className={`text-[10px] px-2 py-1 rounded transition-colors ${sortBy === 'amount' ? 'bg-secondary text-surface' : 'bg-surface-variant text-on-surface-variant hover:bg-outline/20'}`}
           >
-            按金额 {sortConfig.key === 'amount' && (sortConfig.dir === 'asc' ? '↑' : '↓')}
+            按金额
           </button>
         </div>
       </div>
@@ -87,17 +73,24 @@ export default function WeekDetailDrawer({ weekData, onClose, onDeleteTx, onTogg
                     -{tx.amount}
                   </span>
                   
+                  {/* Remix Icon 主题色小滑块开关 */}
                   <button
                     onClick={() => onTogglePool(tx)}
                     title={isCoin ? "已计入蓄水池" : "不计入蓄水池"}
-                    className="relative inline-flex h-[26px] w-[46px] shrink-0 cursor-pointer items-center rounded-full bg-surface-variant transition-colors duration-200 ease-in-out"
+                    className={`relative inline-flex h-[22px] w-[40px] shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-300 ease-in-out ${
+                      isCoin ? 'bg-secondary' : 'bg-surface-variant'
+                    }`}
                   >
                     <span
-                      className={`pointer-events-none flex h-[26px] w-[26px] transform items-center justify-center transition-transform duration-200 ease-in-out ${
-                        isCoin ? 'translate-x-[20px]' : 'translate-x-0'
+                      className={`pointer-events-none flex h-[18px] w-[18px] transform items-center justify-center rounded-full shadow-sm ring-0 transition duration-300 ease-in-out ${
+                        isCoin ? 'translate-x-[18px] bg-surface' : 'translate-x-0 bg-outline-variant text-surface'
                       }`}
                     >
-                      <span className="text-[16px] leading-none">{isCoin ? '🪙' : '🏦'}</span>
+                      {isCoin ? (
+                        <i className="ri-copper-coin-fill text-[12px] text-secondary"></i>
+                      ) : (
+                        <i className="ri-bank-line text-[10px] text-surface"></i>
+                      )}
                     </span>
                   </button>
                 </div>
