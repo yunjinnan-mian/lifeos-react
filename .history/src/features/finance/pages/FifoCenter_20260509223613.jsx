@@ -8,7 +8,7 @@ import WeekDetailDrawer from '../components/WeekDetailDrawer';
 export default function FifoCenter() {
   const { 
     loading, activeYear, setActiveYear, availableYears, 
-    weeklyData, handleBudgetChange, deleteTransaction 
+    weeklyData, handleBudgetChange, saveTransaction, deleteTransaction 
   } = useFifoData();
 
   // 控制右侧抽屉滑出状态
@@ -142,8 +142,8 @@ export default function FifoCenter() {
       {/* 右侧区域容器 (35%)：包含 Quick Ledger 与 滑动抽屉 */}
       <section className="w-full lg:w-[35%] h-auto lg:h-full min-h-[500px] lg:min-h-0 relative overflow-hidden bg-surface-bright shrink-0 z-10 flex flex-col">
         
-        {/* 常规周列表 (去除 absolute inset-0，让它留在文档流中撑开父级高度) */}
-        <div className={`flex-1 h-full flex flex-col p-6 lg:p-12 transition-transform duration-300 ease-in-out ${activeWeekNum ? '-translate-x-full' : 'translate-x-0'}`}>
+        {/* 常规周列表 */}
+        <div className={`absolute inset-0 flex flex-col p-6 lg:p-12 transition-transform duration-300 ease-in-out ${activeWeekNum ? '-translate-x-full' : 'translate-x-0'}`}>
           <div className="flex justify-between items-end mb-8">
             <h2 className="text-2xl font-semibold tracking-tight text-primary">Quick Ledger</h2>
             <span className="text-xs font-medium text-on-surface-variant bg-surface px-2 py-1 rounded">可编辑预算</span>
@@ -156,19 +156,19 @@ export default function FifoCenter() {
             <div className="col-span-3 text-right">结余</div>
           </div>
 
-          {/* 恢复 overflow-visible，让半屏手机端能自然拉伸高度，而PC端正常滚动 */}
-          <div className="flex-1 overflow-visible lg:overflow-y-auto pr-2 mt-4 space-y-1 pb-20">
+          <div className="flex-1 overflow-y-auto pr-2 mt-4 space-y-1 pb-20">
             {weeklyData.map((w, i) => (
               <div 
                 key={w.w} 
                 className="grid grid-cols-12 gap-2 items-center py-3 px-2 rounded-lg hover:bg-surface transition-colors group cursor-pointer"
-                onClick={() => setActiveWeekNum(w.w)}
+                onClick={() => setActiveWeekNum(w.w)} // 点击滑出抽屉
               >
                 <div className="col-span-3 flex flex-col">
                   <span className="font-mono-num text-sm font-bold text-primary">{w.w}</span>
                   <span className="text-[9px] text-outline mt-1">{w.d}</span>
                 </div>
                 
+                {/* 预算列：阻止冒泡，避免触发点击抽屉，失去焦点时保存 */}
                 <div className="col-span-3 text-right" onClick={e => e.stopPropagation()}>
                   <input 
                     type="number" 
@@ -178,6 +178,7 @@ export default function FifoCenter() {
                   />
                 </div>
 
+                {/* 实际支出列：只读 */}
                 <div className="col-span-3 text-right">
                    <div className="font-mono-num text-[15px] font-bold text-primary py-1">
                      {fmtMoney(w.s)}
@@ -192,15 +193,16 @@ export default function FifoCenter() {
           </div>
         </div>
 
-        {/* 抽屉层 (保留 absolute inset-0，仅作为悬浮层滑入滑出) */}
+        {/* 抽屉层 */}
         <div 
-          className="absolute inset-0 transition-transform duration-300 ease-in-out z-20"
+          className="absolute inset-0 transition-transform duration-300 ease-in-out"
           style={{ transform: activeWeekNum ? 'translateX(0)' : 'translateX(100%)' }}
         >
           {activeWeekData && (
             <WeekDetailDrawer 
               weekData={activeWeekData} 
               onClose={() => setActiveWeekNum(null)}
+              onSaveTx={saveTransaction}
               onDeleteTx={deleteTransaction}
             />
           )}

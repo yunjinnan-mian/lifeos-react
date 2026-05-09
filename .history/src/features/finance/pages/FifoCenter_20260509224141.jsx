@@ -8,7 +8,7 @@ import WeekDetailDrawer from '../components/WeekDetailDrawer';
 export default function FifoCenter() {
   const { 
     loading, activeYear, setActiveYear, availableYears, 
-    weeklyData, handleBudgetChange, deleteTransaction 
+    weeklyData, handleBudgetChange, saveTransaction, deleteTransaction 
   } = useFifoData();
 
   // 控制右侧抽屉滑出状态
@@ -201,6 +201,7 @@ export default function FifoCenter() {
             <WeekDetailDrawer 
               weekData={activeWeekData} 
               onClose={() => setActiveWeekNum(null)}
+              onSaveTx={saveTransaction}
               onDeleteTx={deleteTransaction}
             />
           )}
