@@ -2,7 +2,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { FinanceDB } from '../../../lib/db';
 import { useFinance } from '../index'; // 直接接入你主应用的上下文
-import { doc, deleteDoc, setDoc } from 'firebase/firestore';
+import { doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../../lib/firebase';
 
 // ISO 8601: W1 是包含该年第一个星期四的那一周
@@ -78,13 +78,10 @@ export function useFifoData() {
       const wKey = `W${weekIndex + 1}`;
       if (!txsByWeek[wKey]) txsByWeek[wKey] = { totalCents: 0, list:[] };
 
-      txsByWeek[wKey].list.push(tx); // 无论是否计入，都挂载到列表中以便 UI 展示和编辑
-      
-      // 只有标记为 🪙 (coin) 或未标记（旧数据）的才计入图表与结余总和
-      if (tx.pool !== 'bank') {
-        const amountCents = Math.round((parseFloat(tx.amount) || 0) * 100);
-        txsByWeek[wKey].totalCents += amountCents;
-      }
+      // 核心结构改变：转化为分（整数）再累加，从根本上阻断 IEEE 754 精度丢失
+      const amountCents = Math.round((parseFloat(tx.amount) || 0) * 100);
+      txsByWeek[wKey].totalCents += amountCents;
+      txsByWeek[wKey].list.push(tx);
     });
 
     for (let i = 0; i < 52; i++) {
@@ -120,26 +117,7 @@ export function useFifoData() {
     });
   }, [activeYear]);
 
-  // 6. 切换交易的记账池 (🪙/🏦)
-  const toggleTransactionPool = useCallback(async (tx) => {
-    // 字符串枚举：'bank' 代表不计入，'coin' 代表计入
-    const newPool = tx.pool === 'bank' ? 'coin' : 'bank';
-    
-    // 乐观更新：推送到全局账单数组
-    setData(prev => ({
-      ...prev,
-      txs: prev.txs.map(t => String(t.id) === String(tx.id) ? { ...t, pool: newPool } : t)
-    }));
-
-    try {
-      await setDoc(doc(db, 'transactions', String(tx.id)), { pool: newPool, updatedAt: new Date().toISOString() }, { merge: true });
-    } catch (e) {
-      console.error('切换记账池失败', e);
-      if(showToast) showToast('网络错误，状态切换失败');
-    }
-  }, [setData, showToast]);
-
-  // 7. 抽屉内删除交易：同步更新外层
+  // 6. 抽屉内删除交易：同步更新外层
   const deleteTransaction = useCallback(async (id) => {
     const targetTx = allTxs.find(t => t.id === id);
     if (!targetTx) return;
@@ -172,7 +150,6 @@ export function useFifoData() {
     availableYears,
     weeklyData,
     handleBudgetChange,
-    deleteTransaction,
-    toggleTransactionPool
+    deleteTransaction
   };
 }
