@@ -76,11 +76,8 @@ export function useFifoData() {
       const weekIndex = Math.floor(diffDays / 7);
       
       const wKey = `W${weekIndex + 1}`;
-      if (!txsByWeek[wKey]) txsByWeek[wKey] = { totalCents: 0, list:[] };
-
-      // 核心结构改变：转化为分（整数）再累加，从根本上阻断 IEEE 754 精度丢失
-      const amountCents = Math.round((parseFloat(tx.amount) || 0) * 100);
-      txsByWeek[wKey].totalCents += amountCents;
+      if (!txsByWeek[wKey]) txsByWeek[wKey] = { total: 0, list: [] };
+      txsByWeek[wKey].total += (tx.amount || 0);
       txsByWeek[wKey].list.push(tx);
     });
 
@@ -98,7 +95,7 @@ export function useFifoData() {
         d: `${fmt(wStart)}–${fmt(wEnd)}`,
         month: wStart.getMonth(),
         b: budgets[wKey] ?? 0, 
-        s: (txsByWeek[wKey]?.totalCents || 0) / 100,
+        s: txsByWeek[wKey]?.total ?? 0,
         txs: txsByWeek[wKey]?.list ??[] 
       });
     }
