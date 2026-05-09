@@ -89,6 +89,7 @@ export default function WeekDetailDrawer({ weekData, onClose, onDeleteTx, onTogg
                   
                   <button
                     onClick={() => onTogglePool(tx)}
+                    title={isCoin ? "已计入蓄水池" : "不计入蓄水池"}
                     // 1. 彻底消灭物理边框：使用 border-none outline-none，并加上行内 style 作为双重保险
                     // 2. 增加凹槽质感：使用 shadow-inner
                     // 3. 物理阻尼动画：加入 active:scale-90 让点击时有按下微缩的回弹感
