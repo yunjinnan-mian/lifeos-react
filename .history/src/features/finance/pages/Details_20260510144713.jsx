@@ -669,7 +669,6 @@ const Details = memo(function Details() {
         const lines = targets.map(t => {
             const parts = [];
             if (selectedCols.has('month')) parts.push((t.date || '').slice(0, 7));
-            if (selectedCols.has('date')) parts.push((t.date || '').slice(0, 10));
             if (selectedCols.has('desc')) parts.push(t.desc || '');
             if (selectedCols.has('amount')) parts.push((t.amount || 0).toLocaleString());
             return parts.join(',');
