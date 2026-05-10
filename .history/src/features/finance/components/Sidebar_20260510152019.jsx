@@ -10,7 +10,7 @@ const NAV_ITEMS = [
     { id: 'assets',    icon: 'ri-bank-line',          label: '资产快照' },
     { id: 'dashboard', icon: 'ri-dashboard-line',    label: '总览透视' },
     { id: 'journal',   icon: 'ri-file-add-line',     label: '记账工作台',  section: '核心功能' },
-    { id: 'fifo',      icon: 'ri-bar-chart-grouped-line', label: 'FIFO' },
+    { id: 'fifo',      icon: 'ri-bar-chart-grouped-line', label: 'FIFO 成本' },
     { id: 'details',   icon: 'ri-file-list-3-line',  label: '账单明细',   section: '数据管理' },
 ];
 

@@ -21,7 +21,7 @@ const PAGE_TITLES = {
     journal:   '记账工作台',
     details:   '账单明细',
     settings:  '系统设置',
-    fifo:      'FIFO 成本',
+    fifo:      'FIFO',
 };
 
 function Sidebar({ activePage, onNav, onOpenExportModal, onClearData, isCollapsed, onToggleCollapse }) {
