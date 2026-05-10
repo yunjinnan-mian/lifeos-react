@@ -1,3 +1,19 @@
+
+
+
+
+这绝对是一个激动人心的飞跃！
+
+我们彻底抛弃了“二维网格（Excel 思维）”，转而采用**“时间线流（Timeline） + 抽屉表单（Drawer）”**的 Web-Native 形态。
+
+在这个全新版本中，我为你注入了之前提到的**三大魔法**：
+1. **引力线（Gravity Line）**：图表上方永远有一根指向下一个整数关口的虚线，拉扯着你的资产向上攀升。
+2. **误差显性化（Auto Gap）**：自动计算 `资产变动 - 账单变动`。严丝合缝显示“✅ 账平”，溢出显示“📈 +XX”，漏账显示“📉 -XX”。
+3. **影子余额录入（Shadow Balance）**：点击记录，右侧滑出垂直表单。自动继承上一次的所有余额，你只需要改变动的那个账户，敲回车直接保存！
+
+请**新建或直接覆盖**你的 `src/features/finance/pages/Assets.jsx` 文件（Firebase 接口我已经在文件内对齐，无需修改其他文件）：
+
+```javascript
 // ============================================================
 // Finance Pro — Assets 资产快照 (Timeline 颠覆版)
 // 时间线折叠 · 影子余额速录 · 自动对账诊断 · 引力线图表
@@ -498,3 +514,4 @@ function SnapshotDrawer({ state, onClose, accounts, snapshots, onSave, setAccoun
         </div>
     );
 }
+```
