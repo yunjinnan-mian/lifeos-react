@@ -178,13 +178,7 @@ export default function FifoCenter() {
               <div 
                 key={w.w} 
                 className="grid grid-cols-12 gap-2 items-center py-3 px-2 rounded-lg hover:bg-surface transition-colors group cursor-pointer"
-                onClick={() => {
-                  // 核心拦截原理：
-                  // 正常的行点击，在 mousedown 的瞬间就会让之前的输入框失焦。
-                  // 只有当 mousedown 是在 input 内部按下的（比如拖拽选中文字），松手时焦点才会死死咬住 INPUT 不放。
-                  if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
-                  setActiveWeekNum(w.w);
-                }}
+                onClick={() => setActiveWeekNum(w.w)}
               >
                 {/* 1. 周与日期 */}
                 <div className="col-span-3 flex flex-col justify-center">
@@ -192,8 +186,13 @@ export default function FifoCenter() {
                   <span className="text-[9px] text-outline leading-none">{w.d}</span>
                 </div>
                 
-                {/* 2. 可编辑预算 */}
-                <div className="col-span-3 flex items-center justify-end" onClick={e => e.stopPropagation()}>
+                {/* 2. 可编辑预算：全面隔离 mousedown/mouseup，防止拖拽选中文本时触发整行点击 */}
+                <div 
+                  className="col-span-3 flex items-center justify-end" 
+                  onMouseDown={e => e.stopPropagation()}
+                  onMouseUp={e => e.stopPropagation()}
+                  onClick={e => e.stopPropagation()}
+                >
                   <input 
                     type="number" 
                     defaultValue={w.b} 

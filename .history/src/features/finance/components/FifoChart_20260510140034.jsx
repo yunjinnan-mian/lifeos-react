@@ -18,28 +18,15 @@ export default function FifoChart({ weeklyData, onBarClick }) {
   const chartRef = useRef(null);
   const ecInstance = useRef(null);
 
-  // 解决闭包陷阱，永远保持拿到最新的回调函数
-  const onBarClickRef = useRef(onBarClick);
-  useEffect(() => {
-    onBarClickRef.current = onBarClick;
-  }, [onBarClick]);
-
   useEffect(() => {
     if (!chartRef.current) return;
     if (!ecInstance.current) {
       ecInstance.current = echarts.init(chartRef.current);
       
-      // 使用底层 zrender 监听：通过像素坐标反推 X 轴，使得点击整根柱子所在的"列空白处"也能精准触发
-      ecInstance.current.getZr().on('click', (params) => {
-        const pointInPixel = [params.offsetX, params.offsetY];
-        if (ecInstance.current.containPixel('grid', pointInPixel)) {
-          // 转换得到点击的是第几个柱子
-          const xIndex = ecInstance.current.convertFromPixel({ seriesIndex: 0 }, pointInPixel)[0];
-          // 直接从图表实例的配置中安全提取当前周的名称（如 'W12'）
-          const weekStr = ecInstance.current.getOption().xAxis[0].data[xIndex];
-          if (weekStr && onBarClickRef.current) {
-            onBarClickRef.current(weekStr);
-          }
+      // 点击柱体或线条，向上传递周标识（如 'W12'）联动右侧抽屉
+      ecInstance.current.on('click', (params) => {
+        if (params.name && onBarClick) {
+          onBarClick(params.name);
         }
       });
     }

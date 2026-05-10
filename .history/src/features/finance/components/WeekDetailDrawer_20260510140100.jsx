@@ -2,17 +2,13 @@
 import React, { useState, useMemo } from 'react';
 
 export default function WeekDetailDrawer({ weekData, onClose, onDeleteTx, onTogglePool }) {
-  const [sortConfig, setSortConfig] = useState({ key: 'time', dir: 'asc' });
+  const [sortConfig, setSortConfig] = useState({ key: 'time', dir: 'desc' });
 
   const handleSort = (key) => {
-    setSortConfig(prev => {
-      // 连续点击同一个，则切换升降序
-      if (prev.key === key) {
-        return { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' };
-      }
-      // 切换不同的排序项：时间默认给升序(老在前)，金额默认给降序(大在前)
-      return { key, dir: key === 'time' ? 'asc' : 'desc' };
-    });
+    setSortConfig(prev => ({
+      key,
+      dir: prev.key === key && prev.dir === 'desc' ? 'asc' : 'desc'
+    }));
   };
 
   const sortedTxs = useMemo(() => {
@@ -62,17 +58,16 @@ export default function WeekDetailDrawer({ weekData, onClose, onDeleteTx, onTogg
           sortedTxs.map(tx => {
             const isCoin = tx.pool !== 'bank'; // 默认是 coin 计入
             return (
-              <div key={tx.id} className="flex items-center py-3 px-4 bg-surface rounded-lg group transition-colors">
-                {/* 左侧：允许收缩并限制最小宽度为0，确保长串数字必须换行 */}
-                <div className="flex flex-col flex-1 min-w-0 pr-4">
-                  <span className={`text-sm font-medium break-all transition-colors ${isCoin ? 'text-primary' : 'text-outline line-through decoration-outline/50'}`}>
+              <div key={tx.id} className="flex justify-between items-center py-3 px-4 bg-surface rounded-lg group transition-colors">
+                <div className="flex flex-col">
+                  {/* 若为 bank 排除，说明文字加上删除线并变灰 */}
+                  <span className={`text-sm font-medium transition-colors ${isCoin ? 'text-primary' : 'text-outline line-through decoration-outline/50'}`}>
                     {tx.desc}
                   </span>
-                  <span className="text-[10px] text-outline mt-1">{tx.date}</span>
+                  <span className="text-[10px] text-outline mt-0.5">{tx.date}</span>
                 </div>
                 
-                {/* 右侧：禁止收缩，永远保持原始宽度 */}
-                <div className="flex items-center gap-3 shrink-0">
+                <div className="flex items-center gap-3">
                   {/* 金额颜色同步变化 */}
                   <span className={`font-mono-num font-bold transition-colors ${isCoin ? 'text-error' : 'text-outline'}`}>
                     -{tx.amount}

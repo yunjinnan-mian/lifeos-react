@@ -104,24 +104,16 @@ export default function FifoCenter() {
               <div className="flex items-center gap-1.5"><div className="w-4 h-[2px] rounded-full bg-outline opacity-50 border-t border-dashed"></div>基准</div>
             </div>
           </div>
-          <FifoChart weeklyData={weeklyData} onBarClick={(w) => setActiveWeekNum(w)} />
+          <FifoChart weeklyData={weeklyData} />
         </div>
 
         {/* 恢复底部的 本周结余 + 周均消费 */}
         <div className="grid grid-cols-2 gap-8 pt-8 border-0 border-t-[1px] border-solid border-surface-variant mt-auto">
           {(() => {
             // 计算当前时间对应到了第几周，以显示精准的本周结余
-            // 剥离时间，仅使用本地午夜时间对抗时区漂移
-            const now = new Date();
-            const localToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-            
-            // 严格对齐 ISO 8601 的第一周定义（包含该年第一个星期四的那一周）
-            const jan4 = new Date(activeYear, 0, 4);
-            const w1 = new Date(activeYear, 0, 4 - ((jan4.getDay() + 6) % 7));
-            
-            // 使用 Math.round 抵消夏令时误差，再除以 7
-            const diffDays = Math.round((localToday - w1) / 86400000);
-            let curWIdx = Math.floor(diffDays / 7);
+            const today = new Date();
+            const w1 = new Date(weeklyData[0]?.startStr || today);
+            let curWIdx = Math.floor((today - w1) / (1000 * 60 * 60 * 24 * 7));
             curWIdx = Math.max(0, Math.min(51, curWIdx)); // 框定在 0-51 之间
             const curBal = balList[curWIdx] || 0;
             const curWName = `W${curWIdx + 1}`;
@@ -178,13 +170,7 @@ export default function FifoCenter() {
               <div 
                 key={w.w} 
                 className="grid grid-cols-12 gap-2 items-center py-3 px-2 rounded-lg hover:bg-surface transition-colors group cursor-pointer"
-                onClick={() => {
-                  // 核心拦截原理：
-                  // 正常的行点击，在 mousedown 的瞬间就会让之前的输入框失焦。
-                  // 只有当 mousedown 是在 input 内部按下的（比如拖拽选中文字），松手时焦点才会死死咬住 INPUT 不放。
-                  if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
-                  setActiveWeekNum(w.w);
-                }}
+                onClick={() => setActiveWeekNum(w.w)}
               >
                 {/* 1. 周与日期 */}
                 <div className="col-span-3 flex flex-col justify-center">
@@ -198,7 +184,6 @@ export default function FifoCenter() {
                     type="number" 
                     defaultValue={w.b} 
                     onBlur={(e) => handleBudgetChange(w.w, e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
                     title="点击修改预算"
                     className="number-input-clean w-20 bg-transparent border-none text-right font-mono-num text-[13px] font-bold text-on-surface-variant focus:ring-0 focus:text-primary p-0 m-0 leading-none outline-none cursor-pointer focus:cursor-text hover:bg-surface-variant/50 rounded transition-colors"
                   />

@@ -14,34 +14,14 @@ const C = {
   bdr: '#e3e3de',   // surface-variant
 };
 
-export default function FifoChart({ weeklyData, onBarClick }) {
+export default function FifoChart({ weeklyData }) {
   const chartRef = useRef(null);
   const ecInstance = useRef(null);
-
-  // 解决闭包陷阱，永远保持拿到最新的回调函数
-  const onBarClickRef = useRef(onBarClick);
-  useEffect(() => {
-    onBarClickRef.current = onBarClick;
-  }, [onBarClick]);
 
   useEffect(() => {
     if (!chartRef.current) return;
     if (!ecInstance.current) {
       ecInstance.current = echarts.init(chartRef.current);
-      
-      // 使用底层 zrender 监听：通过像素坐标反推 X 轴，使得点击整根柱子所在的"列空白处"也能精准触发
-      ecInstance.current.getZr().on('click', (params) => {
-        const pointInPixel = [params.offsetX, params.offsetY];
-        if (ecInstance.current.containPixel('grid', pointInPixel)) {
-          // 转换得到点击的是第几个柱子
-          const xIndex = ecInstance.current.convertFromPixel({ seriesIndex: 0 }, pointInPixel)[0];
-          // 直接从图表实例的配置中安全提取当前周的名称（如 'W12'）
-          const weekStr = ecInstance.current.getOption().xAxis[0].data[xIndex];
-          if (weekStr && onBarClickRef.current) {
-            onBarClickRef.current(weekStr);
-          }
-        }
-      });
     }
 
     // ── 计算溢水与蓄水池核心逻辑 ──
@@ -100,37 +80,34 @@ export default function FifoChart({ weeklyData, onBarClick }) {
         axisLabel: { color: C.t3, fontSize: 10, fontFamily: 'SF Mono', margin: 12 },
       },
       series:[
-        // 强制 markLine 自身降到 z: 0
+        // 剥离 markLine 到 z: 0 的透明基础层，确保分割线永远在柱体背后
         {
           type: 'line', data: [], z: 0,
-          markLine: { data: mlines, symbol: 'none', silent: true, z: 0 },
+          markLine: { data: mlines, symbol: 'none', silent: true },
         },
-        // 柱状图统一提权到 z: 5
         {
-          name: '基础', type: 'bar', stack: 's', barWidth: '40%', z: 5,
+          name: '基础', type: 'bar', stack: 's', barWidth: '40%', z: 2,
           itemStyle: { color: C.base, borderRadius:[2, 2, 0, 0] }, data: base,
         },
-        { name: '历史', type: 'bar', stack: 's', z: 5, itemStyle: { color: C.spill, borderRadius:[2, 2, 0, 0] }, data: spilled },
-        { name: '超支', type: 'bar', stack: 's', z: 5, itemStyle: { color: C.over, borderRadius: [2, 2, 0, 0] }, data: overflow },
+        { name: '历史', type: 'bar', stack: 's', itemStyle: { color: C.spill, borderRadius: [2, 2, 0, 0] }, data: spilled },
+        { name: '超支', type: 'bar', stack: 's', itemStyle: { color: C.over, borderRadius: [2, 2, 0, 0] }, data: overflow },
         {
-          name: '基准', type: 'line', step: 'middle', symbol: 'none', z: 6,
+          name: '基准', type: 'line', step: 'middle', symbol: 'none', z: 5,
           lineStyle: { color: C.budget, width: 1, type: 'dashed', opacity: 0.5 },
           data: weeklyData.map(x => x.b),
         },
-        // "全部"支出使用原本的红色 (C.gold)，实线
         {
           name: '全部', type: 'line', smooth: 0.3, symbol: 'none', z: 8,
-          lineStyle: { color: C.gold, width: 2, type: 'solid' },
+          lineStyle: { color: '#959c9f', width: 1.5, type: 'dotted' },
           data: weeklyData.map(x => x.sAll),
         },
-        // "实际"计入支出换成同色系的 暖金黄 (#d1a054)，实线，并更新面积阴影
         {
           name: '实际', type: 'line', smooth: 0.3, symbol: 'none', z: 10,
-          lineStyle: { color: '#d1a054', width: 2, type: 'solid' },
+          lineStyle: { color: C.gold, width: 2 },
           areaStyle: {
             color: new echarts.graphic.LinearGradient(0, 0, 0, 1,[
-              { offset: 0, color: 'rgba(209, 160, 84, 0.2)' },
-              { offset: 1, color: 'rgba(209, 160, 84, 0)' }
+              { offset: 0, color: 'rgba(92, 31, 20, 0.15)' },
+              { offset: 1, color: 'rgba(92, 31, 20, 0)' }
             ])
           },
           data: weeklyData.map(x => x.s),

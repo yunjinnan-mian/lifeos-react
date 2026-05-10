@@ -104,7 +104,7 @@ export default function FifoCenter() {
               <div className="flex items-center gap-1.5"><div className="w-4 h-[2px] rounded-full bg-outline opacity-50 border-t border-dashed"></div>基准</div>
             </div>
           </div>
-          <FifoChart weeklyData={weeklyData} onBarClick={(w) => setActiveWeekNum(w)} />
+          <FifoChart weeklyData={weeklyData} />
         </div>
 
         {/* 恢复底部的 本周结余 + 周均消费 */}
@@ -178,13 +178,7 @@ export default function FifoCenter() {
               <div 
                 key={w.w} 
                 className="grid grid-cols-12 gap-2 items-center py-3 px-2 rounded-lg hover:bg-surface transition-colors group cursor-pointer"
-                onClick={() => {
-                  // 核心拦截原理：
-                  // 正常的行点击，在 mousedown 的瞬间就会让之前的输入框失焦。
-                  // 只有当 mousedown 是在 input 内部按下的（比如拖拽选中文字），松手时焦点才会死死咬住 INPUT 不放。
-                  if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
-                  setActiveWeekNum(w.w);
-                }}
+                onClick={() => setActiveWeekNum(w.w)}
               >
                 {/* 1. 周与日期 */}
                 <div className="col-span-3 flex flex-col justify-center">
