@@ -90,7 +90,6 @@ export default function FifoChart({ weeklyData, onBarClick }) {
           const history = getVal('动用结余');
           const over = getVal('严重透支');
           const bal = budget - living;
-          const excluded = total - living; // 计算差额：被 🏦 剥离的大额开支
           
           const fmt = (n) => Number(n).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
           const balStr = bal >= 0 ? '+' + fmt(bal) : fmt(bal);
@@ -100,16 +99,10 @@ export default function FifoChart({ weeklyData, onBarClick }) {
               <div style="font-weight: 700; font-size: 14px; margin-bottom: 8px;">${params[0].axisValue} 账单快照</div>
               
               <div style="height: 1px; background: ${C.bdr}; margin: 6px 0;"></div>
-              <div style="display: flex; justify-content: space-between; font-size: 12px; ${excluded > 0 ? 'margin-bottom: 4px;' : ''}">
+              <div style="display: flex; justify-content: space-between; font-size: 12px;">
                 <span>🔴 总支</span>
                 <span style="font-family: 'SF Mono', monospace; font-weight: 600;">${fmt(total)}</span>
               </div>
-              ${excluded > 0 ? `
-              <div style="display: flex; justify-content: space-between; font-size: 11px; color: ${C.t3};">
-                <span style="padding-left: 20px;">↳ 🏦 非日常/大额</span>
-                <span style="font-family: 'SF Mono', monospace;">${fmt(excluded)}</span>
-              </div>
-              ` : ''}
               
               <div style="height: 1px; background: ${C.bdr}; margin: 6px 0;"></div>
               <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
