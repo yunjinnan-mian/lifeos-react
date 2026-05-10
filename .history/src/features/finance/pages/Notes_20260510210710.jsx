@@ -56,26 +56,7 @@ const Notes = memo(function Notes() {
 
     // ── 幽灵块状态 ──────────────────────────────────────────
     const [ghostText, setGhostText] = useState('');
-    const [activeDate, setActiveDate] = useState('');
     const saveTimerRef = useRef(null);
-
-    // 滚动侦测：计算当前哪个文本块在视口中
-    const handleScroll = () => {
-        let current = '';
-        for (const b of blocks) {
-            const el = document.getElementById(`block-${b.date}`);
-            if (el) {
-                const rect = el.getBoundingClientRect();
-                if ((rect.top >= 0 && rect.top < 300) || (rect.top < 0 && rect.bottom > 150)) {
-                    current = b.date;
-                    break;
-                }
-            }
-        }
-        if (current && current !== activeDate) {
-            setActiveDate(current);
-        }
-    };
 
     const todayStr = useMemo(() => {
         const d = new Date();
@@ -151,15 +132,17 @@ const Notes = memo(function Notes() {
                 );
                 lastMonth = m;
             }
-            const isActive = b.date === activeDate;
             nodes.push(
                 <div
                     key={`d-${b.date}`}
-                    className={`flex items-center gap-2 ml-4 mt-1.5 cursor-pointer transition-all duration-300 ${isActive ? 'text-primary' : 'text-outline hover:text-primary'}`}
-                    onClick={() => document.getElementById(`block-${b.date}`).scrollIntoView({ behavior: 'smooth' })}
+                    className="flex items-center gap-2 ml-4 mt-1 cursor-pointer hover:text-primary text-outline transition-colors"
+                    onClick={() => {
+                        const el = document.getElementById(`block-${b.date}`);
+                        if (el) el.scrollIntoView({ behavior: 'smooth' });
+                    }}
                 >
-                    <div className={`rounded-full transition-all duration-300 ${isActive ? 'w-2 h-2 bg-primary shadow-[0_0_6px_rgba(24,31,33,0.5)]' : 'w-1 h-1 bg-outline-variant'}`}></div>
-                    <span className={`font-mono-num transition-all duration-300 ${isActive ? 'text-[11px] font-bold' : 'text-[9px]'}`}>{day}日</span>
+                    <div className={`w-1 h-1 rounded-full ${b.date === todayStr ? 'bg-primary' : 'bg-outline-variant'}`}></div>
+                    <span className="text-[9px] font-mono-num">{day}日</span>
                 </div>
             );
         });
@@ -192,7 +175,7 @@ const Notes = memo(function Notes() {
         }
 
         return nodes;
-    }, [blocks, todayStr, hasToday, activeDate]);
+    }, [blocks, todayStr, hasToday]);
 
     // ── 更新已有块的内容 ───────────────────────────────────
     const handleBlockChange = useCallback((date, text) => {
@@ -206,15 +189,8 @@ const Notes = memo(function Notes() {
     return (
         <div className="flex h-full" style={{ padding: '20px 0 20px 24px', marginRight: -24, boxSizing: 'border-box' }}>
 
-            {/* 注入一个内联 style 标签专门用来隐藏 webkit 滚动条 */}
-            <style>{`.hide-scroll::-webkit-scrollbar { display: none; }`}</style>
-
             {/* ── 左侧：内容区 ────────────────────────── */}
-            <div
-                className="flex-1 pr-12 overflow-y-auto pb-32 hide-scroll"
-                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-                onScroll={handleScroll}
-            >
+            <div className="flex-1 pr-4 overflow-y-auto pb-32">
                 {/* 标题栏 */}
                 <div className="flex items-baseline gap-3 mb-8">
                     <h2 className="m-0 text-lg font-bold text-on-surface">备忘录</h2>
@@ -228,7 +204,7 @@ const Notes = memo(function Notes() {
                     <div
                         key={b.date}
                         id={`block-${b.date}`}
-                        className="mb-8 border-0 border-b-[1px] border-solid border-surface-variant pb-8"
+                        className="mb-8 border-b-[1px] border-dashed border-surface-variant pb-8"
                     >
                         <div className="text-[11px] font-mono-num font-bold text-outline mb-3">
                             {b.date}
@@ -264,7 +240,7 @@ const Notes = memo(function Notes() {
 
             {/* ── 右侧：降噪时间线 ────────────────────── */}
             {blocks.length > 0 && (
-                <div className="w-16 flex-shrink-0 pl-2 border-none outline-none overflow-y-auto pb-32">
+                <div className="w-16 flex-shrink-0 pl-2 border-l-[1px] border-solid border-surface-variant overflow-y-auto pb-32">
                     <div className="sticky top-0 bg-background pt-5 pb-2">
                         <div className="text-[10px] font-bold text-outline tracking-widest">TIME</div>
                     </div>

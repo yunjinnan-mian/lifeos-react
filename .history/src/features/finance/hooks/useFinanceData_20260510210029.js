@@ -123,22 +123,17 @@ export function useFinanceData(showToast) {
             txSnap.forEach(d => loadedData.txs.push(d.data()));
             loadedData.txs.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-            // 3. 强行迁移：旧版独立备忘录 → 今日 memoBlocks
+            // 3. 平滑迁移：旧版独立备忘录 → memoBlocks
             if (!loadedData.memoBlocks || loadedData.memoBlocks.length === 0) {
                 try {
                     const oldNotesSnap = await getDoc(doc(db, 'config', 'notes'));
                     if (oldNotesSnap.exists()) {
                         const oldContent = oldNotesSnap.data().content || '';
                         if (oldContent.trim()) {
-                            const d = new Date();
-                            const y = d.getFullYear();
-                            const m = String(d.getMonth() + 1).padStart(2, '0');
-                            const day = String(d.getDate()).padStart(2, '0');
-                            const todayStr = `${y}.${m}.${day}`;
-                            loadedData.memoBlocks = [{ date: todayStr, text: oldContent.trim() }];
+                            loadedData.memoBlocks = [{ date: '2025-01-01', text: oldContent.trim() }];
                         }
                     }
-                } catch { /* 忽略旧文档读取失败 */ }
+                } catch { /* 忽略旧文档读取失败，保持为空数组 */ }
             }
 
             const migrated = migrateOldData(loadedData);

@@ -114,7 +114,6 @@ export function useFinanceData(showToast) {
                 if (cfg.subs) loadedData.subs = cfg.subs;
                 if (cfg.history) loadedData.history = cfg.history;
                 if (cfg.cats && cfg.cats.length) loadedData.cats = cfg.cats;
-                if (cfg.memoBlocks && cfg.memoBlocks.length) loadedData.memoBlocks = cfg.memoBlocks;
             }
 
             // 2. 加载交易记录
@@ -122,24 +121,6 @@ export function useFinanceData(showToast) {
             loadedData.txs = [];
             txSnap.forEach(d => loadedData.txs.push(d.data()));
             loadedData.txs.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-            // 3. 强行迁移：旧版独立备忘录 → 今日 memoBlocks
-            if (!loadedData.memoBlocks || loadedData.memoBlocks.length === 0) {
-                try {
-                    const oldNotesSnap = await getDoc(doc(db, 'config', 'notes'));
-                    if (oldNotesSnap.exists()) {
-                        const oldContent = oldNotesSnap.data().content || '';
-                        if (oldContent.trim()) {
-                            const d = new Date();
-                            const y = d.getFullYear();
-                            const m = String(d.getMonth() + 1).padStart(2, '0');
-                            const day = String(d.getDate()).padStart(2, '0');
-                            const todayStr = `${y}.${m}.${day}`;
-                            loadedData.memoBlocks = [{ date: todayStr, text: oldContent.trim() }];
-                        }
-                    }
-                } catch { /* 忽略旧文档读取失败 */ }
-            }
 
             const migrated = migrateOldData(loadedData);
             setData(migrated);
