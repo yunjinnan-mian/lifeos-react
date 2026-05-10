@@ -201,34 +201,21 @@ export default function FifoChart({ weeklyData, onBarClick }) {
       series: getSpotlightSeries(-1, []),
     });
 
-    // ✨ 联动高亮魔法：基于坐标轴的高级监听（防抖、防闪烁）
-    ecInstance.current.off('updateAxisPointer');
-    ecInstance.current.off('globalout');
-    
-    let currentSpotlightIdx = -1; // 记录当前状态，避免无效重绘
-    
-    ecInstance.current.on('updateAxisPointer', (event) => {
-      const xAxisInfo = event.axesInfo[0];
-      if (xAxisInfo) {
-        const idx = xAxisInfo.value;
-        if (idx === currentSpotlightIdx) return; // 还在同一根柱子上，不操作
-        
-        currentSpotlightIdx = idx;
-        const sources = consumedMap[idx]?.sources || [];
-        
-        if (sources.length > 0) {
-          // 开启探照灯
-          ecInstance.current.setOption({ series: getSpotlightSeries(idx, sources) });
-        } else {
-          // 当前周没有借钱，恢复世界明亮
-          ecInstance.current.setOption({ series: getSpotlightSeries(-1, []) });
-        }
+    // ✨ 联动高亮魔法：鼠标悬浮超支周时，启动探照灯模式
+    ecInstance.current.off('mouseover');
+    ecInstance.current.off('mouseout');
+
+    ecInstance.current.on('mouseover', (params) => {
+      const idx = params.dataIndex;
+      const sources = consumedMap[idx]?.sources || [];
+      // 只有当前柱子真的借了往期的钱，才启动探照灯
+      if (sources.length > 0) {
+        ecInstance.current.setOption({ series: getSpotlightSeries(idx, sources) });
       }
     });
-    
-    ecInstance.current.on('globalout', () => {
-      // 鼠标完全移出图表区域，恢复明亮
-      currentSpotlightIdx = -1;
+
+    ecInstance.current.on('mouseout', () => {
+      // 鼠标移出，关闭探照灯，恢复世界明亮
       ecInstance.current.setOption({ series: getSpotlightSeries(-1, []) });
     });
   }, [weeklyData]);
