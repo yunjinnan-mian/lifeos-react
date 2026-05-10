@@ -214,7 +214,7 @@ export default function FifoChart({ weeklyData, onBarClick }) {
         splitLine: { lineStyle: { color: C.bdr, type: 'dashed', opacity: 0.4 } },
         axisLabel: { color: C.t3, fontSize: 10, fontFamily: 'SF Mono', margin: 12 },
       },
-      series: getSpotlightSeries('none', -1, []),
+      series: getSpotlightSeries(-1, []),
     });
 
     // ✨ 状态机：融合坐标轴（防抖）与像素元素（精准识别）的双维监听
