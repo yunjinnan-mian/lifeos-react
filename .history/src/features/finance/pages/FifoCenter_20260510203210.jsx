@@ -92,7 +92,7 @@ export default function FifoCenter() {
         </header>
 
         {/* 恢复图表上方的说明图例 */}
-        <div className="flex-1 flex flex-col min-h-[220px] mb-4 lg:mb-6">
+        <div className="flex-1 flex flex-col min-h-[400px] mb-8">
           <div className="flex justify-between items-center mb-6">
             <h2 className="uppercase tracking-widest text-[11px] font-semibold text-on-surface-variant">52 周支出趋势</h2>
             <div className="flex flex-wrap items-center gap-4 text-[11px] font-medium text-on-surface-variant">
@@ -113,7 +113,7 @@ export default function FifoCenter() {
         </div>
 
         {/* 恢复底部的 本周结余 + 周均消费 */}
-        <div className="grid grid-cols-2 gap-8 pt-6 border-0 border-t-[1px] border-solid border-surface-variant mt-auto">
+        <div className="grid grid-cols-2 gap-8 pt-8 border-0 border-t-[1px] border-solid border-surface-variant mt-auto">
           {(() => {
             // 计算当前时间对应到了第几周，以显示精准的本周结余
             // 剥离时间，仅使用本地午夜时间对抗时区漂移
