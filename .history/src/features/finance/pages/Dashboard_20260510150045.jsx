@@ -136,7 +136,7 @@ const Dashboard = memo(function Dashboard({ onJumpToCategory }) {
                 />
             </div>
 
-            {/* 热力图 */}
+            {/* 热力图 + 词云 */}
             <div style={{ display:'flex', flexWrap:'wrap', gap:24, marginBottom:24, alignItems:'start' }}>
                 <div className="card" style={{ marginBottom:0, display:'flex', flexDirection:'column', overflow:'hidden', flex:'0 0 auto', width:'auto' }}>
                     <div className="card-header">
