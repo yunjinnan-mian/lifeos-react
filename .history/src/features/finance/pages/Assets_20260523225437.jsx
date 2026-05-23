@@ -83,6 +83,7 @@ const Assets = memo(function Assets() {
     const txs = data?.txs || [];
 
     const rows = useMemo(() => {
+        // 辅助函数：标准化日期字符串为 YYYY-MM-DD 格式，去除时间，补齐前导零
         // 辅助函数：标准化日期时间为 YYYY-MM-DD HH:mm:ss
         const normalizeDateTimeStr = (dStr) => {
             if (!dStr) return '';
