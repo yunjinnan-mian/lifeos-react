@@ -75,58 +75,36 @@ const Assets = memo(function Assets() {
     const txs = data?.txs || [];
 
     const rows = useMemo(() => {
-        // 辅助函数：标准化日期字符串为 YYYY-MM-DD 格式，去除时间，补齐前导零
-        const normalizeDateStr = (dStr) => {
-            if (!dStr) return '';
-            const datePart = dStr.trim().split(' ')[0]; // 去除时间部分
-            const parts = datePart.split('-');
-            if (parts.length === 3) {
-                return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
-            }
-            return datePart;
-        };
-
         const sorted = [...snapshots].sort((a, b) => a.date.localeCompare(b.date));
         return sorted.map((snap, idx) => {
             const total = accounts.reduce((s, a) => s + (snap.balances?.[a.id] ?? 0), 0);
             let actualDiff = null;
-            let recordedDiff = null; 
-            let untrackedDiff = null; 
+            let recordedDiff = null;
+            let untrackedDiff = null;
             
             if (idx > 0) {
                 const prev = sorted[idx - 1];
                 const prevTotal = accounts.reduce((s, a) => s + (prev.balances?.[a.id] ?? 0), 0);
                 actualDiff = total - prevTotal;
 
-                if (txs && txs.length > 0) {
-                    const normPrevDate = normalizeDateStr(prev.date);
-                    const normSnapDate = normalizeDateStr(snap.date);
-
-                    // 1. 严格使用补零后的纯日期进行区间对比
+                if (txs.length > 0) {
                     const periodTxs = txs.filter(r => {
-                        if (!r.date) return false;
-                        const normRecordDate = normalizeDateStr(r.date);
-                        return normRecordDate > normPrevDate && normRecordDate <= normSnapDate;
+                        // 截取明细日期的前10位(即 YYYY-MM-DD)，消除时间带来的字符串比较误差
+                        const recordDate = r.date ? r.date.substring(0, 10) : '';
+                        return recordDate > prev.date && recordDate <= snap.date;
                     });
-                    
-                    // 2. 严格按类型计算，排除 transfer 和 adjust 的干扰
                     recordedDiff = periodTxs.reduce((sum, r) => {
                         let amount = Number(r.amount || 0);
-                        if (r.type === 'expense') {
-                            return sum - amount;
-                        } else if (r.type === 'income') {
-                            return sum + amount;
-                        }
-                        // 其他所有类型 (transfer, adjust, undefined) 均不计入"真实账单变动"
-                        return sum;
+                        if (r.type === 'expense') amount = -amount;
+                        else if (r.type === 'transfer') amount = 0;
+                        return sum + amount;
                     }, 0);
-
                     untrackedDiff = actualDiff - recordedDiff;
                 }
             }
             return { ...snap, total, actualDiff, recordedDiff, untrackedDiff };
         }).reverse();
-    }, [snapshots, accounts, txs]); // 确保依赖项包含 txs
+    }, [snapshots, accounts, txs]);
 
     const latestTotal = rows.length > 0 ? rows[0].total : 0;
 
