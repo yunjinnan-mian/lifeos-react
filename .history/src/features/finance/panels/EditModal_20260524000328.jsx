@@ -45,7 +45,7 @@ export default function EditModal({ open, tx, onClose }) {
             const catMap = getCatMap(data.cats);
             await setDoc(doc(db, 'transactions', String(tx.id)), {
                 ...tx,
-                date: saveDate,
+                date: form.date,
                 desc: form.desc,
                 cat2: form.cat2,
                 cat1: catMap[form.cat2] || '其他',

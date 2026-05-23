@@ -576,7 +576,7 @@ const Details = memo(function Details() {
     const handleStartEdit = useCallback((t) => {
         setEditingTxId(t.id);
         setEditFormData({
-            date: t.date || '',
+            date: t.date ? t.date.slice(0, 10) : '',
             cat2: t.cat2 || '',
             desc: t.desc || '',
             amount: t.amount || 0,
@@ -630,7 +630,7 @@ const Details = memo(function Details() {
         const updatedTx = {
             ...t,
             type: newType,
-            date: editFormData.date ? editFormData.date.replace('T', ' ') : editFormData.date,
+            date: editFormData.date + (t.date && t.date.length > 10 ? t.date.substring(10) : ''),
             desc: editFormData.desc,
             cat2: editFormData.cat2,
             cat1: catMap[editFormData.cat2] || '其他',
@@ -938,10 +938,10 @@ const TxRow = memo(function TxRow({ tx: t, colorMap, cats, editingTxId, editForm
             <div className="virt-td virt-td-date">
                 {isEditing ? (
                     <input
-                        type="datetime-local"
+                        type="date"
                         className="edit-naked-input"
-                        style={{ width: 200 }}
-                        value={editFormData.date ? editFormData.date.replace(' ', 'T').slice(0, 16) : ''}
+                        style={{ width: 130 }}
+                        value={editFormData.date}
                         onChange={e => setEditFormData(f => ({ ...f, date: e.target.value }))}
                     />
                 ) : <span>{t.date}</span>}

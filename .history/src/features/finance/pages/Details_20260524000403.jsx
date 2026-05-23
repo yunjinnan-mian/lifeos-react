@@ -576,7 +576,7 @@ const Details = memo(function Details() {
     const handleStartEdit = useCallback((t) => {
         setEditingTxId(t.id);
         setEditFormData({
-            date: t.date || '',
+            date: t.date ? t.date.slice(0, 10) : '',
             cat2: t.cat2 || '',
             desc: t.desc || '',
             amount: t.amount || 0,
@@ -630,7 +630,7 @@ const Details = memo(function Details() {
         const updatedTx = {
             ...t,
             type: newType,
-            date: editFormData.date ? editFormData.date.replace('T', ' ') : editFormData.date,
+            date: editFormData.date + (t.date && t.date.length > 10 ? t.date.substring(10) : ''),
             desc: editFormData.desc,
             cat2: editFormData.cat2,
             cat1: catMap[editFormData.cat2] || '其他',

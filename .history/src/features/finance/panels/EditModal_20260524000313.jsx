@@ -22,14 +22,13 @@ export default function EditModal({ open, tx, onClose }) {
     const catOpts = tx.type === 'income' ? getIncomeOpts(data.cats) : getExpenseOpts(data.cats);
 
     const handleSave = async () => {
-        const saveDate = form.date ? form.date.replace('T', ' ') : form.date;
         setData(prev => {
             const txs = prev.txs.map(t => {
                 if (String(t.id) !== String(tx.id)) return t;
                 const catMap = getCatMap(prev.cats);
                 return {
                     ...t,
-                    date: saveDate,
+                    date: form.date,
                     desc: form.desc,
                     cat2: form.cat2,
                     cat1: catMap[form.cat2] || '其他',
@@ -45,7 +44,7 @@ export default function EditModal({ open, tx, onClose }) {
             const catMap = getCatMap(data.cats);
             await setDoc(doc(db, 'transactions', String(tx.id)), {
                 ...tx,
-                date: saveDate,
+                date: form.date,
                 desc: form.desc,
                 cat2: form.cat2,
                 cat1: catMap[form.cat2] || '其他',
